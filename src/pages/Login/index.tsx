@@ -29,8 +29,12 @@ export default () => {
         }
       }
     } catch (error: any) {
-      // Error handling is typically done in request interceptor, but we can handle specific logic here
-      console.error(error);
+      const msg =
+        error?.response?.data?.error ||
+        error?.data?.error ||
+        error?.message ||
+        (type === 'login' ? '登录失败，请检查用户名或密码' : '注册失败，请稍后重试');
+      message.error(msg);
     }
   };
 
