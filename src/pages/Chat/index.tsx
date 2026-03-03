@@ -8,13 +8,14 @@ import {
   UserOutlined, SendOutlined, StopOutlined, ReloadOutlined,
   CopyOutlined, SunOutlined, MoonOutlined, MenuOutlined,
   PictureOutlined, EditOutlined, CheckOutlined, CloseOutlined,
-  ThunderboltOutlined,
+  ThunderboltOutlined, BarChartOutlined,
 } from '@ant-design/icons';
-import { useModel, history } from '@umijs/max';
+import { useModel, history, useIntl } from '@umijs/max';
 import { SettingsModal } from '@/components/SettingsModal';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { SystemPromptModal } from '@/components/SystemPromptModal';
 import { ModelCompareModal } from '@/components/ModelCompareModal';
+import { AccountModal } from '@/components/AccountModal';
 import {
   getConversations,
   createConversation,
@@ -57,6 +58,7 @@ const hasImage = (content: string): boolean => content.includes('[IMAGE_DATA:');
 
 export default () => {
   const { currentUser, logout, isLoggedIn } = useModel('global');
+  const intl = useIntl();
 
   // UI 状态
   const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme);
@@ -89,6 +91,9 @@ export default () => {
 
   // 模型对比
   const [showCompare, setShowCompare] = useState(false);
+
+  // 用量统计 / API Keys
+  const [showAccount, setShowAccount] = useState(false);
 
   // 对话重命名状态
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -384,13 +389,13 @@ export default () => {
           icon={<PlusOutlined />}
           onClick={handleCreateChat}
           className="new-chat-btn"
-          title="新对话 (Ctrl+N)"
+          title={intl.formatMessage({ id: 'chat.new_chat' }) + ' (Ctrl+N)'}
         >
-          发起新对话
+          {intl.formatMessage({ id: 'chat.new_chat' })}
         </Button>
 
         <div className="conv-list">
-          <div className="conv-list-label">对话</div>
+          <div className="conv-list-label">{intl.formatMessage({ id: 'menu.chat' })}</div>
           {conversations.map(conv => (
             <div
               key={conv.id}
@@ -449,11 +454,18 @@ export default () => {
           {isDark ? '浅色模式' : '深色模式'}
         </Button>
         <Button
+          block icon={<BarChartOutlined />}
+          onClick={() => setShowAccount(true)}
+          className="sider-action-btn"
+        >
+          {intl.formatMessage({ id: 'account.title' }).split(' ')[0]} {/* 简写 */}
+        </Button>
+        <Button
           block icon={<SettingOutlined />}
           onClick={() => setShowSettings(true)}
           className="sider-action-btn"
         >
-          设置
+          {intl.formatMessage({ id: 'chat.settings' })}
         </Button>
         <Button
           block icon={<LogoutOutlined />}
@@ -701,6 +713,11 @@ export default () => {
           onClose={() => setShowCompare(false)}
           models={models}
           conversationId={currentConvId}
+          isDark={isDark}
+        />
+        <AccountModal
+          open={showAccount}
+          onClose={() => setShowAccount(false)}
           isDark={isDark}
         />
       </Layout>

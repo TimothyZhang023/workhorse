@@ -86,26 +86,26 @@
 
 | # | 功能 | 状态 | 说明 |
 |---|------|------|------|
-| 3.1 | 团队/组织管理 | 🔲 待开发 | 邀请成员、角色权限 |
-| 3.2 | 用量统计面板 | 🔲 待开发 | Token 消耗 + 费用估算 |
-| 3.3 | OpenAI 兼容 API 代理 | 🔲 待开发 | Timo 作为统一 API Gateway |
-| 3.4 | Webhook 通知 | 🔲 待开发 | 飞书/钉钉/Slack |
-| 3.5 | API Key 管理 | 🔲 待开发 | 创建子 Key + 额度限制 |
-| 3.6 | 插件系统 | 🔲 待开发 | 图表/流程图/第三方集成 |
+| 3.1 | 用户管理 (Team) | ✅ 完成 | Admin 角色、用户列表、权限修改、删除用户 |
+| 3.2 | 用量统计面板 | ✅ 完成 | Token 消耗、请求数、活跃天数、分模型费用估算 |
+| 3.3 | OpenAI 兼容 API 代理 | ✅ 完成 | /v1 接口，支持 Cursor/Cline 等工具接入 |
+| 3.4 | Webhook 通知 | ✅ 完成 | 支持 user.registration 等事件触发 Webhook |
+| 3.5 | API Key 管理 | ✅ 完成 | 针对代理接口生成 API Key，统一管理用量 |
+| 3.6 | 插件系统 (Artifacts) | ✅ 完成 | HTML 实时预览 (Artifacts)、Markdown 增强渲染 |
 
 ### Phase 4：工程卓越（持续）
 
 | # | 功能 | 状态 | 说明 |
 |---|------|------|------|
 | 4.1 | PostgreSQL 支持 | 🔲 待开发 | 可配置替换 SQLite |
-| 4.2 | AES-256 加密 API Key | 🔲 待开发 | 安全加固 |
-| 4.3 | JWT + Refresh Token | 🔲 待开发 | 替换当前 Token 方案 |
-| 4.4 | Rate Limiting | 🔲 待开发 | express-rate-limit |
+| 4.2 | AES-256 加密 API Key | ✅ 完成 | 存储模型 API Key 前动态加密 |
+| 4.3 | JWT + Refresh Token | ✅ 完成 | 移除 Session 表查询，支持跨域 Token 刷新 |
+| 4.4 | Rate Limiting | ✅ 完成 | 针对登录与 API 代理实施频率限制 |
 | 4.5 | 单元 + E2E 测试 | 🔲 待开发 | Vitest + Playwright |
 | 4.6 | CI/CD | 🔲 待开发 | GitHub Actions |
-| 4.7 | 结构化日志 | 🔲 待开发 | pino |
+| 4.7 | 结构化日志 | ✅ 完成 | pino + pino-http |
 | 4.8 | Sentry 错误监控 | 🔲 待开发 | |
-| 4.9 | i18n 国际化 | 🔲 待开发 | 中/英/日 |
+| 4.9 | i18n 国际化 | ⏳ 进行中 | Umi Locale / 中英双语支持 |
 | 4.10 | a11y 无障碍 | 🔲 待开发 | ARIA + 键盘导航 |
 
 ---
@@ -128,12 +128,15 @@
 ## 五、数据库模型（当前）
 
 ```
-users          — uid / username / password_hash / salt
+users          — uid / username / password_hash / salt / role
 sessions       — uid / token / expires_at
-conversations  — uid / title / created_at / updated_at
+conversations  — uid / title / system_prompt / created_at / updated_at
 messages       — conversation_id / uid / role / content / created_at
 endpoint_groups — uid / name / base_url / api_key / is_default / use_preset_models
 models         — endpoint_group_id / uid / model_id / display_name
+usage_logs     — uid / conversation_id / model / endpoint_name / prompt_tokens / completion_tokens / total_tokens / source / created_at
+api_keys       — uid / name / key_prefix / key_hash / is_active / last_used_at / created_at
+webhooks       — uid / name / url / secret / events / is_active / created_at
 ```
 
 ## 六、API 路由（当前）
@@ -150,6 +153,7 @@ PUT    /api/conversations/:id
 DELETE /api/conversations/:id
 GET    /api/conversations/:id/messages
 POST   /api/conversations/:id/chat     ← SSE 流式
+POST   /api/conversations/:id/regenerate
 
 GET    /api/endpoints
 POST   /api/endpoints
@@ -161,6 +165,22 @@ POST   /api/endpoints/:id/models
 DELETE /api/endpoints/models/:id
 GET    /api/endpoints/available/models
 GET    /api/endpoints/preset-models
+
+GET    /api/account/summary
+GET    /api/account/api-keys
+POST   /api/account/api-keys
+PUT    /api/account/api-keys/:id/revoke
+DELETE /api/account/api-keys/:id
+GET    /api/account/webhooks
+POST   /api/account/webhooks
+DELETE /api/account/webhooks/:id
+
+GET    /api/admin/users
+PUT    /api/admin/users/:uid/role
+DELETE /api/admin/users/:uid
+
+POST   /v1/chat/completions (OpenAI SDK 兼容代理)
+GET    /v1/models
 ```
 
 ---

@@ -3,6 +3,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import fs from 'fs';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,6 +24,7 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     salt TEXT NOT NULL,
+    role TEXT DEFAULT 'user',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -75,12 +77,64 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS usage_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    conversation_id INTEGER,
+    model TEXT NOT NULL,
+    endpoint_name TEXT,
+    prompt_tokens INTEGER DEFAULT 0,
+    completion_tokens INTEGER DEFAULT 0,
+    total_tokens INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'chat',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    key_hash TEXT UNIQUE NOT NULL,
+    key_prefix TEXT NOT NULL,
+    is_active INTEGER DEFAULT 1,
+    last_used_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS webhooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    secret TEXT,
+    events TEXT DEFAULT '[]', -- JSON 数组：['user.registration', 'chat.usage_threshold']
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE INDEX IF NOT EXISTS idx_conversations_uid ON conversations(uid);
   CREATE INDEX IF NOT EXISTS idx_messages_uid ON messages(uid);
   CREATE INDEX IF NOT EXISTS idx_endpoint_groups_uid ON endpoint_groups(uid);
   CREATE INDEX IF NOT EXISTS idx_models_uid ON models(uid);
   CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+  CREATE INDEX IF NOT EXISTS idx_usage_logs_uid ON usage_logs(uid);
+  CREATE INDEX IF NOT EXISTS idx_usage_logs_created ON usage_logs(created_at);
+  CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+  CREATE INDEX IF NOT EXISTS idx_webhooks_uid ON webhooks(uid);
 `);
+
+// 运行时迁移：加密现有的已存储 API Keys
+try {
+  const allGroups = db.prepare('SELECT id, api_key FROM endpoint_groups').all();
+  for (const group of allGroups) {
+    if (group.api_key && !group.api_key.includes(':')) {
+      const encrypted = encrypt(group.api_key);
+      db.prepare('UPDATE endpoint_groups SET api_key = ? WHERE id = ?').run(encrypted, group.id);
+    }
+  }
+} catch (e) {
+  console.error('[DB Migration] Failed to encrypt existing API keys:', e.message);
+}
 
 // 全局预设模型列表
 export const PRESET_MODELS = [
@@ -95,7 +149,10 @@ export const PRESET_MODELS = [
   { model_id: 'claude-opus-4-5-thinking', display_name: 'Claude 4.5 Opus (Thinking)' },
 ];
 
-// ============ 用户管理 ============
+// 运行时迁移：添加 role 列（已存在时忽略）
+try {
+  db.prepare("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'").run();
+} catch (e) { /* column already exists */ }
 
 export function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
@@ -106,11 +163,15 @@ export function createUser(username, password) {
   const salt = crypto.randomBytes(16).toString('hex');
   const passwordHash = hashPassword(password, salt);
 
-  const result = db.prepare(`
-    INSERT INTO users (uid, username, password_hash, salt) VALUES (?, ?, ?, ?)
-  `).run(uid, username, passwordHash, salt);
+  // 检查是否是第一个用户，如果是，则设为 admin
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+  const role = userCount === 0 ? 'admin' : 'user';
 
-  return { id: result.lastInsertRowid, uid, username };
+  const result = db.prepare(`
+    INSERT INTO users (uid, username, password_hash, salt, role) VALUES (?, ?, ?, ?, ?)
+  `).run(uid, username, passwordHash, salt, role);
+
+  return { id: result.lastInsertRowid, uid, username, role };
 }
 
 export function getUserByUsername(username) {
@@ -118,7 +179,7 @@ export function getUserByUsername(username) {
 }
 
 export function getUserByUid(uid) {
-  return db.prepare('SELECT id, uid, username, created_at FROM users WHERE uid = ?').get(uid);
+  return db.prepare('SELECT * FROM users WHERE id = ? OR uid = ?').get(uid, uid);
 }
 
 export function verifyPassword(user, password) {
@@ -126,10 +187,29 @@ export function verifyPassword(user, password) {
   return hash === user.password_hash;
 }
 
-// ============ 会话管理 ============
+// ============ 用户管理 (Admin Only) ============
 
-export function createSession(uid) {
-  const token = crypto.randomBytes(32).toString('hex');
+export function listAllUsers() {
+  return db.prepare('SELECT uid, username, role, created_at FROM users ORDER BY created_at DESC').all();
+}
+
+export function updateUserRole(uid, role) {
+  db.prepare('UPDATE users SET role = ? WHERE uid = ?').run(role, uid);
+}
+
+export function adminDeleteUser(uid) {
+  db.prepare('DELETE FROM sessions WHERE uid = ?').run(uid);
+  db.prepare('DELETE FROM messages WHERE uid = ?').run(uid);
+  db.prepare('DELETE FROM conversations WHERE uid = ?').run(uid);
+  db.prepare('DELETE FROM endpoint_groups WHERE uid = ?').run(uid);
+  db.prepare('DELETE FROM api_keys WHERE uid = ?').run(uid);
+  db.prepare('DELETE FROM usage_logs WHERE uid = ?').run(uid);
+  db.prepare('DELETE FROM users WHERE uid = ?').run(uid);
+}
+
+// ============ 会话管理 (Refresh Tokens) ============
+
+export function createRefreshToken(uid, token) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7天过期
 
   db.prepare(`
@@ -139,11 +219,10 @@ export function createSession(uid) {
   return { token, expiresAt };
 }
 
-export function getSession(token) {
-  const session = db.prepare(`
+export function getRefreshToken(token) {
+  return db.prepare(`
     SELECT * FROM sessions WHERE token = ? AND expires_at > datetime('now')
   `).get(token);
-  return session;
 }
 
 export function deleteSession(token) {
@@ -249,39 +328,48 @@ export function getEndpointGroups(uid) {
     FROM endpoint_groups
     WHERE uid = ?
     ORDER BY is_default DESC, created_at ASC
-  `).all(uid);
+  `).all(uid).map(eg => ({
+    ...eg,
+    api_key: eg.api_key ? decrypt(eg.api_key) : ''
+  }));
 }
 
 export function getDefaultEndpointGroup(uid) {
-  return db.prepare(`
+  const eg = db.prepare(`
     SELECT id, name, base_url, api_key, is_default, use_preset_models
     FROM endpoint_groups
     WHERE uid = ? AND is_default = 1
   `).get(uid);
+  if (eg && eg.api_key) eg.api_key = decrypt(eg.api_key);
+  return eg;
 }
 
 export function getEndpointGroup(id, uid) {
-  return db.prepare(`
+  const eg = db.prepare(`
     SELECT id, name, base_url, api_key, is_default, use_preset_models, created_at, updated_at
     FROM endpoint_groups
     WHERE id = ? AND uid = ?
   `).get(id, uid);
+  if (eg && eg.api_key) eg.api_key = decrypt(eg.api_key);
+  return eg;
 }
 
 export function createEndpointGroup(uid, name, baseUrl, apiKey, isDefault = false, usePresetModels = true) {
   if (isDefault) {
     db.prepare('UPDATE endpoint_groups SET is_default = 0 WHERE uid = ?').run(uid);
   }
+  const encryptedKey = encrypt(apiKey);
   const result = db.prepare(`
     INSERT INTO endpoint_groups (uid, name, base_url, api_key, is_default, use_preset_models) VALUES (?, ?, ?, ?, ?, ?)
-  `).run(uid, name, baseUrl, apiKey, isDefault ? 1 : 0, usePresetModels !== false ? 1 : 0);
+  `).run(uid, name, baseUrl, encryptedKey, isDefault ? 1 : 0, usePresetModels !== false ? 1 : 0);
   return { id: result.lastInsertRowid, name, base_url: baseUrl, api_key: apiKey, is_default: isDefault ? 1 : 0, use_preset_models: usePresetModels !== false ? 1 : 0 };
 }
 
 export function updateEndpointGroup(id, uid, name, baseUrl, apiKey, usePresetModels) {
+  const encryptedKey = encrypt(apiKey);
   db.prepare(`
     UPDATE endpoint_groups SET name = ?, base_url = ?, api_key = ?, use_preset_models = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
-  `).run(name, baseUrl, apiKey, usePresetModels ? 1 : 0, id, uid);
+  `).run(name, baseUrl, encryptedKey, usePresetModels ? 1 : 0, id, uid);
 }
 
 export function setDefaultEndpointGroup(id, uid) {
@@ -313,6 +401,155 @@ export function addModel(endpointGroupId, uid, modelId, displayName) {
 
 export function deleteModel(id, uid) {
   db.prepare('DELETE FROM models WHERE id = ? AND uid = ?').run(id, uid);
+}
+
+// ============ 用量统计 ============
+
+export function logUsage({ uid, conversationId, model, endpointName, promptTokens, completionTokens, source = 'chat' }) {
+  db.prepare(`
+    INSERT INTO usage_logs (uid, conversation_id, model, endpoint_name, prompt_tokens, completion_tokens, total_tokens, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(uid, conversationId ?? null, model, endpointName ?? '', promptTokens ?? 0, completionTokens ?? 0, (promptTokens ?? 0) + (completionTokens ?? 0), source);
+}
+
+export function getUsageSummary(uid, days = 30) {
+  const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
+  const rows = db.prepare(`
+    SELECT
+      DATE(created_at) AS date,
+      model,
+      endpoint_name,
+      SUM(prompt_tokens) AS prompt_tokens,
+      SUM(completion_tokens) AS completion_tokens,
+      SUM(total_tokens) AS total_tokens,
+      COUNT(*) AS requests
+    FROM usage_logs
+    WHERE uid = ? AND created_at >= ?
+    GROUP BY DATE(created_at), model
+    ORDER BY date DESC
+  `).all(uid, since);
+  return rows;
+}
+
+export function getUsageTotals(uid, days = 30) {
+  const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
+  return db.prepare(`
+    SELECT
+      SUM(total_tokens) AS total_tokens,
+      SUM(prompt_tokens) AS prompt_tokens,
+      SUM(completion_tokens) AS completion_tokens,
+      COUNT(*) AS total_requests,
+      COUNT(DISTINCT model) AS models_used,
+      COUNT(DISTINCT DATE(created_at)) AS active_days
+    FROM usage_logs
+    WHERE uid = ? AND created_at >= ?
+  `).get(uid, since);
+}
+
+export function getUsageByModel(uid, days = 30) {
+  const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
+  return db.prepare(`
+    SELECT model, SUM(total_tokens) AS total_tokens, COUNT(*) AS requests
+    FROM usage_logs
+    WHERE uid = ? AND created_at >= ?
+    GROUP BY model
+    ORDER BY total_tokens DESC
+  `).all(uid, since);
+}
+
+// ============ API Key 管理 ============
+
+import { createHash, randomBytes } from 'node:crypto';
+
+function hashKey(key) {
+  return createHash('sha256').update(key).digest('hex');
+}
+
+export function createApiKey(uid, name) {
+  const rawKey = 'timo-' + randomBytes(24).toString('base64url');
+  const prefix = rawKey.slice(0, 12);
+  const hash = hashKey(rawKey);
+  db.prepare(`
+    INSERT INTO api_keys (uid, name, key_hash, key_prefix) VALUES (?, ?, ?, ?)
+  `).run(uid, name, hash, prefix);
+  return { key: rawKey, prefix, name };
+}
+
+export function listApiKeys(uid) {
+  return db.prepare(`
+    SELECT id, name, key_prefix, is_active, last_used_at, created_at
+    FROM api_keys WHERE uid = ? ORDER BY created_at DESC
+  `).all(uid);
+}
+
+export function revokeApiKey(id, uid) {
+  db.prepare('UPDATE api_keys SET is_active = 0 WHERE id = ? AND uid = ?').run(id, uid);
+}
+
+export function deleteApiKey(id, uid) {
+  db.prepare('DELETE FROM api_keys WHERE id = ? AND uid = ?').run(id, uid);
+}
+
+export function verifyApiKey(rawKey) {
+  const hash = hashKey(rawKey);
+  const row = db.prepare(`
+    SELECT uid FROM api_keys WHERE key_hash = ? AND is_active = 1
+  `).get(hash);
+  if (row) {
+    db.prepare('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE key_hash = ?').run(hash);
+    return row.uid;
+  }
+  return null;
+}
+
+// ============ Webhooks ============
+
+export function createWebhook(uid, name, url, events = []) {
+  const result = db.prepare(`
+    INSERT INTO webhooks (uid, name, url, events) VALUES (?, ?, ?, ?)
+  `).run(uid, name, url, JSON.stringify(events));
+  return { id: result.lastInsertRowid, uid, name, url, events };
+}
+
+export function listWebhooks(uid) {
+  return db.prepare('SELECT * FROM webhooks WHERE uid = ?').all().map(w => ({
+    ...w,
+    events: JSON.parse(w.events || '[]')
+  }));
+}
+
+export function deleteWebhook(id, uid) {
+  db.prepare('DELETE FROM webhooks WHERE id = ? AND uid = ?').run(id, uid);
+}
+
+export function updateWebhookStatus(id, uid, isActive) {
+  db.prepare('UPDATE webhooks SET is_active = ? WHERE id = ? AND uid = ?').run(isActive ? 1 : 0, id, uid);
+}
+
+export async function triggerWebhooks(event, payload) {
+  const hooks = db.prepare("SELECT * FROM webhooks WHERE is_active = 1 AND events LIKE ?").all(`%${event}%`).map(w => ({
+    ...w,
+    events: JSON.parse(w.events || '[]')
+  })).filter(w => w.events.includes(event));
+
+  for (const hook of hooks) {
+    try {
+      await fetch(hook.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(hook.secret && { 'X-Timo-Secret': hook.secret })
+        },
+        body: JSON.stringify({
+          event,
+          timestamp: new Date().toISOString(),
+          payload
+        })
+      });
+    } catch (e) {
+      console.error(`[Webhook] Failed to trigger ${hook.name}: ${e.message}`);
+    }
+  }
 }
 
 export default db;

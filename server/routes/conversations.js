@@ -12,6 +12,7 @@ import {
   getDefaultEndpointGroup,
   getEndpointGroups,
   getConversation,
+  logUsage,
 } from '../models/database.js';
 import { authMiddleware } from '../middleware/auth.js';
 import OpenAI from 'openai';
@@ -114,7 +115,7 @@ function getEndpoints(uid) {
   return groups.sort((a, b) => b.is_default - a.is_default);
 }
 
-async function streamWithFallback(uid, model, messages, res) {
+async function streamWithFallback(uid, model, messages, res, opts = {}) {
   const endpoints = getEndpoints(uid);
   if (!endpoints.length) {
     res.write(`data: ${JSON.stringify({ error: '请先在设置中配置 API Endpoint' })}\n\n`);
@@ -126,35 +127,64 @@ async function streamWithFallback(uid, model, messages, res) {
   for (const ep of endpoints) {
     try {
       const client = new OpenAI({ apiKey: ep.api_key, baseURL: ep.base_url });
-      const stream = await client.chat.completions.create({
+
+      // 开启 stream usage 统计
+      const streamParams = {
         model: model || 'gpt-4',
         messages,
         stream: true,
-      });
+        stream_options: { include_usage: true },
+      };
+
+      const stream = await client.chat.completions.create(streamParams);
 
       let fullContent = '';
+      let promptTokens = 0;
+      let completionTokens = 0;
+
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullContent += content;
           res.write(`data: ${JSON.stringify({ content })}\n\n`);
         }
+        // 捕获最终 usage 数据
+        if (chunk.usage) {
+          promptTokens = chunk.usage.prompt_tokens || 0;
+          completionTokens = chunk.usage.completion_tokens || 0;
+        }
       }
+
+      // 记录用量日志
+      try {
+        logUsage({
+          uid,
+          conversationId: opts.conversationId,
+          model,
+          endpointName: ep.name,
+          promptTokens,
+          completionTokens,
+          source: opts.source || 'chat',
+        });
+      } catch (logErr) {
+        console.warn('[Usage] Failed to log usage:', logErr.message);
+      }
+
       return fullContent;
     } catch (error) {
       lastError = error;
-      console.warn(`[Fallback] Endpoint "${ep.name}" failed: ${error.message}. Trying next...`);
+      console.warn(`[Fallback] Endpoint "${ep.name}" failed: ${error.message}.`);
       if (endpoints.indexOf(ep) < endpoints.length - 1) {
-        res.write(`data: ${JSON.stringify({ notice: `切换到备用端点中...` })}\n\n`);
+        res.write(`data: ${JSON.stringify({ notice: '切换到备用端点中...' })}\n\n`);
       }
     }
   }
 
-  // 所有 Endpoint 都失败
   res.write(`data: ${JSON.stringify({ error: `所有 API 端点均不可用：${lastError?.message}` })}\n\n`);
   res.end();
   return false;
 }
+
 
 // ============ 流式聊天 ============
 
@@ -184,8 +214,9 @@ router.post('/:id/chat', async (req, res) => {
 
     const aiMsg = addMessage(id, uid, 'assistant', '');
 
-    const fullContent = await streamWithFallback(uid, model, messages, res);
+    const fullContent = await streamWithFallback(uid, model, messages, res, { conversationId: id, source: 'chat' });
     if (fullContent === false) return;
+
 
     updateMessage(aiMsg.id, uid, fullContent);
 
@@ -230,8 +261,9 @@ router.post('/:id/regenerate', async (req, res) => {
     const messages = buildMessages(history, systemPrompt);
     const aiMsg = addMessage(id, uid, 'assistant', '');
 
-    const fullContent = await streamWithFallback(uid, model, messages, res);
+    const fullContent = await streamWithFallback(uid, model, messages, res, { conversationId: id, source: 'chat' });
     if (fullContent === false) return;
+
 
     updateMessage(aiMsg.id, uid, fullContent);
     res.write('data: [DONE]\n\n');

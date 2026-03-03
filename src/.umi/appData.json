@@ -23,10 +23,16 @@
       "antd": "^5.4.0",
       "better-sqlite3": "^12.6.2",
       "concurrently": "^8.2.2",
+      "cookie-parser": "^1.4.7",
       "cors": "^2.8.5",
       "dotenv": "^16.3.1",
       "express": "^4.18.2",
+      "express-rate-limit": "^8.2.1",
+      "jsonwebtoken": "^9.0.3",
       "openai": "^4.20.0",
+      "pino": "^10.3.1",
+      "pino-http": "^11.0.0",
+      "pino-pretty": "^13.1.3",
       "react": "^18.2.0",
       "react-dom": "^18.2.0",
       "react-markdown": "^8.0.7",
@@ -71,7 +77,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 26
+        "register": 30
       },
       "enableBy": "register"
     },
@@ -84,7 +90,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 10
+        "register": 11
       },
       "enableBy": "register"
     },
@@ -101,7 +107,7 @@
             0
           ]
         },
-        "register": 4
+        "register": 5
       },
       "enableBy": "register"
     },
@@ -134,13 +140,6 @@
           "modifyRoutes": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ]
         },
@@ -159,26 +158,15 @@
         "hooks": {
           "onDevCompileDone": [
             46,
-            3,
             4,
-            6,
-            5,
-            5,
+            3,
             3,
             5,
             3,
-            10,
-            2,
-            2,
-            2,
-            3,
-            2,
-            2,
-            2,
-            2
+            3
           ]
         },
-        "register": 2
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -192,22 +180,15 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            18
+            20
           ],
           "onGenerateFiles": [
             3,
-            10,
-            10,
-            8,
-            8,
-            8,
             9,
-            13,
-            8,
             9
           ]
         },
-        "register": 25
+        "register": 31
       },
       "enableBy": "register"
     },
@@ -221,13 +202,6 @@
       "time": {
         "hooks": {
           "addEntryCode": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
@@ -253,13 +227,7 @@
             0
           ],
           "onPrepareBuildSuccess": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            1,
             0,
             0,
             0,
@@ -270,6 +238,10 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            1,
             0,
             0,
             0,
@@ -336,10 +308,10 @@
       "time": {
         "hooks": {
           "onCheck": [
-            0
+            1
           ]
         },
-        "register": 1
+        "register": 0
       },
       "enableBy": "register"
     },
@@ -369,7 +341,7 @@
             0
           ]
         },
-        "register": 12
+        "register": 13
       },
       "enableBy": "register"
     },
@@ -1235,10 +1207,10 @@
       "time": {
         "hooks": {
           "onStart": [
-            0
+            1
           ]
         },
-        "register": 1
+        "register": 2
       },
       "enableBy": "register"
     },
@@ -1252,10 +1224,10 @@
       "time": {
         "hooks": {
           "addBeforeMiddlewares": [
-            9
+            10
           ]
         },
-        "register": 2
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -1268,7 +1240,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 85
+        "register": 84
       },
       "enableBy": "register"
     },
@@ -1281,7 +1253,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 57
+        "register": 61
       },
       "enableBy": "config"
     },
@@ -1294,7 +1266,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 23
+        "register": 24
       },
       "enableBy": "config"
     },
@@ -1312,26 +1284,9 @@
           ],
           "addBeforeMiddlewares": [
             0
-          ],
-          "modifyHTMLFavicon": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -1346,30 +1301,16 @@
         "hooks": {
           "onGenerateFiles": [
             2,
-            2,
-            2,
             1,
-            2,
-            1,
-            1,
-            1,
-            1,
-            0
+            1
           ],
           "addRuntimePlugin": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
           ]
         },
-        "register": 2
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -1382,7 +1323,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 3
       },
       "enableBy": "config"
     },
@@ -1399,10 +1340,10 @@
             1
           ],
           "addBeforeMiddlewares": [
-            1
+            0
           ]
         },
-        "register": 34
+        "register": 35
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/mpa/mpa": {
@@ -1414,7 +1355,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "config"
     },
@@ -1427,7 +1368,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/overrides/overrides": {
@@ -1442,13 +1383,6 @@
           "onGenerateFiles": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "addEntryImports": [
@@ -1457,24 +1391,10 @@
             0,
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -1504,32 +1424,11 @@
             1
           ],
           "onGenerateFiles": [
-            93,
-            53,
-            65,
-            61,
-            58,
-            39,
-            34,
-            51,
-            33,
-            35
+            106,
+            42,
+            42
           ],
           "addPolyfillImports": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0,
@@ -1538,7 +1437,7 @@
             0
           ]
         },
-        "register": 4
+        "register": 3
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/polyfill/publicPathPolyfill": {
@@ -1555,25 +1454,11 @@
             0,
             0,
             0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -1587,14 +1472,7 @@
       "time": {
         "hooks": {
           "onGenerateFiles": [
-            104,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
+            136,
             0,
             0
           ]
@@ -1641,20 +1519,13 @@
           "onGenerateFiles": [
             1,
             0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            0,
-            1
+            0
           ],
           "addBeforeMiddlewares": [
-            0
+            1
           ]
         },
-        "register": 1
+        "register": 2
       },
       "enableBy": "register"
     },
@@ -1668,26 +1539,12 @@
       "time": {
         "hooks": {
           "onGenerateFiles": [
-            17,
-            10,
-            13,
-            13,
-            19,
+            25,
             11,
-            16,
-            11,
-            19,
-            10,
-            16,
-            9,
             14,
             9,
-            15,
-            10,
-            14,
-            11,
-            14,
-            12
+            13,
+            9
           ]
         },
         "register": 8
@@ -1728,7 +1585,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 5
       },
       "enableBy": "config"
     },
@@ -1742,16 +1599,9 @@
       "time": {
         "hooks": {
           "onGenerateFiles": [
-            446,
-            13,
-            30,
-            13,
-            19,
-            12,
-            10,
-            10,
-            10,
-            11
+            467,
+            22,
+            9
           ]
         },
         "register": 4
@@ -1771,7 +1621,7 @@
             0
           ]
         },
-        "register": 5
+        "register": 6
       },
       "enableBy": "register"
     },
@@ -1797,7 +1647,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 0
       },
       "enableBy": "config"
     },
@@ -1810,7 +1660,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 9
+        "register": 11
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/monorepo/redirect": {
@@ -1822,7 +1672,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 22
+        "register": 24
       },
       "enableBy": "config"
     },
@@ -1836,15 +1686,8 @@
       "time": {
         "hooks": {
           "onGenerateFiles": [
-            2,
-            2,
-            2,
-            2,
-            2,
+            3,
             1,
-            2,
-            2,
-            2,
             1
           ]
         },
@@ -1860,7 +1703,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "config"
     },
@@ -1899,7 +1742,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 2
+        "register": 1
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/swc/swc": {
@@ -1915,7 +1758,7 @@
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -1940,7 +1783,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "config"
     },
@@ -1965,7 +1808,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 3
+        "register": 4
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/routePreloadOnLoad/routePreloadOnLoad": {
@@ -1976,26 +1819,8 @@
       "key": "routePreloadOnLoad",
       "config": {},
       "time": {
-        "hooks": {
-          "addHTMLHeadScripts": [
-            41,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
-        },
-        "register": 30
+        "hooks": {},
+        "register": 38
       }
     },
     "./node_modules/@umijs/preset-umi/dist/features/forget/forget": {
@@ -2021,7 +1846,7 @@
       "time": {
         "hooks": {
           "modifyUniBundler": [
-            834
+            1002
           ]
         },
         "register": 3
@@ -2037,7 +1862,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 6
+        "register": 7
       },
       "enableBy": "register"
     },
@@ -2050,7 +1875,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 39
+        "register": 38
       },
       "enableBy": "register"
     },
@@ -2064,10 +1889,10 @@
       "time": {
         "hooks": {
           "modifyAppData": [
-            42
+            45
           ]
         },
-        "register": 58
+        "register": 64
       }
     },
     "./node_modules/@umijs/preset-umi/dist/commands/help": {
@@ -2209,7 +2034,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 0
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -2313,7 +2138,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 24
+        "register": 23
       },
       "enableBy": "register"
     },
@@ -2339,7 +2164,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 4
+        "register": 5
       },
       "enableBy": "register"
     },
@@ -2355,26 +2180,12 @@
           "addRuntimePlugin": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "onGenerateFiles": [
-            3,
             2,
-            2,
-            2,
-            2,
-            4,
-            3,
-            2,
-            3,
-            6
+            1,
+            3
           ],
           "addTmpGenerateWatcherPaths": [
             0
@@ -2408,10 +2219,10 @@
       "time": {
         "hooks": {
           "modifyConfig": [
-            2
+            3
           ],
           "modifyAppData": [
-            1
+            0
           ],
           "onCheck": [
             0
@@ -2422,30 +2233,9 @@
             0,
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "addRuntimePlugin": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
@@ -2453,32 +2243,18 @@
           "addRuntimePluginKey": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "onGenerateFiles": [
             4,
             2,
-            3,
-            2,
-            3,
-            3,
-            3,
-            2,
-            3,
-            6
+            3
           ],
           "addExtraBabelPlugins": [
             0
           ],
           "chainWebpack": [
-            1
+            0
           ]
         },
         "register": 9
@@ -2493,7 +2269,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 10
+        "register": 12
       },
       "enableBy": "config"
     },
@@ -2509,53 +2285,25 @@
           "addRuntimePlugin": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "addRuntimePluginKey": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "onGenerateFiles": [
-            2,
-            1,
-            2,
-            1,
-            2,
             3,
-            4,
-            2,
-            2,
-            4
+            1,
+            2
           ],
           "addExtraModels": [
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
           ]
         },
-        "register": 1
+        "register": 0
       },
       "enableBy": "config"
     },
@@ -2576,26 +2324,12 @@
           "addLayouts": [
             1,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "modifyAppData": [
-            0
+            1
           ],
           "addRuntimePlugin": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
@@ -2603,29 +2337,15 @@
           "addRuntimePluginKey": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "onGenerateFiles": [
             7,
-            4,
-            9,
-            7,
-            6,
-            10,
-            8,
             5,
-            9,
-            12
+            7
           ]
         },
-        "register": 4
+        "register": 5
       },
       "enableBy": "config"
     },
@@ -2637,8 +2357,35 @@
       "key": "locale",
       "config": {},
       "time": {
-        "hooks": {},
-        "register": 3
+        "hooks": {
+          "addEntryImportsAhead": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          "addRuntimePlugin": [
+            0,
+            0,
+            0
+          ],
+          "addRuntimePluginKey": [
+            0,
+            0,
+            0
+          ],
+          "onGenerateFiles": [
+            17,
+            20,
+            7
+          ],
+          "addTmpGenerateWatcherPaths": [
+            3
+          ]
+        },
+        "register": 4
       },
       "enableBy": "config"
     },
@@ -2665,28 +2412,14 @@
       "time": {
         "hooks": {
           "addRuntimePlugin": [
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
           ],
           "onGenerateFiles": [
-            27,
-            21,
-            30,
-            33,
-            22,
-            29,
-            19,
-            27,
-            20,
-            25
+            28,
+            18,
+            17
           ],
           "addTmpGenerateWatcherPaths": [
             0
@@ -2719,13 +2452,6 @@
       "time": {
         "hooks": {
           "addRuntimePluginKey": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0,
             0,
             0
@@ -2784,26 +2510,12 @@
           "addRuntimePluginKey": [
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "onGenerateFiles": [
             4,
             2,
-            3,
-            3,
-            2,
-            2,
-            2,
-            2,
-            3,
-            4
+            1
           ]
         },
         "register": 1
@@ -2819,7 +2531,7 @@
       "config": {},
       "time": {
         "hooks": {},
-        "register": 1
+        "register": 2
       },
       "enableBy": "config"
     },
@@ -2838,24 +2550,10 @@
             0,
             0,
             0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
             0
           ],
           "onBeforeCompiler": [
-            950
+            966
           ]
         },
         "register": 1
@@ -2888,7 +2586,7 @@
             0
           ]
         },
-        "register": 0
+        "register": 1
       },
       "enableBy": "register"
     },
@@ -2919,7 +2617,6 @@
       "time": {
         "hooks": {
           "onCheckPkgJSON": [
-            0,
             0
           ]
         },
@@ -2952,6 +2649,11 @@
     "model": {},
     "initialState": {},
     "request": {},
+    "locale": {
+      "default": "zh-CN",
+      "antd": true,
+      "baseNavigator": true
+    },
     "layout": {
       "title": "Gemini Chat"
     },
@@ -3018,6 +2720,11 @@
     "model": {},
     "initialState": {},
     "request": {},
+    "locale": {
+      "default": "zh-CN",
+      "antd": true,
+      "baseNavigator": true
+    },
     "layout": {
       "title": "Gemini Chat"
     },
@@ -3991,7 +3698,7 @@
       "file": "@/pages/Chat/index.tsx",
       "id": "3",
       "absPath": "/chat",
-      "__content": "import { useState, useEffect, useRef, useCallback } from 'react';\nimport {\n  Layout, Button, Input, Select, Avatar, Popconfirm,\n  message as antdMessage, Drawer, Upload, Tooltip, ConfigProvider, theme as antdTheme,\n} from 'antd';\nimport {\n  PlusOutlined, DeleteOutlined, SettingOutlined, LogoutOutlined,\n  UserOutlined, SendOutlined, StopOutlined, ReloadOutlined,\n  CopyOutlined, SunOutlined, MoonOutlined, MenuOutlined,\n  PictureOutlined, EditOutlined, CheckOutlined, CloseOutlined,\n} from '@ant-design/icons';\nimport { useModel, history } from '@umijs/max';\nimport { SettingsModal } from '@/components/SettingsModal';\nimport { MarkdownRenderer } from '@/components/MarkdownRenderer';\nimport { SystemPromptModal } from '@/components/SystemPromptModal';\nimport { ModelCompareModal } from '@/components/ModelCompareModal';\nimport {\n  getConversations,\n  createConversation,\n  deleteConversation,\n  getMessages,\n  getAvailableModels,\n  updateConversation,\n} from '@/services/api';\nimport './index.css';\n\nconst { Sider, Content } = Layout;\n\n// 从 localStorage 获取/保存主题\nconst getStoredTheme = (): 'light' | 'dark' => {\n  const saved = localStorage.getItem('timo-theme');\n  if (saved === 'dark' || saved === 'light') return saved;\n  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n};\n\n// 将图片文件转为 base64\nconst fileToBase64 = (file: File): Promise<string> =>\n  new Promise((resolve, reject) => {\n    const reader = new FileReader();\n    reader.readAsDataURL(file);\n    reader.onload = () => {\n      const result = reader.result as string;\n      // 只保留 base64 数据部分\n      resolve(result.split(',')[1]);\n    };\n    reader.onerror = reject;\n  });\n\n// 从存储内容中提取显示文本（去掉图片数据）\nconst extractDisplayContent = (content: string): string => {\n  return content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '[📷 图片]');\n};\n\n// 检查消息是否包含图片\nconst hasImage = (content: string): boolean => content.includes('[IMAGE_DATA:');\n\nexport default () => {\n  const { currentUser, logout, isLoggedIn } = useModel('global');\n\n  // UI 状态\n  const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme);\n  const [siderVisible, setSiderVisible] = useState(false); // mobile drawer\n  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);\n  const isDark = theme === 'dark';\n\n  // 对话状态\n  const [conversations, setConversations] = useState<API.Conversation[]>([]);\n  const [currentConvId, setCurrentConvId] = useState<string | null>(null);\n  const [messages, setMessages] = useState<API.Message[]>([]);\n  const [models, setModels] = useState<API.Model[]>([]);\n  const [selectedModel, setSelectedModel] = useState<string>('');\n\n  // 输入状态\n  const [inputText, setInputText] = useState('');\n  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);\n\n  // 流式处理状态\n  const [loading, setLoading] = useState(false);\n  const abortControllerRef = useRef<AbortController | null>(null);\n\n  // 设置弹窗\n  const [showSettings, setShowSettings] = useState(false);\n\n  // System Prompt\n  const [showSystemPrompt, setShowSystemPrompt] = useState(false);\n  const currentConv = conversations.find(c => c.id === currentConvId) ?? null;\n  const currentSystemPrompt = currentConv?.system_prompt ?? '';\n\n  // 模型对比\n  const [showCompare, setShowCompare] = useState(false);\n\n  // 对话重命名状态\n  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);\n  const [editingTitle, setEditingTitle] = useState('');\n\n  const messagesEndRef = useRef<HTMLDivElement>(null);\n  const inputRef = useRef<HTMLInputElement>(null);\n\n  // 响应式监听\n  useEffect(() => {\n    const handler = () => setIsMobile(window.innerWidth < 768);\n    window.addEventListener('resize', handler);\n    return () => window.removeEventListener('resize', handler);\n  }, []);\n\n  // 主题持久化\n  useEffect(() => {\n    document.documentElement.setAttribute('data-theme', theme);\n    localStorage.setItem('timo-theme', theme);\n  }, [theme]);\n\n  // 登录检查 & 初始化\n  useEffect(() => {\n    if (!isLoggedIn) {\n      history.push('/login');\n      return;\n    }\n    loadInitData();\n  }, [isLoggedIn]);\n\n  // 键盘快捷键\n  useEffect(() => {\n    const handler = (e: KeyboardEvent) => {\n      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {\n        e.preventDefault();\n        handleCreateChat();\n      }\n    };\n    window.addEventListener('keydown', handler);\n    return () => window.removeEventListener('keydown', handler);\n  }, [conversations]);\n\n  const loadInitData = async () => {\n    try {\n      const [convs, availableModels] = await Promise.all([\n        getConversations(),\n        getAvailableModels(),\n      ]);\n      setConversations(convs);\n      setModels(availableModels);\n      if (availableModels.length > 0) setSelectedModel(availableModels[0].model_id);\n      if (convs.length > 0) handleSelectConversation(convs[0].id);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const scrollToBottom = useCallback(() => {\n    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });\n  }, []);\n\n  useEffect(() => {\n    scrollToBottom();\n  }, [messages]);\n\n  const handleCreateChat = async () => {\n    try {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      setCurrentConvId(newConv.id);\n      setMessages([]);\n      if (isMobile) setSiderVisible(false);\n      setTimeout(() => inputRef.current?.focus(), 100);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleSelectConversation = async (id: string) => {\n    setCurrentConvId(id);\n    try {\n      const msgs = await getMessages(id);\n      setMessages(msgs);\n    } catch (error) {\n      console.error(error);\n    }\n    if (isMobile) setSiderVisible(false);\n  };\n\n  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {\n    e.stopPropagation();\n    try {\n      await deleteConversation(id);\n      const newConvs = conversations.filter(c => c.id !== id);\n      setConversations(newConvs);\n      if (currentConvId === id) {\n        if (newConvs.length > 0) {\n          handleSelectConversation(newConvs[0].id);\n        } else {\n          setCurrentConvId(null);\n          setMessages([]);\n        }\n      }\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleRenameStart = (conv: API.Conversation, e: React.MouseEvent) => {\n    e.stopPropagation();\n    setEditingTitleId(conv.id);\n    setEditingTitle(conv.title);\n  };\n\n  const handleRenameConfirm = async () => {\n    if (!editingTitleId || !editingTitle.trim()) {\n      setEditingTitleId(null);\n      return;\n    }\n    try {\n      await updateConversation(editingTitleId, editingTitle.trim());\n      setConversations(prev =>\n        prev.map(c => c.id === editingTitleId ? { ...c, title: editingTitle.trim() } : c)\n      );\n    } catch (e) {\n      console.error(e);\n    }\n    setEditingTitleId(null);\n  };\n\n  const handleSaveSystemPrompt = async (prompt: string) => {\n    if (!currentConvId) return;\n    try {\n      await updateConversation(currentConvId, undefined as any, prompt);\n      setConversations(prev =>\n        prev.map(c => c.id === currentConvId ? { ...c, system_prompt: prompt } : c)\n      );\n      antdMessage.success('System Prompt 已保存');\n    } catch (e) {\n      antdMessage.error('保存失败');\n    }\n  };\n\n\n  // 核心发送函数（兼容 send + regenerate）\n  const streamChat = async (convId: string, userMsg: API.Message | null, isRegenerate = false) => {\n    setLoading(true);\n    const controller = new AbortController();\n    abortControllerRef.current = controller;\n\n    try {\n      const token = localStorage.getItem('token');\n      const url = isRegenerate\n        ? `/api/conversations/${convId}/regenerate`\n        : `/api/conversations/${convId}/chat`;\n\n      let body: any = { model: selectedModel };\n      if (!isRegenerate && userMsg) {\n        body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim() || userMsg.content;\n        // 提取图片 base64\n        const imgMatches = [...userMsg.content.matchAll(/\\[IMAGE_DATA:([^\\]]+)\\]/g)];\n        if (imgMatches.length > 0) {\n          body.images = imgMatches.map(m => m[1]);\n          body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim();\n        }\n      }\n\n      const response = await fetch(url, {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          Authorization: `Bearer ${token}`,\n        },\n        body: JSON.stringify(body),\n        signal: controller.signal,\n      });\n\n      if (!response.ok) throw new Error('Network response was not ok');\n\n      const reader = response.body?.getReader();\n      const decoder = new TextDecoder();\n\n      // 添加空 assistant 消息占位\n      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);\n\n      while (reader) {\n        const { done, value } = await reader.read();\n        if (done) break;\n\n        const chunk = decoder.decode(value);\n        const lines = chunk.split('\\n').filter(line => line.startsWith('data: '));\n\n        for (const line of lines) {\n          const data = line.slice(6);\n          if (data === '[DONE]') continue;\n          try {\n            const parsed = JSON.parse(data);\n            setMessages(prev => {\n              const newMessages = [...prev];\n              const lastMsg = newMessages[newMessages.length - 1];\n              if (lastMsg.role === 'assistant') {\n                if (parsed.content) lastMsg.content += parsed.content;\n                if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;\n              }\n              return newMessages;\n            });\n            if (parsed.title) {\n              setConversations(prev =>\n                prev.map(c => c.id === convId ? { ...c, title: parsed.title } : c)\n              );\n            }\n          } catch (e) {\n            // ignore parse errors\n          }\n        }\n      }\n    } catch (error: any) {\n      if (error.name !== 'AbortError') {\n        antdMessage.error('发送失败，请检查网络和 API 配置');\n        console.error(error);\n      }\n    } finally {\n      setLoading(false);\n      abortControllerRef.current = null;\n    }\n  };\n\n  const sendMessage = async () => {\n    if ((!inputText.trim() && pendingImages.length === 0) || loading) return;\n\n    let convId = currentConvId;\n    if (!convId) {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      convId = newConv.id;\n      setCurrentConvId(convId);\n    }\n\n    // 构建用户消息内容（文字 + 图片标记）\n    let content = inputText;\n    if (pendingImages.length > 0) {\n      const base64s = await Promise.all(pendingImages.map(p => fileToBase64(p.file)));\n      content += '\\n' + base64s.map(b => `[IMAGE_DATA:${b}]`).join('\\n');\n    }\n\n    const userMsg: API.Message = { role: 'user', content };\n    setMessages(prev => [...prev, userMsg]);\n    setInputText('');\n    setPendingImages([]);\n\n    await streamChat(convId, userMsg, false);\n  };\n\n  const handleRegenerate = async () => {\n    if (!currentConvId || loading) return;\n    // 删除界面上最后一条 assistant 消息\n    setMessages(prev => {\n      const newMsgs = [...prev];\n      if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'assistant') {\n        newMsgs.pop();\n      }\n      return newMsgs;\n    });\n    await streamChat(currentConvId, null, true);\n  };\n\n  const handleStop = () => {\n    abortControllerRef.current?.abort();\n  };\n\n  const handleCopyMessage = (content: string) => {\n    const displayContent = extractDisplayContent(content);\n    navigator.clipboard.writeText(displayContent);\n    antdMessage.success('已复制到剪贴板');\n  };\n\n  const handleImageAdd = (file: File) => {\n    const preview = URL.createObjectURL(file);\n    setPendingImages(prev => [...prev, { file, preview }]);\n    return false; // 阻止 antd Upload 自动上传\n  };\n\n  const handleImageRemove = (index: number) => {\n    setPendingImages(prev => prev.filter((_, i) => i !== index));\n  };\n\n  // Sidebar 内容\n  const siderContent = (\n    <div className={`sider-inner ${isDark ? 'dark' : ''}`}>\n      <div className=\"sider-top\">\n        <Button\n          type=\"text\"\n          icon={<PlusOutlined />}\n          onClick={handleCreateChat}\n          className=\"new-chat-btn\"\n          title=\"新对话 (Ctrl+N)\"\n        >\n          发起新对话\n        </Button>\n\n        <div className=\"conv-list\">\n          <div className=\"conv-list-label\">对话</div>\n          {conversations.map(conv => (\n            <div\n              key={conv.id}\n              className={`conversation-item ${currentConvId === conv.id ? 'active' : ''}`}\n              onClick={() => handleSelectConversation(conv.id)}\n            >\n              {editingTitleId === conv.id ? (\n                <div className=\"title-edit\" onClick={e => e.stopPropagation()}>\n                  <Input\n                    size=\"small\"\n                    value={editingTitle}\n                    onChange={e => setEditingTitle(e.target.value)}\n                    onPressEnter={handleRenameConfirm}\n                    autoFocus\n                  />\n                  <Button type=\"text\" size=\"small\" icon={<CheckOutlined />} onClick={handleRenameConfirm} />\n                  <Button type=\"text\" size=\"small\" icon={<CloseOutlined />} onClick={() => setEditingTitleId(null)} />\n                </div>\n              ) : (\n                <>\n                  <span className=\"conv-title\">{conv.title}</span>\n                  <div className=\"conv-actions\">\n                    <Button\n                      type=\"text\" size=\"small\" icon={<EditOutlined />}\n                      className=\"action-btn\"\n                      onClick={(e) => handleRenameStart(conv, e)}\n                    />\n                    <Popconfirm\n                      title=\"删除对话\" description=\"确定要删除这个对话吗？\"\n                      onConfirm={(e) => handleDeleteConversation(conv.id, e as any)}\n                      onCancel={(e) => (e as any)?.stopPropagation()}\n                    >\n                      <Button\n                        type=\"text\" size=\"small\" icon={<DeleteOutlined />}\n                        className=\"action-btn delete-btn\"\n                        onClick={e => e.stopPropagation()}\n                      />\n                    </Popconfirm>\n                  </div>\n                </>\n              )}\n            </div>\n          ))}\n          {conversations.length === 0 && (\n            <div className=\"empty-conv\">暂无对话记录</div>\n          )}\n        </div>\n      </div>\n\n      <div className=\"sider-bottom\">\n        <Button\n          block icon={isDark ? <SunOutlined /> : <MoonOutlined />}\n          onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}\n          className=\"sider-action-btn\"\n        >\n          {isDark ? '浅色模式' : '深色模式'}\n        </Button>\n        <Button\n          block icon={<SettingOutlined />}\n          onClick={() => setShowSettings(true)}\n          className=\"sider-action-btn\"\n        >\n          设置\n        </Button>\n        <Button\n          block icon={<LogoutOutlined />}\n          onClick={logout}\n          className=\"sider-action-btn\"\n          danger\n        >\n          退出登录\n        </Button>\n      </div>\n    </div>\n  );\n\n  const lastAssistantIdx = [...messages].map(m => m.role).lastIndexOf('assistant');\n\n  return (\n    <ConfigProvider\n      theme={{\n        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,\n      }}\n    >\n      <Layout className={`chat-layout ${isDark ? 'dark' : ''}`}>\n        {/* Desktop Sider */}\n        {!isMobile && (\n          <Sider width={260} className=\"chat-sider\">\n            {siderContent}\n          </Sider>\n        )}\n\n        {/* Mobile Drawer */}\n        {isMobile && (\n          <Drawer\n            placement=\"left\"\n            open={siderVisible}\n            onClose={() => setSiderVisible(false)}\n            width={260}\n            styles={{ body: { padding: 0 } }}\n            title={null}\n          >\n            {siderContent}\n          </Drawer>\n        )}\n\n        <Layout>\n          <Content className=\"chat-content\">\n            {/* Header */}\n            <div className=\"chat-header\">\n              <div className=\"header-left\">\n                {isMobile && (\n                  <Button\n                    type=\"text\" icon={<MenuOutlined />}\n                    onClick={() => setSiderVisible(true)}\n                  />\n                )}\n                <span className=\"header-title\">Timo</span>\n                {currentConvId && (\n                  <Tooltip title={currentSystemPrompt ? '编辑 System Prompt（已激活）' : '设置 System Prompt'}>\n                    <Button\n                      type=\"text\"\n                      size=\"small\"\n                      icon={<EditOutlined />}\n                      onClick={() => setShowSystemPrompt(true)}\n                      style={{\n                        color: currentSystemPrompt ? '#f59e0b' : undefined,\n                        fontWeight: currentSystemPrompt ? 600 : undefined,\n                      }}\n                    >\n                      {currentSystemPrompt ? 'System Prompt ✦' : 'System Prompt'}\n                    </Button>\n                  </Tooltip>\n                )}\n              </div>\n              <div className=\"header-right\">\n                {models.length >= 2 && (\n                  <Tooltip title=\"多模型并行对比\">\n                    <Button\n                      type=\"text\" size=\"small\"\n                      icon={<ThunderboltOutlined />}\n                      onClick={() => setShowCompare(true)}\n                      style={{ color: '#f59e0b' }}\n                    >\n                      对比\n                    </Button>\n                  </Tooltip>\n                )}\n                <span className=\"header-username\">{currentUser?.username}</span>\n                <Avatar style={{ backgroundColor: '#2563eb' }} icon={<UserOutlined />}>\n                  {currentUser?.username?.[0]?.toUpperCase()}\n                </Avatar>\n              </div>\n            </div>\n\n            {/* Messages */}\n            <div className=\"messages-area\">\n              {messages.length === 0 ? (\n                <div className=\"empty-messages\">\n                  <div className=\"empty-icon\">✨</div>\n                  <div className=\"empty-title\">有什么我可以帮你的？</div>\n                  <div className=\"empty-hint\">按 Ctrl+N 创建新对话</div>\n                </div>\n              ) : (\n                messages.map((msg, idx) => (\n                  <div\n                    key={idx}\n                    className={`message-row ${msg.role}`}\n                  >\n                    {msg.role === 'assistant' && (\n                      <Avatar className=\"msg-avatar assistant-avatar\" size={32}>AI</Avatar>\n                    )}\n                    <div className={`message-bubble ${msg.role}`}>\n                      {msg.role === 'user' ? (\n                        <div className=\"user-content\">\n                          {hasImage(msg.content) && (\n                            <div className=\"image-preview-row\">📷 图片</div>\n                          )}\n                          {extractDisplayContent(msg.content)}\n                        </div>\n                      ) : (\n                        <MarkdownRenderer content={msg.content} isDark={isDark} />\n                      )}\n                    </div>\n                    {/* Message Actions */}\n                    <div className={`msg-actions ${msg.role}`}>\n                      <Tooltip title=\"复制\">\n                        <Button\n                          type=\"text\" size=\"small\"\n                          icon={<CopyOutlined />}\n                          onClick={() => handleCopyMessage(msg.content)}\n                          className=\"msg-action-btn\"\n                        />\n                      </Tooltip>\n                      {msg.role === 'assistant' && idx === lastAssistantIdx && !loading && (\n                        <Tooltip title=\"重新生成\">\n                          <Button\n                            type=\"text\" size=\"small\"\n                            icon={<ReloadOutlined />}\n                            onClick={handleRegenerate}\n                            className=\"msg-action-btn\"\n                          />\n                        </Tooltip>\n                      )}\n                    </div>\n                  </div>\n                ))\n              )}\n              <div ref={messagesEndRef} />\n            </div>\n\n            {/* Input Area */}\n            <div className=\"input-area\">\n              {/* Pending Images Preview */}\n              {pendingImages.length > 0 && (\n                <div className=\"pending-images\">\n                  {pendingImages.map((img, i) => (\n                    <div key={i} className=\"pending-image-item\">\n                      <img src={img.preview} alt=\"upload\" />\n                      <Button\n                        type=\"text\" size=\"small\" danger\n                        icon={<CloseOutlined />}\n                        className=\"remove-image-btn\"\n                        onClick={() => handleImageRemove(i)}\n                      />\n                    </div>\n                  ))}\n                </div>\n              )}\n\n              <div className=\"input-container\">\n                <Tooltip title=\"上传图片\">\n                  <Upload\n                    accept=\"image/*\"\n                    showUploadList={false}\n                    beforeUpload={handleImageAdd}\n                    multiple\n                  >\n                    <Button\n                      type=\"text\"\n                      icon={<PictureOutlined />}\n                      className=\"input-action-btn\"\n                      disabled={loading}\n                    />\n                  </Upload>\n                </Tooltip>\n\n                <Input\n                  ref={inputRef as any}\n                  value={inputText}\n                  onChange={e => setInputText(e.target.value)}\n                  onPressEnter={e => {\n                    if (!e.shiftKey) {\n                      e.preventDefault();\n                      sendMessage();\n                    }\n                  }}\n                  placeholder=\"问问 Timo… (Shift+Enter 换行)\"\n                  bordered={false}\n                  disabled={loading}\n                  className=\"chat-input\"\n                />\n\n                <Select\n                  value={selectedModel}\n                  onChange={setSelectedModel}\n                  options={models.map(m => ({ label: m.display_name, value: m.model_id }))}\n                  bordered={false}\n                  style={{ minWidth: 120, maxWidth: 180 }}\n                  disabled={loading}\n                  placeholder=\"选择模型\"\n                />\n\n                {loading ? (\n                  <Tooltip title=\"停止生成\">\n                    <Button\n                      danger shape=\"circle\"\n                      icon={<StopOutlined />}\n                      onClick={handleStop}\n                      className=\"send-btn\"\n                    />\n                  </Tooltip>\n                ) : (\n                  <Button\n                    type=\"primary\" shape=\"circle\"\n                    icon={<SendOutlined />}\n                    disabled={!inputText.trim() && pendingImages.length === 0}\n                    onClick={sendMessage}\n                    className=\"send-btn\"\n                  />\n                )}\n              </div>\n              <div className=\"input-hint\">Timo 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行</div>\n            </div>\n          </Content>\n        </Layout>\n\n        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />\n        <SystemPromptModal\n          open={showSystemPrompt}\n          onClose={() => setShowSystemPrompt(false)}\n          conversationId={currentConvId}\n          currentPrompt={currentSystemPrompt}\n          onSave={handleSaveSystemPrompt}\n        />\n        <ModelCompareModal\n          open={showCompare}\n          onClose={() => setShowCompare(false)}\n          models={models}\n          conversationId={currentConvId}\n          isDark={isDark}\n        />\n      </Layout>\n    </ConfigProvider>\n  );\n};\n",
+      "__content": "import { useState, useEffect, useRef, useCallback } from 'react';\nimport {\n  Layout, Button, Input, Select, Avatar, Popconfirm,\n  message as antdMessage, Drawer, Upload, Tooltip, ConfigProvider, theme as antdTheme,\n} from 'antd';\nimport {\n  PlusOutlined, DeleteOutlined, SettingOutlined, LogoutOutlined,\n  UserOutlined, SendOutlined, StopOutlined, ReloadOutlined,\n  CopyOutlined, SunOutlined, MoonOutlined, MenuOutlined,\n  PictureOutlined, EditOutlined, CheckOutlined, CloseOutlined,\n  ThunderboltOutlined, BarChartOutlined,\n} from '@ant-design/icons';\nimport { useModel, history, useIntl } from '@umijs/max';\nimport { SettingsModal } from '@/components/SettingsModal';\nimport { MarkdownRenderer } from '@/components/MarkdownRenderer';\nimport { SystemPromptModal } from '@/components/SystemPromptModal';\nimport { ModelCompareModal } from '@/components/ModelCompareModal';\nimport { AccountModal } from '@/components/AccountModal';\nimport {\n  getConversations,\n  createConversation,\n  deleteConversation,\n  getMessages,\n  getAvailableModels,\n  updateConversation,\n} from '@/services/api';\nimport './index.css';\n\nconst { Sider, Content } = Layout;\n\n// 从 localStorage 获取/保存主题\nconst getStoredTheme = (): 'light' | 'dark' => {\n  const saved = localStorage.getItem('timo-theme');\n  if (saved === 'dark' || saved === 'light') return saved;\n  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n};\n\n// 将图片文件转为 base64\nconst fileToBase64 = (file: File): Promise<string> =>\n  new Promise((resolve, reject) => {\n    const reader = new FileReader();\n    reader.readAsDataURL(file);\n    reader.onload = () => {\n      const result = reader.result as string;\n      // 只保留 base64 数据部分\n      resolve(result.split(',')[1]);\n    };\n    reader.onerror = reject;\n  });\n\n// 从存储内容中提取显示文本（去掉图片数据）\nconst extractDisplayContent = (content: string): string => {\n  return content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '[📷 图片]');\n};\n\n// 检查消息是否包含图片\nconst hasImage = (content: string): boolean => content.includes('[IMAGE_DATA:');\n\nexport default () => {\n  const { currentUser, logout, isLoggedIn } = useModel('global');\n  const intl = useIntl();\n\n  // UI 状态\n  const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme);\n  const [siderVisible, setSiderVisible] = useState(false); // mobile drawer\n  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);\n  const isDark = theme === 'dark';\n\n  // 对话状态\n  const [conversations, setConversations] = useState<API.Conversation[]>([]);\n  const [currentConvId, setCurrentConvId] = useState<string | null>(null);\n  const [messages, setMessages] = useState<API.Message[]>([]);\n  const [models, setModels] = useState<API.Model[]>([]);\n  const [selectedModel, setSelectedModel] = useState<string>('');\n\n  // 输入状态\n  const [inputText, setInputText] = useState('');\n  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);\n\n  // 流式处理状态\n  const [loading, setLoading] = useState(false);\n  const abortControllerRef = useRef<AbortController | null>(null);\n\n  // 设置弹窗\n  const [showSettings, setShowSettings] = useState(false);\n\n  // System Prompt\n  const [showSystemPrompt, setShowSystemPrompt] = useState(false);\n  const currentConv = conversations.find(c => c.id === currentConvId) ?? null;\n  const currentSystemPrompt = currentConv?.system_prompt ?? '';\n\n  // 模型对比\n  const [showCompare, setShowCompare] = useState(false);\n\n  // 用量统计 / API Keys\n  const [showAccount, setShowAccount] = useState(false);\n\n  // 对话重命名状态\n  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);\n  const [editingTitle, setEditingTitle] = useState('');\n\n  const messagesEndRef = useRef<HTMLDivElement>(null);\n  const inputRef = useRef<HTMLInputElement>(null);\n\n  // 响应式监听\n  useEffect(() => {\n    const handler = () => setIsMobile(window.innerWidth < 768);\n    window.addEventListener('resize', handler);\n    return () => window.removeEventListener('resize', handler);\n  }, []);\n\n  // 主题持久化\n  useEffect(() => {\n    document.documentElement.setAttribute('data-theme', theme);\n    localStorage.setItem('timo-theme', theme);\n  }, [theme]);\n\n  // 登录检查 & 初始化\n  useEffect(() => {\n    if (!isLoggedIn) {\n      history.push('/login');\n      return;\n    }\n    loadInitData();\n  }, [isLoggedIn]);\n\n  // 键盘快捷键\n  useEffect(() => {\n    const handler = (e: KeyboardEvent) => {\n      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {\n        e.preventDefault();\n        handleCreateChat();\n      }\n    };\n    window.addEventListener('keydown', handler);\n    return () => window.removeEventListener('keydown', handler);\n  }, [conversations]);\n\n  const loadInitData = async () => {\n    try {\n      const [convs, availableModels] = await Promise.all([\n        getConversations(),\n        getAvailableModels(),\n      ]);\n      setConversations(convs);\n      setModels(availableModels);\n      if (availableModels.length > 0) setSelectedModel(availableModels[0].model_id);\n      if (convs.length > 0) handleSelectConversation(convs[0].id);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const scrollToBottom = useCallback(() => {\n    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });\n  }, []);\n\n  useEffect(() => {\n    scrollToBottom();\n  }, [messages]);\n\n  const handleCreateChat = async () => {\n    try {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      setCurrentConvId(newConv.id);\n      setMessages([]);\n      if (isMobile) setSiderVisible(false);\n      setTimeout(() => inputRef.current?.focus(), 100);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleSelectConversation = async (id: string) => {\n    setCurrentConvId(id);\n    try {\n      const msgs = await getMessages(id);\n      setMessages(msgs);\n    } catch (error) {\n      console.error(error);\n    }\n    if (isMobile) setSiderVisible(false);\n  };\n\n  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {\n    e.stopPropagation();\n    try {\n      await deleteConversation(id);\n      const newConvs = conversations.filter(c => c.id !== id);\n      setConversations(newConvs);\n      if (currentConvId === id) {\n        if (newConvs.length > 0) {\n          handleSelectConversation(newConvs[0].id);\n        } else {\n          setCurrentConvId(null);\n          setMessages([]);\n        }\n      }\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleRenameStart = (conv: API.Conversation, e: React.MouseEvent) => {\n    e.stopPropagation();\n    setEditingTitleId(conv.id);\n    setEditingTitle(conv.title);\n  };\n\n  const handleRenameConfirm = async () => {\n    if (!editingTitleId || !editingTitle.trim()) {\n      setEditingTitleId(null);\n      return;\n    }\n    try {\n      await updateConversation(editingTitleId, editingTitle.trim());\n      setConversations(prev =>\n        prev.map(c => c.id === editingTitleId ? { ...c, title: editingTitle.trim() } : c)\n      );\n    } catch (e) {\n      console.error(e);\n    }\n    setEditingTitleId(null);\n  };\n\n  const handleSaveSystemPrompt = async (prompt: string) => {\n    if (!currentConvId) return;\n    try {\n      await updateConversation(currentConvId, undefined as any, prompt);\n      setConversations(prev =>\n        prev.map(c => c.id === currentConvId ? { ...c, system_prompt: prompt } : c)\n      );\n      antdMessage.success('System Prompt 已保存');\n    } catch (e) {\n      antdMessage.error('保存失败');\n    }\n  };\n\n\n  // 核心发送函数（兼容 send + regenerate）\n  const streamChat = async (convId: string, userMsg: API.Message | null, isRegenerate = false) => {\n    setLoading(true);\n    const controller = new AbortController();\n    abortControllerRef.current = controller;\n\n    try {\n      const token = localStorage.getItem('token');\n      const url = isRegenerate\n        ? `/api/conversations/${convId}/regenerate`\n        : `/api/conversations/${convId}/chat`;\n\n      let body: any = { model: selectedModel };\n      if (!isRegenerate && userMsg) {\n        body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim() || userMsg.content;\n        // 提取图片 base64\n        const imgMatches = [...userMsg.content.matchAll(/\\[IMAGE_DATA:([^\\]]+)\\]/g)];\n        if (imgMatches.length > 0) {\n          body.images = imgMatches.map(m => m[1]);\n          body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim();\n        }\n      }\n\n      const response = await fetch(url, {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          Authorization: `Bearer ${token}`,\n        },\n        body: JSON.stringify(body),\n        signal: controller.signal,\n      });\n\n      if (!response.ok) throw new Error('Network response was not ok');\n\n      const reader = response.body?.getReader();\n      const decoder = new TextDecoder();\n\n      // 添加空 assistant 消息占位\n      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);\n\n      while (reader) {\n        const { done, value } = await reader.read();\n        if (done) break;\n\n        const chunk = decoder.decode(value);\n        const lines = chunk.split('\\n').filter(line => line.startsWith('data: '));\n\n        for (const line of lines) {\n          const data = line.slice(6);\n          if (data === '[DONE]') continue;\n          try {\n            const parsed = JSON.parse(data);\n            setMessages(prev => {\n              const newMessages = [...prev];\n              const lastMsg = newMessages[newMessages.length - 1];\n              if (lastMsg.role === 'assistant') {\n                if (parsed.content) lastMsg.content += parsed.content;\n                if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;\n              }\n              return newMessages;\n            });\n            if (parsed.title) {\n              setConversations(prev =>\n                prev.map(c => c.id === convId ? { ...c, title: parsed.title } : c)\n              );\n            }\n          } catch (e) {\n            // ignore parse errors\n          }\n        }\n      }\n    } catch (error: any) {\n      if (error.name !== 'AbortError') {\n        antdMessage.error('发送失败，请检查网络和 API 配置');\n        console.error(error);\n      }\n    } finally {\n      setLoading(false);\n      abortControllerRef.current = null;\n    }\n  };\n\n  const sendMessage = async () => {\n    if ((!inputText.trim() && pendingImages.length === 0) || loading) return;\n\n    let convId = currentConvId;\n    if (!convId) {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      convId = newConv.id;\n      setCurrentConvId(convId);\n    }\n\n    // 构建用户消息内容（文字 + 图片标记）\n    let content = inputText;\n    if (pendingImages.length > 0) {\n      const base64s = await Promise.all(pendingImages.map(p => fileToBase64(p.file)));\n      content += '\\n' + base64s.map(b => `[IMAGE_DATA:${b}]`).join('\\n');\n    }\n\n    const userMsg: API.Message = { role: 'user', content };\n    setMessages(prev => [...prev, userMsg]);\n    setInputText('');\n    setPendingImages([]);\n\n    await streamChat(convId, userMsg, false);\n  };\n\n  const handleRegenerate = async () => {\n    if (!currentConvId || loading) return;\n    // 删除界面上最后一条 assistant 消息\n    setMessages(prev => {\n      const newMsgs = [...prev];\n      if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'assistant') {\n        newMsgs.pop();\n      }\n      return newMsgs;\n    });\n    await streamChat(currentConvId, null, true);\n  };\n\n  const handleStop = () => {\n    abortControllerRef.current?.abort();\n  };\n\n  const handleCopyMessage = (content: string) => {\n    const displayContent = extractDisplayContent(content);\n    navigator.clipboard.writeText(displayContent);\n    antdMessage.success('已复制到剪贴板');\n  };\n\n  const handleImageAdd = (file: File) => {\n    const preview = URL.createObjectURL(file);\n    setPendingImages(prev => [...prev, { file, preview }]);\n    return false; // 阻止 antd Upload 自动上传\n  };\n\n  const handleImageRemove = (index: number) => {\n    setPendingImages(prev => prev.filter((_, i) => i !== index));\n  };\n\n  // Sidebar 内容\n  const siderContent = (\n    <div className={`sider-inner ${isDark ? 'dark' : ''}`}>\n      <div className=\"sider-top\">\n        <Button\n          type=\"text\"\n          icon={<PlusOutlined />}\n          onClick={handleCreateChat}\n          className=\"new-chat-btn\"\n          title=\"新对话 (Ctrl+N)\"\n        >\n          发起新对话\n        </Button>\n\n        <div className=\"conv-list\">\n          <div className=\"conv-list-label\">对话</div>\n          {conversations.map(conv => (\n            <div\n              key={conv.id}\n              className={`conversation-item ${currentConvId === conv.id ? 'active' : ''}`}\n              onClick={() => handleSelectConversation(conv.id)}\n            >\n              {editingTitleId === conv.id ? (\n                <div className=\"title-edit\" onClick={e => e.stopPropagation()}>\n                  <Input\n                    size=\"small\"\n                    value={editingTitle}\n                    onChange={e => setEditingTitle(e.target.value)}\n                    onPressEnter={handleRenameConfirm}\n                    autoFocus\n                  />\n                  <Button type=\"text\" size=\"small\" icon={<CheckOutlined />} onClick={handleRenameConfirm} />\n                  <Button type=\"text\" size=\"small\" icon={<CloseOutlined />} onClick={() => setEditingTitleId(null)} />\n                </div>\n              ) : (\n                <>\n                  <span className=\"conv-title\">{conv.title}</span>\n                  <div className=\"conv-actions\">\n                    <Button\n                      type=\"text\" size=\"small\" icon={<EditOutlined />}\n                      className=\"action-btn\"\n                      onClick={(e) => handleRenameStart(conv, e)}\n                    />\n                    <Popconfirm\n                      title=\"删除对话\" description=\"确定要删除这个对话吗？\"\n                      onConfirm={(e) => handleDeleteConversation(conv.id, e as any)}\n                      onCancel={(e) => (e as any)?.stopPropagation()}\n                    >\n                      <Button\n                        type=\"text\" size=\"small\" icon={<DeleteOutlined />}\n                        className=\"action-btn delete-btn\"\n                        onClick={e => e.stopPropagation()}\n                      />\n                    </Popconfirm>\n                  </div>\n                </>\n              )}\n            </div>\n          ))}\n          {conversations.length === 0 && (\n            <div className=\"empty-conv\">暂无对话记录</div>\n          )}\n        </div>\n      </div>\n\n      <div className=\"sider-bottom\">\n        <Button\n          block icon={isDark ? <SunOutlined /> : <MoonOutlined />}\n          onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}\n          className=\"sider-action-btn\"\n        >\n          {isDark ? '浅色模式' : '深色模式'}\n        </Button>\n        <Button\n          block icon={<BarChartOutlined />}\n          onClick={() => setShowAccount(true)}\n          className=\"sider-action-btn\"\n        >\n          用量 & API Keys\n        </Button>\n        <Button\n          block icon={<SettingOutlined />}\n          onClick={() => setShowSettings(true)}\n          className=\"sider-action-btn\"\n        >\n          设置\n        </Button>\n        <Button\n          block icon={<LogoutOutlined />}\n          onClick={logout}\n          className=\"sider-action-btn\"\n          danger\n        >\n          退出登录\n        </Button>\n      </div>\n    </div>\n  );\n\n  const lastAssistantIdx = [...messages].map(m => m.role).lastIndexOf('assistant');\n\n  return (\n    <ConfigProvider\n      theme={{\n        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,\n      }}\n    >\n      <Layout className={`chat-layout ${isDark ? 'dark' : ''}`}>\n        {/* Desktop Sider */}\n        {!isMobile && (\n          <Sider width={260} className=\"chat-sider\">\n            {siderContent}\n          </Sider>\n        )}\n\n        {/* Mobile Drawer */}\n        {isMobile && (\n          <Drawer\n            placement=\"left\"\n            open={siderVisible}\n            onClose={() => setSiderVisible(false)}\n            width={260}\n            styles={{ body: { padding: 0 } }}\n            title={null}\n          >\n            {siderContent}\n          </Drawer>\n        )}\n\n        <Layout>\n          <Content className=\"chat-content\">\n            {/* Header */}\n            <div className=\"chat-header\">\n              <div className=\"header-left\">\n                {isMobile && (\n                  <Button\n                    type=\"text\" icon={<MenuOutlined />}\n                    onClick={() => setSiderVisible(true)}\n                  />\n                )}\n                <span className=\"header-title\">Timo</span>\n                {currentConvId && (\n                  <Tooltip title={currentSystemPrompt ? '编辑 System Prompt（已激活）' : '设置 System Prompt'}>\n                    <Button\n                      type=\"text\"\n                      size=\"small\"\n                      icon={<EditOutlined />}\n                      onClick={() => setShowSystemPrompt(true)}\n                      style={{\n                        color: currentSystemPrompt ? '#f59e0b' : undefined,\n                        fontWeight: currentSystemPrompt ? 600 : undefined,\n                      }}\n                    >\n                      {currentSystemPrompt ? 'System Prompt ✦' : 'System Prompt'}\n                    </Button>\n                  </Tooltip>\n                )}\n              </div>\n              <div className=\"header-right\">\n                {models.length >= 2 && (\n                  <Tooltip title=\"多模型并行对比\">\n                    <Button\n                      type=\"text\" size=\"small\"\n                      icon={<ThunderboltOutlined />}\n                      onClick={() => setShowCompare(true)}\n                      style={{ color: '#f59e0b' }}\n                    >\n                      对比\n                    </Button>\n                  </Tooltip>\n                )}\n                <span className=\"header-username\">{currentUser?.username}</span>\n                <Avatar style={{ backgroundColor: '#2563eb' }} icon={<UserOutlined />}>\n                  {currentUser?.username?.[0]?.toUpperCase()}\n                </Avatar>\n              </div>\n            </div>\n\n            {/* Messages */}\n            <div className=\"messages-area\">\n              {messages.length === 0 ? (\n                <div className=\"empty-messages\">\n                  <div className=\"empty-icon\">✨</div>\n                  <div className=\"empty-title\">有什么我可以帮你的？</div>\n                  <div className=\"empty-hint\">按 Ctrl+N 创建新对话</div>\n                </div>\n              ) : (\n                messages.map((msg, idx) => (\n                  <div\n                    key={idx}\n                    className={`message-row ${msg.role}`}\n                  >\n                    {msg.role === 'assistant' && (\n                      <Avatar className=\"msg-avatar assistant-avatar\" size={32}>AI</Avatar>\n                    )}\n                    <div className={`message-bubble ${msg.role}`}>\n                      {msg.role === 'user' ? (\n                        <div className=\"user-content\">\n                          {hasImage(msg.content) && (\n                            <div className=\"image-preview-row\">📷 图片</div>\n                          )}\n                          {extractDisplayContent(msg.content)}\n                        </div>\n                      ) : (\n                        <MarkdownRenderer content={msg.content} isDark={isDark} />\n                      )}\n                    </div>\n                    {/* Message Actions */}\n                    <div className={`msg-actions ${msg.role}`}>\n                      <Tooltip title=\"复制\">\n                        <Button\n                          type=\"text\" size=\"small\"\n                          icon={<CopyOutlined />}\n                          onClick={() => handleCopyMessage(msg.content)}\n                          className=\"msg-action-btn\"\n                        />\n                      </Tooltip>\n                      {msg.role === 'assistant' && idx === lastAssistantIdx && !loading && (\n                        <Tooltip title=\"重新生成\">\n                          <Button\n                            type=\"text\" size=\"small\"\n                            icon={<ReloadOutlined />}\n                            onClick={handleRegenerate}\n                            className=\"msg-action-btn\"\n                          />\n                        </Tooltip>\n                      )}\n                    </div>\n                  </div>\n                ))\n              )}\n              <div ref={messagesEndRef} />\n            </div>\n\n            {/* Input Area */}\n            <div className=\"input-area\">\n              {/* Pending Images Preview */}\n              {pendingImages.length > 0 && (\n                <div className=\"pending-images\">\n                  {pendingImages.map((img, i) => (\n                    <div key={i} className=\"pending-image-item\">\n                      <img src={img.preview} alt=\"upload\" />\n                      <Button\n                        type=\"text\" size=\"small\" danger\n                        icon={<CloseOutlined />}\n                        className=\"remove-image-btn\"\n                        onClick={() => handleImageRemove(i)}\n                      />\n                    </div>\n                  ))}\n                </div>\n              )}\n\n              <div className=\"input-container\">\n                <Tooltip title=\"上传图片\">\n                  <Upload\n                    accept=\"image/*\"\n                    showUploadList={false}\n                    beforeUpload={handleImageAdd}\n                    multiple\n                  >\n                    <Button\n                      type=\"text\"\n                      icon={<PictureOutlined />}\n                      className=\"input-action-btn\"\n                      disabled={loading}\n                    />\n                  </Upload>\n                </Tooltip>\n\n                <Input\n                  ref={inputRef as any}\n                  value={inputText}\n                  onChange={e => setInputText(e.target.value)}\n                  onPressEnter={e => {\n                    if (!e.shiftKey) {\n                      e.preventDefault();\n                      sendMessage();\n                    }\n                  }}\n                  placeholder=\"问问 Timo… (Shift+Enter 换行)\"\n                  bordered={false}\n                  disabled={loading}\n                  className=\"chat-input\"\n                />\n\n                <Select\n                  value={selectedModel}\n                  onChange={setSelectedModel}\n                  options={models.map(m => ({ label: m.display_name, value: m.model_id }))}\n                  bordered={false}\n                  style={{ minWidth: 120, maxWidth: 180 }}\n                  disabled={loading}\n                  placeholder=\"选择模型\"\n                />\n\n                {loading ? (\n                  <Tooltip title=\"停止生成\">\n                    <Button\n                      danger shape=\"circle\"\n                      icon={<StopOutlined />}\n                      onClick={handleStop}\n                      className=\"send-btn\"\n                    />\n                  </Tooltip>\n                ) : (\n                  <Button\n                    type=\"primary\" shape=\"circle\"\n                    icon={<SendOutlined />}\n                    disabled={!inputText.trim() && pendingImages.length === 0}\n                    onClick={sendMessage}\n                    className=\"send-btn\"\n                  />\n                )}\n              </div>\n              <div className=\"input-hint\">Timo 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行</div>\n            </div>\n          </Content>\n        </Layout>\n\n        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />\n        <SystemPromptModal\n          open={showSystemPrompt}\n          onClose={() => setShowSystemPrompt(false)}\n          conversationId={currentConvId}\n          currentPrompt={currentSystemPrompt}\n          onSave={handleSaveSystemPrompt}\n        />\n        <ModelCompareModal\n          open={showCompare}\n          onClose={() => setShowCompare(false)}\n          models={models}\n          conversationId={currentConvId}\n          isDark={isDark}\n        />\n        <AccountModal\n          open={showAccount}\n          onClose={() => setShowAccount(false)}\n          isDark={isDark}\n        />\n      </Layout>\n    </ConfigProvider>\n  );\n};\n",
       "__isJSFile": true,
       "__absFile": "C:/Users/ZTS/Desktop/dev/timo/src/pages/Chat/index.tsx"
     },
@@ -5164,7 +4871,7 @@
             "format": "esm"
           },
           "src/.umi/core/defineApp.ts": {
-            "bytes": 1142,
+            "bytes": 1270,
             "imports": [],
             "format": "esm"
           },
@@ -5200,29 +4907,8 @@
             ],
             "format": "esm"
           },
-          "src/.umi/plugin-model/index.tsx": {
-            "bytes": 4939,
-            "imports": [
-              {
-                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/fast-deep-equal/index.js",
-                "kind": "import-statement",
-                "external": true
-              },
-              {
-                "path": "react",
-                "kind": "import-statement",
-                "external": true
-              },
-              {
-                "path": "react/jsx-runtime",
-                "kind": "import-statement",
-                "external": true
-              }
-            ],
-            "format": "esm"
-          },
           "src/services/api.ts": {
-            "bytes": 3182,
+            "bytes": 3593,
             "imports": [
               {
                 "path": "src/.umi/exports.ts",
@@ -5300,6 +4986,27 @@
             ],
             "format": "esm"
           },
+          "src/.umi/plugin-model/index.tsx": {
+            "bytes": 4939,
+            "imports": [
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/fast-deep-equal/index.js",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              }
+            ],
+            "format": "esm"
+          },
           "src/.umi/plugin-initialState/Provider.tsx": {
             "bytes": 594,
             "imports": [
@@ -5359,6 +5066,58 @@
                 "path": "src/.umi/plugin-layout/icons.tsx",
                 "kind": "import-statement",
                 "original": "./icons"
+              }
+            ],
+            "format": "esm"
+          },
+          "src/.umi/plugin-locale/locale.tsx": {
+            "bytes": 1725,
+            "imports": [
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/moment",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/moment/locale/zh-cn",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/.umi/plugin-locale/localeExports.ts",
+                "kind": "import-statement",
+                "original": "./localeExports"
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              }
+            ],
+            "format": "esm"
+          },
+          "src/.umi/plugin-locale/runtime.tsx": {
+            "bytes": 296,
+            "imports": [
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/.umi/plugin-locale/locale.tsx",
+                "kind": "import-statement",
+                "original": "./locale"
               }
             ],
             "format": "esm"
@@ -5438,7 +5197,7 @@
             "format": "esm"
           },
           "src/.umi/core/plugin.ts": {
-            "bytes": 2341,
+            "bytes": 2609,
             "imports": [
               {
                 "path": "src/app.tsx",
@@ -5466,6 +5225,11 @@
                 "original": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-layout/runtime.tsx"
               },
               {
+                "path": "src/.umi/plugin-locale/runtime.tsx",
+                "kind": "import-statement",
+                "original": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-locale/runtime.tsx"
+              },
+              {
                 "path": "src/.umi/plugin-model/runtime.tsx",
                 "kind": "import-statement",
                 "original": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-model/runtime.tsx"
@@ -5474,6 +5238,119 @@
                 "path": "src/.umi/exports.ts",
                 "kind": "import-statement",
                 "original": "umi"
+              }
+            ],
+            "format": "esm"
+          },
+          "src/locales/en-US.ts": {
+            "bytes": 472,
+            "imports": [],
+            "format": "esm"
+          },
+          "src/locales/zh-CN.ts": {
+            "bytes": 500,
+            "imports": [],
+            "format": "esm"
+          },
+          "src/.umi/plugin-locale/localeExports.ts": {
+            "bytes": 8158,
+            "imports": [
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/plugins/node_modules/react-intl",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/.umi/core/plugin.ts",
+                "kind": "import-statement",
+                "original": "../core/plugin"
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/event-emitter",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/warning",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/plugins/node_modules/react-intl",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd/es/locale/en_US",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/locales/en-US.ts",
+                "kind": "import-statement",
+                "original": "C:/Users/ZTS/Desktop/dev/timo/src/locales/en-US.ts"
+              },
+              {
+                "path": "antd/es/locale/zh_CN",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/locales/zh-CN.ts",
+                "kind": "import-statement",
+                "original": "C:/Users/ZTS/Desktop/dev/timo/src/locales/zh-CN.ts"
+              }
+            ],
+            "format": "esm"
+          },
+          "src/.umi/plugin-locale/SelectLang.tsx": {
+            "bytes": 10358,
+            "imports": [
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd/es/menu",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd/es/dropdown",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/.umi/plugin-locale/localeExports.ts",
+                "kind": "import-statement",
+                "original": "./localeExports"
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              }
+            ],
+            "format": "esm"
+          },
+          "src/.umi/plugin-locale/index.ts": {
+            "bytes": 519,
+            "imports": [
+              {
+                "path": "src/.umi/plugin-locale/localeExports.ts",
+                "kind": "import-statement",
+                "original": "./localeExports"
+              },
+              {
+                "path": "src/.umi/plugin-locale/SelectLang.tsx",
+                "kind": "import-statement",
+                "original": "./SelectLang"
               }
             ],
             "format": "esm"
@@ -5588,7 +5465,7 @@
             "format": "esm"
           },
           "src/.umi/exports.ts": {
-            "bytes": 1951,
+            "bytes": 2384,
             "imports": [
               {
                 "path": "src/.umi/core/defineApp.ts",
@@ -5599,6 +5476,11 @@
                 "path": "src/.umi/plugin-access/index.tsx",
                 "kind": "import-statement",
                 "original": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-access"
+              },
+              {
+                "path": "src/.umi/plugin-locale/index.ts",
+                "kind": "import-statement",
+                "original": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-locale"
               },
               {
                 "path": "src/.umi/plugin-model/index.tsx",
@@ -5757,7 +5639,7 @@
             "format": "esm"
           },
           "src/components/MarkdownRenderer.tsx": {
-            "bytes": 3979,
+            "bytes": 5466,
             "imports": [
               {
                 "path": "react-markdown",
@@ -5884,8 +5766,39 @@
             ],
             "format": "esm"
           },
+          "src/components/AccountModal.tsx": {
+            "bytes": 25755,
+            "imports": [
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "@ant-design/icons",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/.umi/exports.ts",
+                "kind": "import-statement",
+                "original": "@umijs/max"
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              }
+            ],
+            "format": "esm"
+          },
           "src/pages/Chat/index.tsx": {
-            "bytes": 24612,
+            "bytes": 25348,
             "imports": [
               {
                 "path": "react",
@@ -5926,6 +5839,11 @@
                 "path": "src/components/ModelCompareModal.tsx",
                 "kind": "import-statement",
                 "original": "@/components/ModelCompareModal"
+              },
+              {
+                "path": "src/components/AccountModal.tsx",
+                "kind": "import-statement",
+                "original": "@/components/AccountModal"
               },
               {
                 "path": "src/services/api.ts",
@@ -5988,7 +5906,7 @@
             "format": "esm"
           },
           "src/.umi/plugin-layout/rightRender.tsx": {
-            "bytes": 3043,
+            "bytes": 3082,
             "imports": [
               {
                 "path": "react",
@@ -6006,6 +5924,11 @@
                 "external": true
               },
               {
+                "path": "src/.umi/plugin-locale/index.ts",
+                "kind": "import-statement",
+                "original": "@@/plugin-locale"
+              },
+              {
                 "path": "react/jsx-runtime",
                 "kind": "import-statement",
                 "external": true
@@ -6014,7 +5937,7 @@
             "format": "esm"
           },
           "src/.umi/plugin-layout/Layout.tsx": {
-            "bytes": 5657,
+            "bytes": 5704,
             "imports": [
               {
                 "path": "src/.umi/exports.ts",
@@ -6060,6 +5983,11 @@
                 "path": "src/.umi/plugin-access/index.tsx",
                 "kind": "import-statement",
                 "original": "@@/plugin-access"
+              },
+              {
+                "path": "src/.umi/plugin-locale/index.ts",
+                "kind": "import-statement",
+                "original": "@@/plugin-locale"
               },
               {
                 "path": "react/jsx-runtime",
@@ -6171,6 +6099,21 @@
                 "external": true
               },
               {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/renderer-react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
                 "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/fast-deep-equal/index.js",
                 "kind": "import-statement",
                 "external": true
@@ -6191,21 +6134,6 @@
                 "external": true
               },
               {
-                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/renderer-react",
-                "kind": "import-statement",
-                "external": true
-              },
-              {
-                "path": "react/jsx-runtime",
-                "kind": "import-statement",
-                "external": true
-              },
-              {
-                "path": "react",
-                "kind": "import-statement",
-                "external": true
-              },
-              {
                 "path": "react/jsx-runtime",
                 "kind": "import-statement",
                 "external": true
@@ -6226,12 +6154,87 @@
                 "external": true
               },
               {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/moment",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/moment/locale/zh-cn",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
                 "path": "react",
                 "kind": "import-statement",
                 "external": true
               },
               {
                 "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/plugins/node_modules/react-intl",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/event-emitter",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/warning",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/plugins/node_modules/react-intl",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd/es/locale/en_US",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd/es/locale/zh_CN",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
                 "kind": "import-statement",
                 "external": true
               },
@@ -6462,6 +6465,26 @@
               },
               {
                 "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "@ant-design/icons",
                 "kind": "import-statement",
                 "external": true
               },
@@ -7663,9 +7686,6 @@
               "src/.umi/plugin-access/index.tsx": {
                 "bytesInOutput": 2428
               },
-              "src/.umi/plugin-model/index.tsx": {
-                "bytesInOutput": 3175
-              },
               "src/services/api.ts": {
                 "bytesInOutput": 2244
               },
@@ -7679,7 +7699,10 @@
                 "bytesInOutput": 468
               },
               "src/.umi/plugin-access/runtime.tsx": {
-                "bytesInOutput": 519
+                "bytesInOutput": 517
+              },
+              "src/.umi/plugin-model/index.tsx": {
+                "bytesInOutput": 3176
               },
               "src/.umi/plugin-initialState/Provider.tsx": {
                 "bytesInOutput": 667
@@ -7693,6 +7716,12 @@
               "src/.umi/plugin-layout/runtime.tsx": {
                 "bytesInOutput": 813
               },
+              "src/.umi/plugin-locale/locale.tsx": {
+                "bytesInOutput": 1591
+              },
+              "src/.umi/plugin-locale/runtime.tsx": {
+                "bytesInOutput": 342
+              },
               "src/.umi/plugin-initialState/@@initialState.ts": {
                 "bytesInOutput": 1311
               },
@@ -7703,10 +7732,25 @@
                 "bytesInOutput": 307
               },
               "src/.umi/plugin-model/runtime.tsx": {
-                "bytesInOutput": 776
+                "bytesInOutput": 777
               },
               "src/.umi/core/plugin.ts": {
-                "bytesInOutput": 1773
+                "bytesInOutput": 1944
+              },
+              "src/locales/en-US.ts": {
+                "bytesInOutput": 590
+              },
+              "src/locales/zh-CN.ts": {
+                "bytesInOutput": 723
+              },
+              "src/.umi/plugin-locale/localeExports.ts": {
+                "bytesInOutput": 6068
+              },
+              "src/.umi/plugin-locale/SelectLang.tsx": {
+                "bytesInOutput": 12651
+              },
+              "src/.umi/plugin-locale/index.ts": {
+                "bytesInOutput": 148
               },
               "src/.umi/plugin-request/request.ts": {
                 "bytesInOutput": 5207
@@ -7721,22 +7765,22 @@
                 "bytesInOutput": 1530
               },
               "src/.umi/testBrowser.tsx": {
-                "bytesInOutput": 2378
+                "bytesInOutput": 2380
               },
               "src/.umi/exports.ts": {
-                "bytesInOutput": 3562
+                "bytesInOutput": 4497
               },
               "src/.umi/core/EmptyRoute.tsx": {
-                "bytesInOutput": 381
+                "bytesInOutput": 383
               },
               "src/pages/Login/index.tsx": {
-                "bytesInOutput": 4552
+                "bytesInOutput": 4561
               },
               "src/components/SettingsModal.tsx": {
                 "bytesInOutput": 9324
               },
               "src/components/MarkdownRenderer.tsx": {
-                "bytesInOutput": 3421
+                "bytesInOutput": 4562
               },
               "src/components/SystemPromptModal.tsx": {
                 "bytesInOutput": 10920
@@ -7744,20 +7788,23 @@
               "src/components/ModelCompareModal.tsx": {
                 "bytesInOutput": 10340
               },
+              "src/components/AccountModal.tsx": {
+                "bytesInOutput": 25238
+              },
               "src/pages/Chat/index.tsx": {
-                "bytesInOutput": 28727
+                "bytesInOutput": 29675
               },
               "src/.umi/plugin-layout/Logo.tsx": {
-                "bytesInOutput": 5504
+                "bytesInOutput": 5514
               },
               "src/.umi/plugin-layout/Exception.tsx": {
                 "bytesInOutput": 1117
               },
               "src/.umi/plugin-layout/rightRender.tsx": {
-                "bytesInOutput": 2865
+                "bytesInOutput": 2962
               },
               "src/.umi/plugin-layout/Layout.tsx": {
-                "bytesInOutput": 5786
+                "bytesInOutput": 5836
               },
               "src/.umi/core/route.tsx": {
                 "bytesInOutput": 942
@@ -7769,7 +7816,7 @@
                 "bytesInOutput": 2061
               }
             },
-            "bytes": 141842
+            "bytes": 192843
           }
         }
       }
@@ -7853,9 +7900,9 @@
           "type": "ImportDeclaration"
         },
         {
-          "end": 569,
+          "end": 568,
           "importKind": "type",
-          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-request/runtimeConfig.d",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-locale/runtimeConfig.d",
           "specifiers": [
             {
               "imported": "IRuntimeConfig",
@@ -7864,6 +7911,20 @@
             }
           ],
           "start": 451,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 687,
+          "importKind": "type",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-request/runtimeConfig.d",
+          "specifiers": [
+            {
+              "imported": "IRuntimeConfig",
+              "local": "Plugin4",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 569,
           "type": "ImportDeclaration"
         }
       ],
@@ -8018,9 +8079,9 @@
           "type": "ImportDeclaration"
         },
         {
-          "end": 591,
+          "end": 592,
           "importKind": "value",
-          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-model/runtime.tsx",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-locale/runtime.tsx",
           "specifiers": [
             {
               "local": "Plugin_5",
@@ -8031,7 +8092,20 @@
           "type": "ImportDeclaration"
         },
         {
-          "end": 628,
+          "end": 685,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-model/runtime.tsx",
+          "specifiers": [
+            {
+              "local": "Plugin_6",
+              "type": "ImportNamespaceSpecifier"
+            }
+          ],
+          "start": 593,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 722,
           "importKind": "value",
           "source": "umi",
           "specifiers": [
@@ -8041,7 +8115,7 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 592,
+          "start": 686,
           "type": "ImportDeclaration"
         }
       ],
@@ -9845,7 +9919,131 @@
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 418,
+          "end": 761,
+          "exportKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-locale",
+          "specifiers": [
+            {
+              "exported": "addLocale",
+              "local": "addLocale",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "setLocale",
+              "local": "setLocale",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "getLocale",
+              "local": "getLocale",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "getIntl",
+              "local": "getIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "useIntl",
+              "local": "useIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "injectIntl",
+              "local": "injectIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "formatMessage",
+              "local": "formatMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedMessage",
+              "local": "FormattedMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "getAllLocales",
+              "local": "getAllLocales",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDate",
+              "local": "FormattedDate",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDateParts",
+              "local": "FormattedDateParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDisplayName",
+              "local": "FormattedDisplayName",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedHTMLMessage",
+              "local": "FormattedHTMLMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedList",
+              "local": "FormattedList",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedNumber",
+              "local": "FormattedNumber",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedNumberParts",
+              "local": "FormattedNumberParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedPlural",
+              "local": "FormattedPlural",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedRelativeTime",
+              "local": "FormattedRelativeTime",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedTime",
+              "local": "FormattedTime",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedTimeParts",
+              "local": "FormattedTimeParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "IntlProvider",
+              "local": "IntlProvider",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "RawIntlProvider",
+              "local": "RawIntlProvider",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "SelectLang",
+              "local": "SelectLang",
+              "type": "ExportSpecifier"
+            }
+          ],
+          "start": 329,
+          "type": "ExportNamedDeclaration"
+        },
+        {
+          "end": 851,
           "exportKind": "value",
           "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-model",
           "specifiers": [
@@ -9860,11 +10058,11 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 329,
+          "start": 762,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 551,
+          "end": 984,
           "exportKind": "value",
           "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-request",
           "specifiers": [
@@ -9889,35 +10087,35 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 419,
+          "start": 852,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 651,
+          "end": 1084,
           "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-access/types.d",
-          "start": 574,
+          "start": 1007,
           "type": "ExportAllDeclaration"
         },
         {
-          "end": 727,
+          "end": 1160,
           "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-antd/types.d",
-          "start": 652,
+          "start": 1085,
           "type": "ExportAllDeclaration"
         },
         {
-          "end": 805,
+          "end": 1238,
           "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-layout/types.d",
-          "start": 728,
+          "start": 1161,
           "type": "ExportAllDeclaration"
         },
         {
-          "end": 884,
+          "end": 1317,
           "source": "C:/Users/ZTS/Desktop/dev/timo/src/.umi/plugin-request/types.d",
-          "start": 806,
+          "start": 1239,
           "type": "ExportAllDeclaration"
         },
         {
-          "end": 1467,
+          "end": 1900,
           "exportKind": "value",
           "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/renderer-react",
           "specifiers": [
@@ -10092,11 +10290,11 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 906,
+          "start": 1339,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 1577,
+          "end": 2010,
           "exportKind": "type",
           "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/renderer-react",
           "specifiers": [
@@ -10111,11 +10309,11 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 1468,
+          "start": 1901,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 1727,
+          "end": 2160,
           "exportKind": "value",
           "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/umi/client/client/plugin.js",
           "specifiers": [
@@ -10130,11 +10328,11 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 1606,
+          "start": 2039,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 1784,
+          "end": 2217,
           "exportKind": "value",
           "source": "./core/history",
           "specifiers": [
@@ -10149,11 +10347,11 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 1728,
+          "start": 2161,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 1828,
+          "end": 2261,
           "exportKind": "value",
           "source": "./core/terminal",
           "specifiers": [
@@ -10163,11 +10361,11 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 1785,
+          "start": 2218,
           "type": "ExportNamedDeclaration"
         },
         {
-          "end": 1951,
+          "end": 2384,
           "exportKind": "value",
           "source": "./testBrowser",
           "specifiers": [
@@ -10177,7 +10375,7 @@
               "type": "ExportSpecifier"
             }
           ],
-          "start": 1907,
+          "start": 2340,
           "type": "ExportNamedDeclaration"
         }
       ],
@@ -10575,6 +10773,20 @@
           ],
           "start": 617,
           "type": "ImportDeclaration"
+        },
+        {
+          "end": 718,
+          "importKind": "value",
+          "source": "@@/plugin-locale",
+          "specifiers": [
+            {
+              "imported": "useIntl",
+              "local": "useIntl",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 675,
+          "type": "ImportDeclaration"
         }
       ],
       "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-layout\\Logo.tsx": [
@@ -10654,6 +10866,20 @@
           ],
           "start": 182,
           "type": "ImportDeclaration"
+        },
+        {
+          "end": 351,
+          "importKind": "value",
+          "source": "@@/plugin-locale",
+          "specifiers": [
+            {
+              "imported": "SelectLang",
+              "local": "SelectLang",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 305,
+          "type": "ImportDeclaration"
         }
       ],
       "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-layout\\runtime.tsx": [
@@ -10681,6 +10907,587 @@
             }
           ],
           "start": 120,
+          "type": "ImportDeclaration"
+        }
+      ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-locale\\SelectLang.tsx": [
+        {
+          "end": 132,
+          "importKind": "value",
+          "source": "react",
+          "specifiers": [
+            {
+              "local": "React",
+              "type": "ImportDefaultSpecifier"
+            },
+            {
+              "imported": "useState",
+              "local": "useState",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 93,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 180,
+          "importKind": "value",
+          "source": "antd",
+          "specifiers": [
+            {
+              "imported": "Menu",
+              "local": "Menu",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "version",
+              "local": "version",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Dropdown",
+              "local": "Dropdown",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 133,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 223,
+          "importKind": "value",
+          "source": "antd/es/menu",
+          "specifiers": [
+            {
+              "imported": "ClickParam",
+              "local": "ClickParam",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 181,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 273,
+          "importKind": "value",
+          "source": "antd/es/dropdown",
+          "specifiers": [
+            {
+              "imported": "DropDownProps",
+              "local": "DropDownProps",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 224,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 344,
+          "importKind": "value",
+          "source": "./localeExports",
+          "specifiers": [
+            {
+              "imported": "getLocale",
+              "local": "getLocale",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "getAllLocales",
+              "local": "getAllLocales",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "setLocale",
+              "local": "setLocale",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 274,
+          "type": "ImportDeclaration"
+        }
+      ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-locale\\index.ts": [
+        {
+          "end": 476,
+          "exportKind": "value",
+          "source": "./localeExports",
+          "specifiers": [
+            {
+              "exported": "addLocale",
+              "local": "addLocale",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "setLocale",
+              "local": "setLocale",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "getLocale",
+              "local": "getLocale",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "getIntl",
+              "local": "getIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "useIntl",
+              "local": "useIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "injectIntl",
+              "local": "injectIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "formatMessage",
+              "local": "formatMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedMessage",
+              "local": "FormattedMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "getAllLocales",
+              "local": "getAllLocales",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDate",
+              "local": "FormattedDate",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDateParts",
+              "local": "FormattedDateParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDisplayName",
+              "local": "FormattedDisplayName",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedHTMLMessage",
+              "local": "FormattedHTMLMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedList",
+              "local": "FormattedList",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedNumber",
+              "local": "FormattedNumber",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedNumberParts",
+              "local": "FormattedNumberParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedPlural",
+              "local": "FormattedPlural",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedRelativeTime",
+              "local": "FormattedRelativeTime",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedTime",
+              "local": "FormattedTime",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedTimeParts",
+              "local": "FormattedTimeParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "IntlProvider",
+              "local": "IntlProvider",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "RawIntlProvider",
+              "local": "RawIntlProvider",
+              "type": "ExportSpecifier"
+            }
+          ],
+          "start": 93,
+          "type": "ExportNamedDeclaration"
+        },
+        {
+          "end": 519,
+          "exportKind": "value",
+          "source": "./SelectLang",
+          "specifiers": [
+            {
+              "exported": "SelectLang",
+              "local": "SelectLang",
+              "type": "ExportSpecifier"
+            }
+          ],
+          "start": 477,
+          "type": "ExportNamedDeclaration"
+        }
+      ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-locale\\locale.tsx": [
+        {
+          "end": 119,
+          "importKind": "value",
+          "source": "react",
+          "specifiers": [
+            {
+              "local": "React",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 93,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 158,
+          "importKind": "value",
+          "source": "antd",
+          "specifiers": [
+            {
+              "imported": "ConfigProvider",
+              "local": "ConfigProvider",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 120,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 231,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/moment",
+          "specifiers": [
+            {
+              "local": "moment",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 160,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 304,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/moment/locale/zh-cn",
+          "specifiers": [],
+          "start": 232,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 437,
+          "importKind": "value",
+          "source": "./localeExports",
+          "specifiers": [
+            {
+              "imported": "RawIntlProvider",
+              "local": "RawIntlProvider",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "getLocale",
+              "local": "getLocale",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "getDirection",
+              "local": "getDirection",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "setIntl",
+              "local": "setIntl",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "getIntl",
+              "local": "getIntl",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "localeInfo",
+              "local": "localeInfo",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "event",
+              "local": "event",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "LANG_CHANGE_EVENT",
+              "local": "LANG_CHANGE_EVENT",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 305,
+          "type": "ImportDeclaration"
+        }
+      ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-locale\\localeExports.ts": [
+        {
+          "end": 241,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/plugins/node_modules/react-intl",
+          "specifiers": [
+            {
+              "imported": "createIntl",
+              "local": "createIntl",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "IntlShape",
+              "local": "IntlShape",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "MessageDescriptor",
+              "local": "MessageDescriptor",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 93,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 292,
+          "importKind": "value",
+          "source": "../core/plugin",
+          "specifiers": [
+            {
+              "imported": "getPluginManager",
+              "local": "getPluginManager",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 242,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 377,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/event-emitter",
+          "specifiers": [
+            {
+              "local": "EventEmitter",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 293,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 465,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/warning",
+          "specifiers": [
+            {
+              "local": "warning",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 392,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 955,
+          "exportKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/node_modules/@umijs/plugins/node_modules/react-intl",
+          "specifiers": [
+            {
+              "exported": "FormattedDate",
+              "local": "FormattedDate",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDateParts",
+              "local": "FormattedDateParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedDisplayName",
+              "local": "FormattedDisplayName",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedHTMLMessage",
+              "local": "FormattedHTMLMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedList",
+              "local": "FormattedList",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedMessage",
+              "local": "FormattedMessage",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedNumber",
+              "local": "FormattedNumber",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedNumberParts",
+              "local": "FormattedNumberParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedPlural",
+              "local": "FormattedPlural",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedRelativeTime",
+              "local": "FormattedRelativeTime",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedTime",
+              "local": "FormattedTime",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "FormattedTimeParts",
+              "local": "FormattedTimeParts",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "IntlContext",
+              "local": "IntlContext",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "IntlProvider",
+              "local": "IntlProvider",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "RawIntlProvider",
+              "local": "RawIntlProvider",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "createIntlCache",
+              "local": "createIntlCache",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "defineMessages",
+              "local": "defineMessages",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "injectIntl",
+              "local": "injectIntl",
+              "type": "ExportSpecifier"
+            },
+            {
+              "exported": "useIntl",
+              "local": "useIntl",
+              "type": "ExportSpecifier"
+            }
+          ],
+          "start": 493,
+          "type": "ExportNamedDeclaration"
+        },
+        {
+          "end": 1166,
+          "importKind": "value",
+          "source": "antd/es/locale/en_US",
+          "specifiers": [
+            {
+              "local": "enUS0",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 1125,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 1243,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/locales/en-US.ts",
+          "specifiers": [
+            {
+              "local": "lang_enUS0",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 1167,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 1285,
+          "importKind": "value",
+          "source": "antd/es/locale/zh_CN",
+          "specifiers": [
+            {
+              "local": "zhCN0",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 1244,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 1362,
+          "importKind": "value",
+          "source": "C:/Users/ZTS/Desktop/dev/timo/src/locales/zh-CN.ts",
+          "specifiers": [
+            {
+              "local": "lang_zhCN0",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 1286,
+          "type": "ImportDeclaration"
+        }
+      ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\.umi\\plugin-locale\\runtime.tsx": [
+        {
+          "end": 119,
+          "importKind": "value",
+          "source": "react",
+          "specifiers": [
+            {
+              "local": "React",
+              "type": "ImportDefaultSpecifier"
+            }
+          ],
+          "start": 93,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 178,
+          "importKind": "value",
+          "source": "./locale",
+          "specifiers": [
+            {
+              "imported": "_LocaleContainer",
+              "local": "_LocaleContainer",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 134,
           "type": "ImportDeclaration"
         }
       ],
@@ -11296,6 +12103,199 @@
           "type": "ImportDeclaration"
         }
       ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\components\\AccountModal.tsx": [
+        {
+          "end": 45,
+          "importKind": "value",
+          "source": "react",
+          "specifiers": [
+            {
+              "imported": "useState",
+              "local": "useState",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "useEffect",
+              "local": "useEffect",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 1,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 214,
+          "importKind": "value",
+          "source": "antd",
+          "specifiers": [
+            {
+              "imported": "Modal",
+              "local": "Modal",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Tabs",
+              "local": "Tabs",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Row",
+              "local": "Row",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Col",
+              "local": "Col",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Table",
+              "local": "Table",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Button",
+              "local": "Button",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Input",
+              "local": "Input",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Form",
+              "local": "Form",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "message",
+              "local": "antdMessage",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Tag",
+              "local": "Tag",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Popconfirm",
+              "local": "Popconfirm",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Typography",
+              "local": "Typography",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Alert",
+              "local": "Alert",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Space",
+              "local": "Space",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Select",
+              "local": "Select",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Empty",
+              "local": "Empty",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 47,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 449,
+          "importKind": "value",
+          "source": "@ant-design/icons",
+          "specifiers": [
+            {
+              "imported": "BarChartOutlined",
+              "local": "BarChartOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "KeyOutlined",
+              "local": "KeyOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "PlusOutlined",
+              "local": "PlusOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "CopyOutlined",
+              "local": "CopyOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "DeleteOutlined",
+              "local": "DeleteOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "StopOutlined",
+              "local": "StopOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "CheckCircleOutlined",
+              "local": "CheckCircleOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "CloseCircleOutlined",
+              "local": "CloseCircleOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "TeamOutlined",
+              "local": "TeamOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "NotificationOutlined",
+              "local": "NotificationOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "LinkOutlined",
+              "local": "LinkOutlined",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 216,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 498,
+          "importKind": "value",
+          "source": "@umijs/max",
+          "specifiers": [
+            {
+              "imported": "request",
+              "local": "request",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "useModel",
+              "local": "useModel",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 451,
+          "type": "ImportDeclaration"
+        }
+      ],
       "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\components\\MarkdownRenderer.tsx": [
         {
           "end": 44,
@@ -11419,7 +12419,7 @@
           "type": "ImportDeclaration"
         },
         {
-          "end": 522,
+          "end": 549,
           "importKind": "value",
           "source": "@ant-design/icons",
           "specifiers": [
@@ -11432,13 +12432,23 @@
               "imported": "CheckOutlined",
               "local": "CheckOutlined",
               "type": "ImportSpecifier"
+            },
+            {
+              "imported": "EyeOutlined",
+              "local": "EyeOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "CodeOutlined",
+              "local": "CodeOutlined",
+              "type": "ImportSpecifier"
             }
           ],
           "start": 458,
           "type": "ImportDeclaration"
         },
         {
-          "end": 563,
+          "end": 590,
           "importKind": "value",
           "source": "antd",
           "specifiers": [
@@ -11453,7 +12463,7 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 524,
+          "start": 551,
           "type": "ImportDeclaration"
         }
       ],
@@ -11840,6 +12850,8 @@
           "type": "ImportDeclaration"
         }
       ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\locales\\en-US.ts": [],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\locales\\zh-CN.ts": [],
       "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\models\\global.ts": [
         {
           "end": 37,
@@ -11975,7 +12987,7 @@
           "type": "ImportDeclaration"
         },
         {
-          "end": 535,
+          "end": 553,
           "importKind": "value",
           "source": "@ant-design/icons",
           "specifiers": [
@@ -12063,13 +13075,18 @@
               "imported": "ThunderboltOutlined",
               "local": "ThunderboltOutlined",
               "type": "ImportSpecifier"
+            },
+            {
+              "imported": "BarChartOutlined",
+              "local": "BarChartOutlined",
+              "type": "ImportSpecifier"
             }
           ],
           "start": 231,
           "type": "ImportDeclaration"
         },
         {
-          "end": 583,
+          "end": 610,
           "importKind": "value",
           "source": "@umijs/max",
           "specifiers": [
@@ -12082,13 +13099,18 @@
               "imported": "history",
               "local": "history",
               "type": "ImportSpecifier"
+            },
+            {
+              "imported": "useIntl",
+              "local": "useIntl",
+              "type": "ImportSpecifier"
             }
           ],
-          "start": 536,
+          "start": 554,
           "type": "ImportDeclaration"
         },
         {
-          "end": 643,
+          "end": 670,
           "importKind": "value",
           "source": "@/components/SettingsModal",
           "specifiers": [
@@ -12098,11 +13120,11 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 584,
+          "start": 611,
           "type": "ImportDeclaration"
         },
         {
-          "end": 709,
+          "end": 736,
           "importKind": "value",
           "source": "@/components/MarkdownRenderer",
           "specifiers": [
@@ -12112,11 +13134,11 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 644,
+          "start": 671,
           "type": "ImportDeclaration"
         },
         {
-          "end": 777,
+          "end": 804,
           "importKind": "value",
           "source": "@/components/SystemPromptModal",
           "specifiers": [
@@ -12126,11 +13148,11 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 710,
+          "start": 737,
           "type": "ImportDeclaration"
         },
         {
-          "end": 845,
+          "end": 872,
           "importKind": "value",
           "source": "@/components/ModelCompareModal",
           "specifiers": [
@@ -12140,11 +13162,25 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 778,
+          "start": 805,
           "type": "ImportDeclaration"
         },
         {
-          "end": 1002,
+          "end": 930,
+          "importKind": "value",
+          "source": "@/components/AccountModal",
+          "specifiers": [
+            {
+              "imported": "AccountModal",
+              "local": "AccountModal",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 873,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 1087,
           "importKind": "value",
           "source": "@/services/api",
           "specifiers": [
@@ -12179,15 +13215,15 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 846,
+          "start": 931,
           "type": "ImportDeclaration"
         },
         {
-          "end": 1024,
+          "end": 1109,
           "importKind": "value",
           "source": "./index.css",
           "specifiers": [],
-          "start": 1003,
+          "start": 1088,
           "type": "ImportDeclaration"
         }
       ],

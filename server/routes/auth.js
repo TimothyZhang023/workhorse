@@ -3,11 +3,14 @@ import {
   createUser,
   getUserByUsername,
   verifyPassword,
-  createSession,
+  createRefreshToken,
+  getRefreshToken,
   deleteSession,
   getUserByUid,
-  getSession
+  triggerWebhooks,
 } from '../models/database.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -34,11 +37,23 @@ router.post('/register', (req, res) => {
     }
 
     const user = createUser(username, password);
-    const session = createSession(user.uid);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    createRefreshToken(user.uid, refreshToken);
+
+    // 异步触发 Webhook
+    triggerWebhooks('user.registration', { uid: user.uid, username: user.username });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7天
+    });
 
     res.json({
-      user: { uid: user.uid, username: user.username },
-      token: session.token
+      user: { uid: user.uid, username: user.username, role: user.role },
+      token: accessToken
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -63,11 +78,20 @@ router.post('/login', (req, res) => {
       return res.status(401).json({ error: '用户名或密码错误' });
     }
 
-    const session = createSession(user.uid);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    createRefreshToken(user.uid, refreshToken);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7天
+    });
 
     res.json({
-      user: { uid: user.uid, username: user.username },
-      token: session.token
+      user: { uid: user.uid, username: user.username, role: user.role },
+      token: accessToken
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -77,35 +101,49 @@ router.post('/login', (req, res) => {
 // 登出
 router.post('/logout', (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (token) {
-      deleteSession(token);
+    const refreshToken = req.cookies?.refreshToken;
+    if (refreshToken) {
+      deleteSession(refreshToken);
     }
+    res.clearCookie('refreshToken');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 获取当前用户信息
-router.get('/me', (req, res) => {
+// 刷新 Token
+router.post('/refresh', (req, res) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: '未登录' });
-    }
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) return res.status(401).json({ error: '缺失 Refresh Token' });
 
-    const session = getSession(token);
-    if (!session) {
-      return res.status(401).json({ error: '登录已过期' });
-    }
+    const session = getRefreshToken(refreshToken);
+    if (!session) return res.status(401).json({ error: '无效的会话' });
 
-    const user = getUserByUid(session.uid);
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded) return res.status(401).json({ error: 'RefreshToken 已过期' });
+
+    const user = getUserByUid(decoded.uid);
+    if (!user) return res.status(401).json({ error: '用户不存在' });
+
+    const accessToken = generateAccessToken(user);
+    res.json({ token: accessToken });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// 获取当前用户信息
+router.get('/me', authMiddleware, (req, res) => {
+  try {
+    const user = getUserByUid(req.uid);
     if (!user) {
       return res.status(401).json({ error: '用户不存在' });
     }
 
-    res.json({ uid: user.uid, username: user.username });
+    res.json({ uid: user.uid, username: user.username, role: user.role });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

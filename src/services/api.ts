@@ -131,3 +131,23 @@ export async function getAvailableModels() {
     method: 'GET',
   });
 }
+
+// Admin
+export async function getAllUsers() {
+  return request<any[]>('/api/admin/users', {
+    method: 'GET',
+  });
+}
+
+export async function updateUserRole(uid: string, role: string) {
+  return request(`/api/admin/users/${uid}/role`, {
+    method: 'PUT',
+    data: { role },
+  });
+}
+
+export async function deleteUser(uid: string) {
+  return request(`/api/admin/users/${uid}`, {
+    method: 'DELETE',
+  });
+}

@@ -6,6 +6,11 @@ export default defineConfig({
   model: {},
   initialState: {},
   request: {},
+  locale: {
+    default: 'zh-CN',
+    antd: true,
+    baseNavigator: true,
+  },
   layout: {
     title: 'Gemini Chat',
   },

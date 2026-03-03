@@ -1,0 +1,15 @@
+export default {
+    'app.title': 'Timo AI Chat',
+    'menu.chat': 'Chat',
+    'menu.login': 'Login',
+    'chat.new_chat': 'New Chat',
+    'chat.input_placeholder': 'Type a message...',
+    'chat.send': 'Send',
+    'chat.settings': 'Settings',
+    'chat.endpoints': 'Endpoints',
+    'account.title': 'Account & Platform',
+    'account.usage': 'Usage',
+    'account.api_keys': 'API Keys',
+    'account.webhooks': 'Webhooks',
+    'account.admin': 'Users',
+};
