@@ -36,7 +36,7 @@ export function createApp() {
   return app;
 }
 
-export function startServer(port = 7866) {
+export function startServer(port = 8866) {
   const app = createApp();
 
   app.listen(port, '0.0.0.0', () => {

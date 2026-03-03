@@ -31,7 +31,7 @@ export default defineConfig({
   outputPath: 'public',
   proxy: {
     '/api': {
-      target: 'http://localhost:7866',
+      target: 'http://localhost:8866',
       changeOrigin: true,
     },
   },
