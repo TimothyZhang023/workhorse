@@ -14,7 +14,8 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const db = new Database(join(dataDir, 'chat.db'));
+const dbPath = process.env.DB_PATH || join(dataDir, 'chat.db');
+const db = new Database(dbPath);
 
 // 初始化数据库表
 db.exec(`
@@ -179,7 +180,7 @@ export function getUserByUsername(username) {
 }
 
 export function getUserByUid(uid) {
-  return db.prepare('SELECT * FROM users WHERE id = ? OR uid = ?').get(uid, uid);
+  return db.prepare('SELECT * FROM users WHERE uid = ?').get(uid);
 }
 
 export function verifyPassword(user, password) {
@@ -284,7 +285,7 @@ export function getMessages(conversationId, uid) {
     SELECT id, role, content, created_at
     FROM messages
     WHERE conversation_id = ? AND uid = ?
-    ORDER BY created_at ASC
+    ORDER BY id ASC
   `).all(conversationId, uid);
 }
 
@@ -310,13 +311,25 @@ export function deleteLastMessages(conversationId, uid, count = 1) {
   const rows = db.prepare(`
     SELECT id FROM messages
     WHERE conversation_id = ? AND uid = ?
-    ORDER BY created_at DESC
+    ORDER BY id DESC
     LIMIT ?
   `).all(conversationId, uid, count);
   const ids = rows.map(r => r.id);
   if (ids.length) {
     db.prepare(`DELETE FROM messages WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
   }
+}
+
+export function deleteLastAssistantMessage(conversationId, uid) {
+  const row = db.prepare(`
+    SELECT id FROM messages
+    WHERE conversation_id = ? AND uid = ? AND role = 'assistant'
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(conversationId, uid);
+  if (!row) return false;
+  db.prepare('DELETE FROM messages WHERE id = ?').run(row.id);
+  return true;
 }
 
 
@@ -366,10 +379,20 @@ export function createEndpointGroup(uid, name, baseUrl, apiKey, isDefault = fals
 }
 
 export function updateEndpointGroup(id, uid, name, baseUrl, apiKey, usePresetModels) {
-  const encryptedKey = encrypt(apiKey);
+  const existing = db.prepare(`
+    SELECT api_key, use_preset_models FROM endpoint_groups WHERE id = ? AND uid = ?
+  `).get(id, uid);
+  if (!existing) {
+    throw new Error('Endpoint not found');
+  }
+
+  // 编辑时允许不传 apiKey，默认保留原值。
+  const encryptedKey = apiKey ? encrypt(apiKey) : existing.api_key;
+  const presetFlag = usePresetModels === undefined ? existing.use_preset_models : (usePresetModels ? 1 : 0);
+
   db.prepare(`
     UPDATE endpoint_groups SET name = ?, base_url = ?, api_key = ?, use_preset_models = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
-  `).run(name, baseUrl, encryptedKey, usePresetModels ? 1 : 0, id, uid);
+  `).run(name, baseUrl, encryptedKey, presetFlag, id, uid);
 }
 
 export function setDefaultEndpointGroup(id, uid) {

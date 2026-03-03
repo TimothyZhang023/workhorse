@@ -1,6 +1,8 @@
 declare namespace API {
   type CurrentUser = {
+    uid?: string;
     username: string;
+    role?: string;
     id?: number;
   };
 
@@ -31,9 +33,12 @@ declare namespace API {
     id: number;
     name: string;
     base_url: string;
-    api_key: string;
+    api_key?: string;
+    api_key_preview?: string;
     is_default: boolean;
     use_preset_models: boolean;
+    created_at?: string;
+    updated_at?: string;
   };
 
   type Model = {

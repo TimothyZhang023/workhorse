@@ -33,7 +33,8 @@ export default defineConfig({
     },
   ],
   npmClient: 'npm',
-  outputPath: 'public',
+  outputPath: 'dist',
+  esbuildMinifyIIFE: true,
   proxy: {
     '/api': {
       target: 'http://localhost:8866',

@@ -151,7 +151,12 @@ export const SettingsModal = ({ open, onOpenChange }: { open: boolean; onOpenCha
       >
         <ProFormText name="name" label="名称" placeholder="如：OpenAI" rules={[{ required: true }]} />
         <ProFormText name="base_url" label="Base URL" placeholder="如：https://api.openai.com/v1" rules={[{ required: true }]} />
-        <ProFormText.Password name="api_key" label="API Key" placeholder="sk-..." rules={[{ required: true }]} />
+        <ProFormText.Password
+          name="api_key"
+          label="API Key"
+          placeholder={editingEndpoint?.id ? '留空则保持不变' : 'sk-...'}
+          rules={[{ required: !editingEndpoint?.id }]}
+        />
         <ProFormSwitch name="use_preset_models" label="使用预设模型列表" initialValue={true} />
         {!editingEndpoint?.id && <ProFormSwitch name="is_default" label="设为默认" />}
       </ModalForm>

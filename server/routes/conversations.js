@@ -8,8 +8,7 @@ import {
   getMessages,
   addMessage,
   updateMessage,
-  deleteLastMessages,
-  getDefaultEndpointGroup,
+  deleteLastAssistantMessage,
   getEndpointGroups,
   getConversation,
   logUsage,
@@ -200,6 +199,11 @@ router.post('/:id/chat', async (req, res) => {
   try {
     // 获取对话（含 system_prompt）
     const conversation = getConversation(id, uid);
+    if (!conversation) {
+      res.write(`data: ${JSON.stringify({ error: '对话不存在或无权限' })}\n\n`);
+      res.end();
+      return;
+    }
 
     // 构建存储内容（图片用标记内嵌存储）
     let storedContent = message;
@@ -247,7 +251,12 @@ router.post('/:id/regenerate', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    deleteLastMessages(id, uid, 1);
+    const deleted = deleteLastAssistantMessage(id, uid);
+    if (!deleted) {
+      res.write(`data: ${JSON.stringify({ error: '没有可重新生成的 AI 消息' })}\n\n`);
+      res.end();
+      return;
+    }
 
     const history = getMessages(id, uid);
     if (!history.length) {

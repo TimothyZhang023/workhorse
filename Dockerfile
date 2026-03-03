@@ -30,7 +30,7 @@ WORKDIR /app
 
 # 从 builder 阶段复制已编译的依赖和产物
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/public       ./public
+COPY --from=builder /app/dist         ./dist
 
 # 复制服务端源码
 COPY server.js      ./
