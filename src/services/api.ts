@@ -47,10 +47,13 @@ export async function deleteConversation(id: string) {
   });
 }
 
-export async function updateConversation(id: string, title: string) {
+export async function updateConversation(id: string, title?: string, systemPrompt?: string) {
   return request(`/api/conversations/${id}`, {
     method: 'PUT',
-    data: { title },
+    data: {
+      ...(title !== undefined && { title }),
+      ...(systemPrompt !== undefined && { system_prompt: systemPrompt }),
+    },
   });
 }
 

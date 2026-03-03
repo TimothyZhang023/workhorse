@@ -18,6 +18,7 @@ declare namespace API {
   type Conversation = {
     id: string;
     title: string;
+    system_prompt?: string;
     created_at?: string;
   };
 

@@ -3,114 +3,164 @@ import {
   getConversations,
   createConversation,
   updateConversationTitle,
+  updateConversationSystemPrompt,
   deleteConversation,
   getMessages,
   addMessage,
   updateMessage,
   deleteLastMessages,
-  getDefaultEndpointGroup
+  getDefaultEndpointGroup,
+  getEndpointGroups,
+  getConversation,
 } from '../models/database.js';
 import { authMiddleware } from '../middleware/auth.js';
 import OpenAI from 'openai';
 
 const router = Router();
-
-// 所有路由需要认证
 router.use(authMiddleware);
 
-// 获取所有对话
+// ============ 对话 CRUD ============
+
 router.get('/', (req, res) => {
   try {
-    const conversations = getConversations(req.uid);
-    res.json(conversations);
+    res.json(getConversations(req.uid));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 创建新对话
 router.post('/', (req, res) => {
   try {
     const { title } = req.body;
-    const conversation = createConversation(req.uid, title);
-    res.json(conversation);
+    res.json(createConversation(req.uid, title));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 更新对话标题
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { title } = req.body;
-    updateConversationTitle(id, req.uid, title);
+    const { title, system_prompt } = req.body;
+    if (title !== undefined) updateConversationTitle(id, req.uid, title);
+    if (system_prompt !== undefined) updateConversationSystemPrompt(id, req.uid, system_prompt);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 删除对话
 router.delete('/:id', (req, res) => {
   try {
-    const { id } = req.params;
-    deleteConversation(id, req.uid);
+    deleteConversation(req.params.id, req.uid);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// 获取对话的消息
 router.get('/:id/messages', (req, res) => {
   try {
-    const { id } = req.params;
-    const messages = getMessages(id, req.uid);
-    res.json(messages);
+    res.json(getMessages(req.params.id, req.uid));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ============ 工具函数 ============
 
 /**
  * 构建 OpenAI messages 数组，支持文本和 base64 图片
- * 如果某条历史消息是用户消息，且含有 [IMAGE:...] 标记，则转为 vision content array
  */
-function buildMessages(history) {
-  return history.map(m => {
+function buildMessages(history, systemPrompt) {
+  const result = [];
+  if (systemPrompt && systemPrompt.trim()) {
+    result.push({ role: 'system', content: systemPrompt.trim() });
+  }
+  for (const m of history) {
     if (m.role === 'user' && m.content.includes('[IMAGE_DATA:')) {
-      // 解析图片消息格式: 文本\n[IMAGE_DATA:base64string]
       const parts = [];
       const imageRegex = /\[IMAGE_DATA:([^\]]+)\]/g;
-      let lastIndex = 0;
-      let match;
-
       const textContent = m.content.replace(imageRegex, '').trim();
-      if (textContent) {
-        parts.push({ type: 'text', text: textContent });
-      }
+      if (textContent) parts.push({ type: 'text', text: textContent });
 
-      while ((match = imageRegex.exec(m.content)) !== null) {
+      let match;
+      const imageRegex2 = /\[IMAGE_DATA:([^\]]+)\]/g;
+      while ((match = imageRegex2.exec(m.content)) !== null) {
         const base64Data = match[1];
         const mimeType = base64Data.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
         parts.push({
           type: 'image_url',
-          image_url: { url: `data:${mimeType};base64,${base64Data}`, detail: 'auto' }
+          image_url: { url: `data:${mimeType};base64,${base64Data}`, detail: 'auto' },
         });
-        lastIndex = match.index + match[0].length;
       }
-
-      return { role: 'user', content: parts };
+      result.push({ role: 'user', content: parts });
+    } else {
+      result.push({ role: m.role, content: m.content });
     }
-    return { role: m.role, content: m.content };
-  });
+  }
+  return result;
 }
 
-// 流式聊天
+/**
+ * 获取带 Fallback 的 OpenAI client
+ * 1. 优先使用默认 Endpoint
+ * 2. 如果失败，自动切换到其他 Endpoint
+ */
+function getEndpoints(uid) {
+  const groups = getEndpointGroups(uid);
+  if (!groups.length) return [];
+  // 默认的排首位
+  return groups.sort((a, b) => b.is_default - a.is_default);
+}
+
+async function streamWithFallback(uid, model, messages, res) {
+  const endpoints = getEndpoints(uid);
+  if (!endpoints.length) {
+    res.write(`data: ${JSON.stringify({ error: '请先在设置中配置 API Endpoint' })}\n\n`);
+    res.end();
+    return false;
+  }
+
+  let lastError = null;
+  for (const ep of endpoints) {
+    try {
+      const client = new OpenAI({ apiKey: ep.api_key, baseURL: ep.base_url });
+      const stream = await client.chat.completions.create({
+        model: model || 'gpt-4',
+        messages,
+        stream: true,
+      });
+
+      let fullContent = '';
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+          fullContent += content;
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+      return fullContent;
+    } catch (error) {
+      lastError = error;
+      console.warn(`[Fallback] Endpoint "${ep.name}" failed: ${error.message}. Trying next...`);
+      if (endpoints.indexOf(ep) < endpoints.length - 1) {
+        res.write(`data: ${JSON.stringify({ notice: `切换到备用端点中...` })}\n\n`);
+      }
+    }
+  }
+
+  // 所有 Endpoint 都失败
+  res.write(`data: ${JSON.stringify({ error: `所有 API 端点均不可用：${lastError?.message}` })}\n\n`);
+  res.end();
+  return false;
+}
+
+// ============ 流式聊天 ============
+
 router.post('/:id/chat', async (req, res) => {
   const { id } = req.params;
-  const { message, model, images } = req.body; // images: string[] base64
+  const { message, model, images } = req.body;
   const uid = req.uid;
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -118,17 +168,8 @@ router.post('/:id/chat', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    const endpointGroup = getDefaultEndpointGroup(uid);
-    if (!endpointGroup) {
-      res.write(`data: ${JSON.stringify({ error: '请先在设置中配置 API Endpoint' })}\n\n`);
-      res.end();
-      return;
-    }
-
-    const client = new OpenAI({
-      apiKey: endpointGroup.api_key,
-      baseURL: endpointGroup.base_url,
-    });
+    // 获取对话（含 system_prompt）
+    const conversation = getConversation(id, uid);
 
     // 构建存储内容（图片用标记内嵌存储）
     let storedContent = message;
@@ -138,24 +179,13 @@ router.post('/:id/chat', async (req, res) => {
     addMessage(id, uid, 'user', storedContent);
 
     const history = getMessages(id, uid);
-    const messages = buildMessages(history);
+    const systemPrompt = conversation?.system_prompt || '';
+    const messages = buildMessages(history, systemPrompt);
 
     const aiMsg = addMessage(id, uid, 'assistant', '');
 
-    const stream = await client.chat.completions.create({
-      model: model || 'gpt-4',
-      messages,
-      stream: true,
-    });
-
-    let fullContent = '';
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        fullContent += content;
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
-      }
-    }
+    const fullContent = await streamWithFallback(uid, model, messages, res);
+    if (fullContent === false) return;
 
     updateMessage(aiMsg.id, uid, fullContent);
 
@@ -174,7 +204,8 @@ router.post('/:id/chat', async (req, res) => {
   }
 });
 
-// 重新生成最后一条 AI 消息
+// ============ 重新生成 ============
+
 router.post('/:id/regenerate', async (req, res) => {
   const { id } = req.params;
   const { model } = req.body;
@@ -185,14 +216,6 @@ router.post('/:id/regenerate', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
 
   try {
-    const endpointGroup = getDefaultEndpointGroup(uid);
-    if (!endpointGroup) {
-      res.write(`data: ${JSON.stringify({ error: '请先在设置中配置 API Endpoint' })}\n\n`);
-      res.end();
-      return;
-    }
-
-    // 删除最后一条 assistant 消息
     deleteLastMessages(id, uid, 1);
 
     const history = getMessages(id, uid);
@@ -202,28 +225,13 @@ router.post('/:id/regenerate', async (req, res) => {
       return;
     }
 
-    const client = new OpenAI({
-      apiKey: endpointGroup.api_key,
-      baseURL: endpointGroup.base_url,
-    });
-
-    const messages = buildMessages(history);
+    const conversation = getConversation(id, uid);
+    const systemPrompt = conversation?.system_prompt || '';
+    const messages = buildMessages(history, systemPrompt);
     const aiMsg = addMessage(id, uid, 'assistant', '');
 
-    const stream = await client.chat.completions.create({
-      model: model || 'gpt-4',
-      messages,
-      stream: true,
-    });
-
-    let fullContent = '';
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content || '';
-      if (content) {
-        fullContent += content;
-        res.write(`data: ${JSON.stringify({ content })}\n\n`);
-      }
-    }
+    const fullContent = await streamWithFallback(uid, model, messages, res);
+    if (fullContent === false) return;
 
     updateMessage(aiMsg.id, uid, fullContent);
     res.write('data: [DONE]\n\n');

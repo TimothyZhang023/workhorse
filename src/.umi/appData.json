@@ -135,6 +135,12 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ]
         },
@@ -161,7 +167,15 @@
             3,
             5,
             3,
-            10
+            10,
+            2,
+            2,
+            2,
+            3,
+            2,
+            2,
+            2,
+            2
           ]
         },
         "register": 2
@@ -184,7 +198,13 @@
             3,
             10,
             10,
-            8
+            8,
+            8,
+            8,
+            9,
+            13,
+            8,
+            9
           ]
         },
         "register": 25
@@ -201,6 +221,12 @@
       "time": {
         "hooks": {
           "addEntryCode": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -231,9 +257,25 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "onCheckCode": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -1306,9 +1348,21 @@
             2,
             2,
             2,
-            1
+            1,
+            2,
+            1,
+            1,
+            1,
+            1,
+            0
           ],
           "addRuntimePlugin": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -1389,9 +1443,27 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "addEntryImports": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -1435,9 +1507,27 @@
             93,
             53,
             65,
-            61
+            61,
+            58,
+            39,
+            34,
+            51,
+            33,
+            35
           ],
           "addPolyfillImports": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -1468,6 +1558,18 @@
             1,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ]
         },
@@ -1486,6 +1588,12 @@
         "hooks": {
           "onGenerateFiles": [
             104,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0
@@ -1534,6 +1642,12 @@
             1,
             0,
             1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
             1
           ],
           "addBeforeMiddlewares": [
@@ -1561,7 +1675,19 @@
             19,
             11,
             16,
-            11
+            11,
+            19,
+            10,
+            16,
+            9,
+            14,
+            9,
+            15,
+            10,
+            14,
+            11,
+            14,
+            12
           ]
         },
         "register": 8
@@ -1619,7 +1745,13 @@
             446,
             13,
             30,
-            13
+            13,
+            19,
+            12,
+            10,
+            10,
+            10,
+            11
           ]
         },
         "register": 4
@@ -1707,7 +1839,13 @@
             2,
             2,
             2,
-            2
+            2,
+            2,
+            1,
+            2,
+            2,
+            2,
+            1
           ]
         },
         "register": 2
@@ -2218,13 +2356,25 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "onGenerateFiles": [
             3,
             2,
             2,
-            2
+            2,
+            2,
+            4,
+            3,
+            2,
+            3,
+            6
           ],
           "addTmpGenerateWatcherPaths": [
             0
@@ -2274,9 +2424,27 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "addRuntimePlugin": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -2286,13 +2454,25 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "onGenerateFiles": [
             4,
             2,
             3,
-            2
+            2,
+            3,
+            3,
+            3,
+            2,
+            3,
+            6
           ],
           "addExtraBabelPlugins": [
             0
@@ -2330,9 +2510,21 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "addRuntimePluginKey": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -2342,10 +2534,22 @@
             2,
             1,
             2,
-            1
+            1,
+            2,
+            3,
+            4,
+            2,
+            2,
+            4
           ],
           "addExtraModels": [
             1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0
@@ -2373,6 +2577,12 @@
             1,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "modifyAppData": [
@@ -2382,9 +2592,21 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "addRuntimePluginKey": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -2394,7 +2616,13 @@
             7,
             4,
             9,
-            7
+            7,
+            6,
+            10,
+            8,
+            5,
+            9,
+            12
           ]
         },
         "register": 4
@@ -2440,13 +2668,25 @@
             1,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "onGenerateFiles": [
             27,
             21,
             30,
-            33
+            33,
+            22,
+            29,
+            19,
+            27,
+            20,
+            25
           ],
           "addTmpGenerateWatcherPaths": [
             0
@@ -2479,6 +2719,12 @@
       "time": {
         "hooks": {
           "addRuntimePluginKey": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -2539,13 +2785,25 @@
             0,
             0,
             0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0
           ],
           "onGenerateFiles": [
             4,
             2,
             3,
-            3
+            3,
+            2,
+            2,
+            2,
+            2,
+            3,
+            4
           ]
         },
         "register": 1
@@ -2575,6 +2833,18 @@
       "time": {
         "hooks": {
           "addEntryImports": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -3721,7 +3991,7 @@
       "file": "@/pages/Chat/index.tsx",
       "id": "3",
       "absPath": "/chat",
-      "__content": "import { useState, useEffect, useRef, useCallback } from 'react';\nimport {\n  Layout, Button, Input, Select, Avatar, Popconfirm,\n  message as antdMessage, Drawer, Upload, Tooltip, ConfigProvider, theme as antdTheme,\n} from 'antd';\nimport {\n  PlusOutlined, DeleteOutlined, SettingOutlined, LogoutOutlined,\n  UserOutlined, SendOutlined, StopOutlined, ReloadOutlined,\n  CopyOutlined, SunOutlined, MoonOutlined, MenuOutlined,\n  PictureOutlined, EditOutlined, CheckOutlined, CloseOutlined,\n} from '@ant-design/icons';\nimport { useModel, history } from '@umijs/max';\nimport { SettingsModal } from '@/components/SettingsModal';\nimport { MarkdownRenderer } from '@/components/MarkdownRenderer';\nimport {\n  getConversations,\n  createConversation,\n  deleteConversation,\n  getMessages,\n  getAvailableModels,\n  updateConversation,\n} from '@/services/api';\nimport './index.css';\n\nconst { Sider, Content } = Layout;\n\n// 从 localStorage 获取/保存主题\nconst getStoredTheme = (): 'light' | 'dark' => {\n  const saved = localStorage.getItem('timo-theme');\n  if (saved === 'dark' || saved === 'light') return saved;\n  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n};\n\n// 将图片文件转为 base64\nconst fileToBase64 = (file: File): Promise<string> =>\n  new Promise((resolve, reject) => {\n    const reader = new FileReader();\n    reader.readAsDataURL(file);\n    reader.onload = () => {\n      const result = reader.result as string;\n      // 只保留 base64 数据部分\n      resolve(result.split(',')[1]);\n    };\n    reader.onerror = reject;\n  });\n\n// 从存储内容中提取显示文本（去掉图片数据）\nconst extractDisplayContent = (content: string): string => {\n  return content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '[📷 图片]');\n};\n\n// 检查消息是否包含图片\nconst hasImage = (content: string): boolean => content.includes('[IMAGE_DATA:');\n\nexport default () => {\n  const { currentUser, logout, isLoggedIn } = useModel('global');\n\n  // UI 状态\n  const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme);\n  const [siderVisible, setSiderVisible] = useState(false); // mobile drawer\n  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);\n  const isDark = theme === 'dark';\n\n  // 对话状态\n  const [conversations, setConversations] = useState<API.Conversation[]>([]);\n  const [currentConvId, setCurrentConvId] = useState<string | null>(null);\n  const [messages, setMessages] = useState<API.Message[]>([]);\n  const [models, setModels] = useState<API.Model[]>([]);\n  const [selectedModel, setSelectedModel] = useState<string>('');\n\n  // 输入状态\n  const [inputText, setInputText] = useState('');\n  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);\n\n  // 流式处理状态\n  const [loading, setLoading] = useState(false);\n  const abortControllerRef = useRef<AbortController | null>(null);\n\n  // 设置弹窗\n  const [showSettings, setShowSettings] = useState(false);\n\n  // 对话重命名状态\n  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);\n  const [editingTitle, setEditingTitle] = useState('');\n\n  const messagesEndRef = useRef<HTMLDivElement>(null);\n  const inputRef = useRef<HTMLInputElement>(null);\n\n  // 响应式监听\n  useEffect(() => {\n    const handler = () => setIsMobile(window.innerWidth < 768);\n    window.addEventListener('resize', handler);\n    return () => window.removeEventListener('resize', handler);\n  }, []);\n\n  // 主题持久化\n  useEffect(() => {\n    document.documentElement.setAttribute('data-theme', theme);\n    localStorage.setItem('timo-theme', theme);\n  }, [theme]);\n\n  // 登录检查 & 初始化\n  useEffect(() => {\n    if (!isLoggedIn) {\n      history.push('/login');\n      return;\n    }\n    loadInitData();\n  }, [isLoggedIn]);\n\n  // 键盘快捷键\n  useEffect(() => {\n    const handler = (e: KeyboardEvent) => {\n      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {\n        e.preventDefault();\n        handleCreateChat();\n      }\n    };\n    window.addEventListener('keydown', handler);\n    return () => window.removeEventListener('keydown', handler);\n  }, [conversations]);\n\n  const loadInitData = async () => {\n    try {\n      const [convs, availableModels] = await Promise.all([\n        getConversations(),\n        getAvailableModels(),\n      ]);\n      setConversations(convs);\n      setModels(availableModels);\n      if (availableModels.length > 0) setSelectedModel(availableModels[0].model_id);\n      if (convs.length > 0) handleSelectConversation(convs[0].id);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const scrollToBottom = useCallback(() => {\n    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });\n  }, []);\n\n  useEffect(() => {\n    scrollToBottom();\n  }, [messages]);\n\n  const handleCreateChat = async () => {\n    try {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      setCurrentConvId(newConv.id);\n      setMessages([]);\n      if (isMobile) setSiderVisible(false);\n      setTimeout(() => inputRef.current?.focus(), 100);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleSelectConversation = async (id: string) => {\n    setCurrentConvId(id);\n    try {\n      const msgs = await getMessages(id);\n      setMessages(msgs);\n    } catch (error) {\n      console.error(error);\n    }\n    if (isMobile) setSiderVisible(false);\n  };\n\n  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {\n    e.stopPropagation();\n    try {\n      await deleteConversation(id);\n      const newConvs = conversations.filter(c => c.id !== id);\n      setConversations(newConvs);\n      if (currentConvId === id) {\n        if (newConvs.length > 0) {\n          handleSelectConversation(newConvs[0].id);\n        } else {\n          setCurrentConvId(null);\n          setMessages([]);\n        }\n      }\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleRenameStart = (conv: API.Conversation, e: React.MouseEvent) => {\n    e.stopPropagation();\n    setEditingTitleId(conv.id);\n    setEditingTitle(conv.title);\n  };\n\n  const handleRenameConfirm = async () => {\n    if (!editingTitleId || !editingTitle.trim()) {\n      setEditingTitleId(null);\n      return;\n    }\n    try {\n      await updateConversation(editingTitleId, editingTitle.trim());\n      setConversations(prev =>\n        prev.map(c => c.id === editingTitleId ? { ...c, title: editingTitle.trim() } : c)\n      );\n    } catch (e) {\n      console.error(e);\n    }\n    setEditingTitleId(null);\n  };\n\n  // 核心发送函数（兼容 send + regenerate）\n  const streamChat = async (convId: string, userMsg: API.Message | null, isRegenerate = false) => {\n    setLoading(true);\n    const controller = new AbortController();\n    abortControllerRef.current = controller;\n\n    try {\n      const token = localStorage.getItem('token');\n      const url = isRegenerate\n        ? `/api/conversations/${convId}/regenerate`\n        : `/api/conversations/${convId}/chat`;\n\n      let body: any = { model: selectedModel };\n      if (!isRegenerate && userMsg) {\n        body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim() || userMsg.content;\n        // 提取图片 base64\n        const imgMatches = [...userMsg.content.matchAll(/\\[IMAGE_DATA:([^\\]]+)\\]/g)];\n        if (imgMatches.length > 0) {\n          body.images = imgMatches.map(m => m[1]);\n          body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim();\n        }\n      }\n\n      const response = await fetch(url, {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          Authorization: `Bearer ${token}`,\n        },\n        body: JSON.stringify(body),\n        signal: controller.signal,\n      });\n\n      if (!response.ok) throw new Error('Network response was not ok');\n\n      const reader = response.body?.getReader();\n      const decoder = new TextDecoder();\n\n      // 添加空 assistant 消息占位\n      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);\n\n      while (reader) {\n        const { done, value } = await reader.read();\n        if (done) break;\n\n        const chunk = decoder.decode(value);\n        const lines = chunk.split('\\n').filter(line => line.startsWith('data: '));\n\n        for (const line of lines) {\n          const data = line.slice(6);\n          if (data === '[DONE]') continue;\n          try {\n            const parsed = JSON.parse(data);\n            setMessages(prev => {\n              const newMessages = [...prev];\n              const lastMsg = newMessages[newMessages.length - 1];\n              if (lastMsg.role === 'assistant') {\n                if (parsed.content) lastMsg.content += parsed.content;\n                if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;\n              }\n              return newMessages;\n            });\n            if (parsed.title) {\n              setConversations(prev =>\n                prev.map(c => c.id === convId ? { ...c, title: parsed.title } : c)\n              );\n            }\n          } catch (e) {\n            // ignore parse errors\n          }\n        }\n      }\n    } catch (error: any) {\n      if (error.name !== 'AbortError') {\n        antdMessage.error('发送失败，请检查网络和 API 配置');\n        console.error(error);\n      }\n    } finally {\n      setLoading(false);\n      abortControllerRef.current = null;\n    }\n  };\n\n  const sendMessage = async () => {\n    if ((!inputText.trim() && pendingImages.length === 0) || loading) return;\n\n    let convId = currentConvId;\n    if (!convId) {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      convId = newConv.id;\n      setCurrentConvId(convId);\n    }\n\n    // 构建用户消息内容（文字 + 图片标记）\n    let content = inputText;\n    if (pendingImages.length > 0) {\n      const base64s = await Promise.all(pendingImages.map(p => fileToBase64(p.file)));\n      content += '\\n' + base64s.map(b => `[IMAGE_DATA:${b}]`).join('\\n');\n    }\n\n    const userMsg: API.Message = { role: 'user', content };\n    setMessages(prev => [...prev, userMsg]);\n    setInputText('');\n    setPendingImages([]);\n\n    await streamChat(convId, userMsg, false);\n  };\n\n  const handleRegenerate = async () => {\n    if (!currentConvId || loading) return;\n    // 删除界面上最后一条 assistant 消息\n    setMessages(prev => {\n      const newMsgs = [...prev];\n      if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'assistant') {\n        newMsgs.pop();\n      }\n      return newMsgs;\n    });\n    await streamChat(currentConvId, null, true);\n  };\n\n  const handleStop = () => {\n    abortControllerRef.current?.abort();\n  };\n\n  const handleCopyMessage = (content: string) => {\n    const displayContent = extractDisplayContent(content);\n    navigator.clipboard.writeText(displayContent);\n    antdMessage.success('已复制到剪贴板');\n  };\n\n  const handleImageAdd = (file: File) => {\n    const preview = URL.createObjectURL(file);\n    setPendingImages(prev => [...prev, { file, preview }]);\n    return false; // 阻止 antd Upload 自动上传\n  };\n\n  const handleImageRemove = (index: number) => {\n    setPendingImages(prev => prev.filter((_, i) => i !== index));\n  };\n\n  // Sidebar 内容\n  const siderContent = (\n    <div className={`sider-inner ${isDark ? 'dark' : ''}`}>\n      <div className=\"sider-top\">\n        <Button\n          type=\"text\"\n          icon={<PlusOutlined />}\n          onClick={handleCreateChat}\n          className=\"new-chat-btn\"\n          title=\"新对话 (Ctrl+N)\"\n        >\n          发起新对话\n        </Button>\n\n        <div className=\"conv-list\">\n          <div className=\"conv-list-label\">对话</div>\n          {conversations.map(conv => (\n            <div\n              key={conv.id}\n              className={`conversation-item ${currentConvId === conv.id ? 'active' : ''}`}\n              onClick={() => handleSelectConversation(conv.id)}\n            >\n              {editingTitleId === conv.id ? (\n                <div className=\"title-edit\" onClick={e => e.stopPropagation()}>\n                  <Input\n                    size=\"small\"\n                    value={editingTitle}\n                    onChange={e => setEditingTitle(e.target.value)}\n                    onPressEnter={handleRenameConfirm}\n                    autoFocus\n                  />\n                  <Button type=\"text\" size=\"small\" icon={<CheckOutlined />} onClick={handleRenameConfirm} />\n                  <Button type=\"text\" size=\"small\" icon={<CloseOutlined />} onClick={() => setEditingTitleId(null)} />\n                </div>\n              ) : (\n                <>\n                  <span className=\"conv-title\">{conv.title}</span>\n                  <div className=\"conv-actions\">\n                    <Button\n                      type=\"text\" size=\"small\" icon={<EditOutlined />}\n                      className=\"action-btn\"\n                      onClick={(e) => handleRenameStart(conv, e)}\n                    />\n                    <Popconfirm\n                      title=\"删除对话\" description=\"确定要删除这个对话吗？\"\n                      onConfirm={(e) => handleDeleteConversation(conv.id, e as any)}\n                      onCancel={(e) => (e as any)?.stopPropagation()}\n                    >\n                      <Button\n                        type=\"text\" size=\"small\" icon={<DeleteOutlined />}\n                        className=\"action-btn delete-btn\"\n                        onClick={e => e.stopPropagation()}\n                      />\n                    </Popconfirm>\n                  </div>\n                </>\n              )}\n            </div>\n          ))}\n          {conversations.length === 0 && (\n            <div className=\"empty-conv\">暂无对话记录</div>\n          )}\n        </div>\n      </div>\n\n      <div className=\"sider-bottom\">\n        <Button\n          block icon={isDark ? <SunOutlined /> : <MoonOutlined />}\n          onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}\n          className=\"sider-action-btn\"\n        >\n          {isDark ? '浅色模式' : '深色模式'}\n        </Button>\n        <Button\n          block icon={<SettingOutlined />}\n          onClick={() => setShowSettings(true)}\n          className=\"sider-action-btn\"\n        >\n          设置\n        </Button>\n        <Button\n          block icon={<LogoutOutlined />}\n          onClick={logout}\n          className=\"sider-action-btn\"\n          danger\n        >\n          退出登录\n        </Button>\n      </div>\n    </div>\n  );\n\n  const lastAssistantIdx = [...messages].map(m => m.role).lastIndexOf('assistant');\n\n  return (\n    <ConfigProvider\n      theme={{\n        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,\n      }}\n    >\n      <Layout className={`chat-layout ${isDark ? 'dark' : ''}`}>\n        {/* Desktop Sider */}\n        {!isMobile && (\n          <Sider width={260} className=\"chat-sider\">\n            {siderContent}\n          </Sider>\n        )}\n\n        {/* Mobile Drawer */}\n        {isMobile && (\n          <Drawer\n            placement=\"left\"\n            open={siderVisible}\n            onClose={() => setSiderVisible(false)}\n            width={260}\n            styles={{ body: { padding: 0 } }}\n            title={null}\n          >\n            {siderContent}\n          </Drawer>\n        )}\n\n        <Layout>\n          <Content className=\"chat-content\">\n            {/* Header */}\n            <div className=\"chat-header\">\n              <div className=\"header-left\">\n                {isMobile && (\n                  <Button\n                    type=\"text\" icon={<MenuOutlined />}\n                    onClick={() => setSiderVisible(true)}\n                  />\n                )}\n                <span className=\"header-title\">Timo</span>\n              </div>\n              <div className=\"header-right\">\n                <span className=\"header-username\">{currentUser?.username}</span>\n                <Avatar style={{ backgroundColor: '#2563eb' }} icon={<UserOutlined />}>\n                  {currentUser?.username?.[0]?.toUpperCase()}\n                </Avatar>\n              </div>\n            </div>\n\n            {/* Messages */}\n            <div className=\"messages-area\">\n              {messages.length === 0 ? (\n                <div className=\"empty-messages\">\n                  <div className=\"empty-icon\">✨</div>\n                  <div className=\"empty-title\">有什么我可以帮你的？</div>\n                  <div className=\"empty-hint\">按 Ctrl+N 创建新对话</div>\n                </div>\n              ) : (\n                messages.map((msg, idx) => (\n                  <div\n                    key={idx}\n                    className={`message-row ${msg.role}`}\n                  >\n                    {msg.role === 'assistant' && (\n                      <Avatar className=\"msg-avatar assistant-avatar\" size={32}>AI</Avatar>\n                    )}\n                    <div className={`message-bubble ${msg.role}`}>\n                      {msg.role === 'user' ? (\n                        <div className=\"user-content\">\n                          {hasImage(msg.content) && (\n                            <div className=\"image-preview-row\">📷 图片</div>\n                          )}\n                          {extractDisplayContent(msg.content)}\n                        </div>\n                      ) : (\n                        <MarkdownRenderer content={msg.content} isDark={isDark} />\n                      )}\n                    </div>\n                    {/* Message Actions */}\n                    <div className={`msg-actions ${msg.role}`}>\n                      <Tooltip title=\"复制\">\n                        <Button\n                          type=\"text\" size=\"small\"\n                          icon={<CopyOutlined />}\n                          onClick={() => handleCopyMessage(msg.content)}\n                          className=\"msg-action-btn\"\n                        />\n                      </Tooltip>\n                      {msg.role === 'assistant' && idx === lastAssistantIdx && !loading && (\n                        <Tooltip title=\"重新生成\">\n                          <Button\n                            type=\"text\" size=\"small\"\n                            icon={<ReloadOutlined />}\n                            onClick={handleRegenerate}\n                            className=\"msg-action-btn\"\n                          />\n                        </Tooltip>\n                      )}\n                    </div>\n                  </div>\n                ))\n              )}\n              <div ref={messagesEndRef} />\n            </div>\n\n            {/* Input Area */}\n            <div className=\"input-area\">\n              {/* Pending Images Preview */}\n              {pendingImages.length > 0 && (\n                <div className=\"pending-images\">\n                  {pendingImages.map((img, i) => (\n                    <div key={i} className=\"pending-image-item\">\n                      <img src={img.preview} alt=\"upload\" />\n                      <Button\n                        type=\"text\" size=\"small\" danger\n                        icon={<CloseOutlined />}\n                        className=\"remove-image-btn\"\n                        onClick={() => handleImageRemove(i)}\n                      />\n                    </div>\n                  ))}\n                </div>\n              )}\n\n              <div className=\"input-container\">\n                <Tooltip title=\"上传图片\">\n                  <Upload\n                    accept=\"image/*\"\n                    showUploadList={false}\n                    beforeUpload={handleImageAdd}\n                    multiple\n                  >\n                    <Button\n                      type=\"text\"\n                      icon={<PictureOutlined />}\n                      className=\"input-action-btn\"\n                      disabled={loading}\n                    />\n                  </Upload>\n                </Tooltip>\n\n                <Input\n                  ref={inputRef as any}\n                  value={inputText}\n                  onChange={e => setInputText(e.target.value)}\n                  onPressEnter={e => {\n                    if (!e.shiftKey) {\n                      e.preventDefault();\n                      sendMessage();\n                    }\n                  }}\n                  placeholder=\"问问 Timo… (Shift+Enter 换行)\"\n                  bordered={false}\n                  disabled={loading}\n                  className=\"chat-input\"\n                />\n\n                <Select\n                  value={selectedModel}\n                  onChange={setSelectedModel}\n                  options={models.map(m => ({ label: m.display_name, value: m.model_id }))}\n                  bordered={false}\n                  style={{ minWidth: 120, maxWidth: 180 }}\n                  disabled={loading}\n                  placeholder=\"选择模型\"\n                />\n\n                {loading ? (\n                  <Tooltip title=\"停止生成\">\n                    <Button\n                      danger shape=\"circle\"\n                      icon={<StopOutlined />}\n                      onClick={handleStop}\n                      className=\"send-btn\"\n                    />\n                  </Tooltip>\n                ) : (\n                  <Button\n                    type=\"primary\" shape=\"circle\"\n                    icon={<SendOutlined />}\n                    disabled={!inputText.trim() && pendingImages.length === 0}\n                    onClick={sendMessage}\n                    className=\"send-btn\"\n                  />\n                )}\n              </div>\n              <div className=\"input-hint\">Timo 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行</div>\n            </div>\n          </Content>\n        </Layout>\n\n        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />\n      </Layout>\n    </ConfigProvider>\n  );\n};\n",
+      "__content": "import { useState, useEffect, useRef, useCallback } from 'react';\nimport {\n  Layout, Button, Input, Select, Avatar, Popconfirm,\n  message as antdMessage, Drawer, Upload, Tooltip, ConfigProvider, theme as antdTheme,\n} from 'antd';\nimport {\n  PlusOutlined, DeleteOutlined, SettingOutlined, LogoutOutlined,\n  UserOutlined, SendOutlined, StopOutlined, ReloadOutlined,\n  CopyOutlined, SunOutlined, MoonOutlined, MenuOutlined,\n  PictureOutlined, EditOutlined, CheckOutlined, CloseOutlined,\n} from '@ant-design/icons';\nimport { useModel, history } from '@umijs/max';\nimport { SettingsModal } from '@/components/SettingsModal';\nimport { MarkdownRenderer } from '@/components/MarkdownRenderer';\nimport { SystemPromptModal } from '@/components/SystemPromptModal';\nimport { ModelCompareModal } from '@/components/ModelCompareModal';\nimport {\n  getConversations,\n  createConversation,\n  deleteConversation,\n  getMessages,\n  getAvailableModels,\n  updateConversation,\n} from '@/services/api';\nimport './index.css';\n\nconst { Sider, Content } = Layout;\n\n// 从 localStorage 获取/保存主题\nconst getStoredTheme = (): 'light' | 'dark' => {\n  const saved = localStorage.getItem('timo-theme');\n  if (saved === 'dark' || saved === 'light') return saved;\n  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n};\n\n// 将图片文件转为 base64\nconst fileToBase64 = (file: File): Promise<string> =>\n  new Promise((resolve, reject) => {\n    const reader = new FileReader();\n    reader.readAsDataURL(file);\n    reader.onload = () => {\n      const result = reader.result as string;\n      // 只保留 base64 数据部分\n      resolve(result.split(',')[1]);\n    };\n    reader.onerror = reject;\n  });\n\n// 从存储内容中提取显示文本（去掉图片数据）\nconst extractDisplayContent = (content: string): string => {\n  return content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '[📷 图片]');\n};\n\n// 检查消息是否包含图片\nconst hasImage = (content: string): boolean => content.includes('[IMAGE_DATA:');\n\nexport default () => {\n  const { currentUser, logout, isLoggedIn } = useModel('global');\n\n  // UI 状态\n  const [theme, setTheme] = useState<'light' | 'dark'>(getStoredTheme);\n  const [siderVisible, setSiderVisible] = useState(false); // mobile drawer\n  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);\n  const isDark = theme === 'dark';\n\n  // 对话状态\n  const [conversations, setConversations] = useState<API.Conversation[]>([]);\n  const [currentConvId, setCurrentConvId] = useState<string | null>(null);\n  const [messages, setMessages] = useState<API.Message[]>([]);\n  const [models, setModels] = useState<API.Model[]>([]);\n  const [selectedModel, setSelectedModel] = useState<string>('');\n\n  // 输入状态\n  const [inputText, setInputText] = useState('');\n  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);\n\n  // 流式处理状态\n  const [loading, setLoading] = useState(false);\n  const abortControllerRef = useRef<AbortController | null>(null);\n\n  // 设置弹窗\n  const [showSettings, setShowSettings] = useState(false);\n\n  // System Prompt\n  const [showSystemPrompt, setShowSystemPrompt] = useState(false);\n  const currentConv = conversations.find(c => c.id === currentConvId) ?? null;\n  const currentSystemPrompt = currentConv?.system_prompt ?? '';\n\n  // 模型对比\n  const [showCompare, setShowCompare] = useState(false);\n\n  // 对话重命名状态\n  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);\n  const [editingTitle, setEditingTitle] = useState('');\n\n  const messagesEndRef = useRef<HTMLDivElement>(null);\n  const inputRef = useRef<HTMLInputElement>(null);\n\n  // 响应式监听\n  useEffect(() => {\n    const handler = () => setIsMobile(window.innerWidth < 768);\n    window.addEventListener('resize', handler);\n    return () => window.removeEventListener('resize', handler);\n  }, []);\n\n  // 主题持久化\n  useEffect(() => {\n    document.documentElement.setAttribute('data-theme', theme);\n    localStorage.setItem('timo-theme', theme);\n  }, [theme]);\n\n  // 登录检查 & 初始化\n  useEffect(() => {\n    if (!isLoggedIn) {\n      history.push('/login');\n      return;\n    }\n    loadInitData();\n  }, [isLoggedIn]);\n\n  // 键盘快捷键\n  useEffect(() => {\n    const handler = (e: KeyboardEvent) => {\n      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {\n        e.preventDefault();\n        handleCreateChat();\n      }\n    };\n    window.addEventListener('keydown', handler);\n    return () => window.removeEventListener('keydown', handler);\n  }, [conversations]);\n\n  const loadInitData = async () => {\n    try {\n      const [convs, availableModels] = await Promise.all([\n        getConversations(),\n        getAvailableModels(),\n      ]);\n      setConversations(convs);\n      setModels(availableModels);\n      if (availableModels.length > 0) setSelectedModel(availableModels[0].model_id);\n      if (convs.length > 0) handleSelectConversation(convs[0].id);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const scrollToBottom = useCallback(() => {\n    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });\n  }, []);\n\n  useEffect(() => {\n    scrollToBottom();\n  }, [messages]);\n\n  const handleCreateChat = async () => {\n    try {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      setCurrentConvId(newConv.id);\n      setMessages([]);\n      if (isMobile) setSiderVisible(false);\n      setTimeout(() => inputRef.current?.focus(), 100);\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleSelectConversation = async (id: string) => {\n    setCurrentConvId(id);\n    try {\n      const msgs = await getMessages(id);\n      setMessages(msgs);\n    } catch (error) {\n      console.error(error);\n    }\n    if (isMobile) setSiderVisible(false);\n  };\n\n  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {\n    e.stopPropagation();\n    try {\n      await deleteConversation(id);\n      const newConvs = conversations.filter(c => c.id !== id);\n      setConversations(newConvs);\n      if (currentConvId === id) {\n        if (newConvs.length > 0) {\n          handleSelectConversation(newConvs[0].id);\n        } else {\n          setCurrentConvId(null);\n          setMessages([]);\n        }\n      }\n    } catch (error) {\n      console.error(error);\n    }\n  };\n\n  const handleRenameStart = (conv: API.Conversation, e: React.MouseEvent) => {\n    e.stopPropagation();\n    setEditingTitleId(conv.id);\n    setEditingTitle(conv.title);\n  };\n\n  const handleRenameConfirm = async () => {\n    if (!editingTitleId || !editingTitle.trim()) {\n      setEditingTitleId(null);\n      return;\n    }\n    try {\n      await updateConversation(editingTitleId, editingTitle.trim());\n      setConversations(prev =>\n        prev.map(c => c.id === editingTitleId ? { ...c, title: editingTitle.trim() } : c)\n      );\n    } catch (e) {\n      console.error(e);\n    }\n    setEditingTitleId(null);\n  };\n\n  const handleSaveSystemPrompt = async (prompt: string) => {\n    if (!currentConvId) return;\n    try {\n      await updateConversation(currentConvId, undefined as any, prompt);\n      setConversations(prev =>\n        prev.map(c => c.id === currentConvId ? { ...c, system_prompt: prompt } : c)\n      );\n      antdMessage.success('System Prompt 已保存');\n    } catch (e) {\n      antdMessage.error('保存失败');\n    }\n  };\n\n\n  // 核心发送函数（兼容 send + regenerate）\n  const streamChat = async (convId: string, userMsg: API.Message | null, isRegenerate = false) => {\n    setLoading(true);\n    const controller = new AbortController();\n    abortControllerRef.current = controller;\n\n    try {\n      const token = localStorage.getItem('token');\n      const url = isRegenerate\n        ? `/api/conversations/${convId}/regenerate`\n        : `/api/conversations/${convId}/chat`;\n\n      let body: any = { model: selectedModel };\n      if (!isRegenerate && userMsg) {\n        body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim() || userMsg.content;\n        // 提取图片 base64\n        const imgMatches = [...userMsg.content.matchAll(/\\[IMAGE_DATA:([^\\]]+)\\]/g)];\n        if (imgMatches.length > 0) {\n          body.images = imgMatches.map(m => m[1]);\n          body.message = userMsg.content.replace(/\\[IMAGE_DATA:[^\\]]+\\]/g, '').trim();\n        }\n      }\n\n      const response = await fetch(url, {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          Authorization: `Bearer ${token}`,\n        },\n        body: JSON.stringify(body),\n        signal: controller.signal,\n      });\n\n      if (!response.ok) throw new Error('Network response was not ok');\n\n      const reader = response.body?.getReader();\n      const decoder = new TextDecoder();\n\n      // 添加空 assistant 消息占位\n      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);\n\n      while (reader) {\n        const { done, value } = await reader.read();\n        if (done) break;\n\n        const chunk = decoder.decode(value);\n        const lines = chunk.split('\\n').filter(line => line.startsWith('data: '));\n\n        for (const line of lines) {\n          const data = line.slice(6);\n          if (data === '[DONE]') continue;\n          try {\n            const parsed = JSON.parse(data);\n            setMessages(prev => {\n              const newMessages = [...prev];\n              const lastMsg = newMessages[newMessages.length - 1];\n              if (lastMsg.role === 'assistant') {\n                if (parsed.content) lastMsg.content += parsed.content;\n                if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;\n              }\n              return newMessages;\n            });\n            if (parsed.title) {\n              setConversations(prev =>\n                prev.map(c => c.id === convId ? { ...c, title: parsed.title } : c)\n              );\n            }\n          } catch (e) {\n            // ignore parse errors\n          }\n        }\n      }\n    } catch (error: any) {\n      if (error.name !== 'AbortError') {\n        antdMessage.error('发送失败，请检查网络和 API 配置');\n        console.error(error);\n      }\n    } finally {\n      setLoading(false);\n      abortControllerRef.current = null;\n    }\n  };\n\n  const sendMessage = async () => {\n    if ((!inputText.trim() && pendingImages.length === 0) || loading) return;\n\n    let convId = currentConvId;\n    if (!convId) {\n      const newConv = await createConversation('新对话');\n      setConversations(prev => [newConv, ...prev]);\n      convId = newConv.id;\n      setCurrentConvId(convId);\n    }\n\n    // 构建用户消息内容（文字 + 图片标记）\n    let content = inputText;\n    if (pendingImages.length > 0) {\n      const base64s = await Promise.all(pendingImages.map(p => fileToBase64(p.file)));\n      content += '\\n' + base64s.map(b => `[IMAGE_DATA:${b}]`).join('\\n');\n    }\n\n    const userMsg: API.Message = { role: 'user', content };\n    setMessages(prev => [...prev, userMsg]);\n    setInputText('');\n    setPendingImages([]);\n\n    await streamChat(convId, userMsg, false);\n  };\n\n  const handleRegenerate = async () => {\n    if (!currentConvId || loading) return;\n    // 删除界面上最后一条 assistant 消息\n    setMessages(prev => {\n      const newMsgs = [...prev];\n      if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'assistant') {\n        newMsgs.pop();\n      }\n      return newMsgs;\n    });\n    await streamChat(currentConvId, null, true);\n  };\n\n  const handleStop = () => {\n    abortControllerRef.current?.abort();\n  };\n\n  const handleCopyMessage = (content: string) => {\n    const displayContent = extractDisplayContent(content);\n    navigator.clipboard.writeText(displayContent);\n    antdMessage.success('已复制到剪贴板');\n  };\n\n  const handleImageAdd = (file: File) => {\n    const preview = URL.createObjectURL(file);\n    setPendingImages(prev => [...prev, { file, preview }]);\n    return false; // 阻止 antd Upload 自动上传\n  };\n\n  const handleImageRemove = (index: number) => {\n    setPendingImages(prev => prev.filter((_, i) => i !== index));\n  };\n\n  // Sidebar 内容\n  const siderContent = (\n    <div className={`sider-inner ${isDark ? 'dark' : ''}`}>\n      <div className=\"sider-top\">\n        <Button\n          type=\"text\"\n          icon={<PlusOutlined />}\n          onClick={handleCreateChat}\n          className=\"new-chat-btn\"\n          title=\"新对话 (Ctrl+N)\"\n        >\n          发起新对话\n        </Button>\n\n        <div className=\"conv-list\">\n          <div className=\"conv-list-label\">对话</div>\n          {conversations.map(conv => (\n            <div\n              key={conv.id}\n              className={`conversation-item ${currentConvId === conv.id ? 'active' : ''}`}\n              onClick={() => handleSelectConversation(conv.id)}\n            >\n              {editingTitleId === conv.id ? (\n                <div className=\"title-edit\" onClick={e => e.stopPropagation()}>\n                  <Input\n                    size=\"small\"\n                    value={editingTitle}\n                    onChange={e => setEditingTitle(e.target.value)}\n                    onPressEnter={handleRenameConfirm}\n                    autoFocus\n                  />\n                  <Button type=\"text\" size=\"small\" icon={<CheckOutlined />} onClick={handleRenameConfirm} />\n                  <Button type=\"text\" size=\"small\" icon={<CloseOutlined />} onClick={() => setEditingTitleId(null)} />\n                </div>\n              ) : (\n                <>\n                  <span className=\"conv-title\">{conv.title}</span>\n                  <div className=\"conv-actions\">\n                    <Button\n                      type=\"text\" size=\"small\" icon={<EditOutlined />}\n                      className=\"action-btn\"\n                      onClick={(e) => handleRenameStart(conv, e)}\n                    />\n                    <Popconfirm\n                      title=\"删除对话\" description=\"确定要删除这个对话吗？\"\n                      onConfirm={(e) => handleDeleteConversation(conv.id, e as any)}\n                      onCancel={(e) => (e as any)?.stopPropagation()}\n                    >\n                      <Button\n                        type=\"text\" size=\"small\" icon={<DeleteOutlined />}\n                        className=\"action-btn delete-btn\"\n                        onClick={e => e.stopPropagation()}\n                      />\n                    </Popconfirm>\n                  </div>\n                </>\n              )}\n            </div>\n          ))}\n          {conversations.length === 0 && (\n            <div className=\"empty-conv\">暂无对话记录</div>\n          )}\n        </div>\n      </div>\n\n      <div className=\"sider-bottom\">\n        <Button\n          block icon={isDark ? <SunOutlined /> : <MoonOutlined />}\n          onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}\n          className=\"sider-action-btn\"\n        >\n          {isDark ? '浅色模式' : '深色模式'}\n        </Button>\n        <Button\n          block icon={<SettingOutlined />}\n          onClick={() => setShowSettings(true)}\n          className=\"sider-action-btn\"\n        >\n          设置\n        </Button>\n        <Button\n          block icon={<LogoutOutlined />}\n          onClick={logout}\n          className=\"sider-action-btn\"\n          danger\n        >\n          退出登录\n        </Button>\n      </div>\n    </div>\n  );\n\n  const lastAssistantIdx = [...messages].map(m => m.role).lastIndexOf('assistant');\n\n  return (\n    <ConfigProvider\n      theme={{\n        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,\n      }}\n    >\n      <Layout className={`chat-layout ${isDark ? 'dark' : ''}`}>\n        {/* Desktop Sider */}\n        {!isMobile && (\n          <Sider width={260} className=\"chat-sider\">\n            {siderContent}\n          </Sider>\n        )}\n\n        {/* Mobile Drawer */}\n        {isMobile && (\n          <Drawer\n            placement=\"left\"\n            open={siderVisible}\n            onClose={() => setSiderVisible(false)}\n            width={260}\n            styles={{ body: { padding: 0 } }}\n            title={null}\n          >\n            {siderContent}\n          </Drawer>\n        )}\n\n        <Layout>\n          <Content className=\"chat-content\">\n            {/* Header */}\n            <div className=\"chat-header\">\n              <div className=\"header-left\">\n                {isMobile && (\n                  <Button\n                    type=\"text\" icon={<MenuOutlined />}\n                    onClick={() => setSiderVisible(true)}\n                  />\n                )}\n                <span className=\"header-title\">Timo</span>\n                {currentConvId && (\n                  <Tooltip title={currentSystemPrompt ? '编辑 System Prompt（已激活）' : '设置 System Prompt'}>\n                    <Button\n                      type=\"text\"\n                      size=\"small\"\n                      icon={<EditOutlined />}\n                      onClick={() => setShowSystemPrompt(true)}\n                      style={{\n                        color: currentSystemPrompt ? '#f59e0b' : undefined,\n                        fontWeight: currentSystemPrompt ? 600 : undefined,\n                      }}\n                    >\n                      {currentSystemPrompt ? 'System Prompt ✦' : 'System Prompt'}\n                    </Button>\n                  </Tooltip>\n                )}\n              </div>\n              <div className=\"header-right\">\n                {models.length >= 2 && (\n                  <Tooltip title=\"多模型并行对比\">\n                    <Button\n                      type=\"text\" size=\"small\"\n                      icon={<ThunderboltOutlined />}\n                      onClick={() => setShowCompare(true)}\n                      style={{ color: '#f59e0b' }}\n                    >\n                      对比\n                    </Button>\n                  </Tooltip>\n                )}\n                <span className=\"header-username\">{currentUser?.username}</span>\n                <Avatar style={{ backgroundColor: '#2563eb' }} icon={<UserOutlined />}>\n                  {currentUser?.username?.[0]?.toUpperCase()}\n                </Avatar>\n              </div>\n            </div>\n\n            {/* Messages */}\n            <div className=\"messages-area\">\n              {messages.length === 0 ? (\n                <div className=\"empty-messages\">\n                  <div className=\"empty-icon\">✨</div>\n                  <div className=\"empty-title\">有什么我可以帮你的？</div>\n                  <div className=\"empty-hint\">按 Ctrl+N 创建新对话</div>\n                </div>\n              ) : (\n                messages.map((msg, idx) => (\n                  <div\n                    key={idx}\n                    className={`message-row ${msg.role}`}\n                  >\n                    {msg.role === 'assistant' && (\n                      <Avatar className=\"msg-avatar assistant-avatar\" size={32}>AI</Avatar>\n                    )}\n                    <div className={`message-bubble ${msg.role}`}>\n                      {msg.role === 'user' ? (\n                        <div className=\"user-content\">\n                          {hasImage(msg.content) && (\n                            <div className=\"image-preview-row\">📷 图片</div>\n                          )}\n                          {extractDisplayContent(msg.content)}\n                        </div>\n                      ) : (\n                        <MarkdownRenderer content={msg.content} isDark={isDark} />\n                      )}\n                    </div>\n                    {/* Message Actions */}\n                    <div className={`msg-actions ${msg.role}`}>\n                      <Tooltip title=\"复制\">\n                        <Button\n                          type=\"text\" size=\"small\"\n                          icon={<CopyOutlined />}\n                          onClick={() => handleCopyMessage(msg.content)}\n                          className=\"msg-action-btn\"\n                        />\n                      </Tooltip>\n                      {msg.role === 'assistant' && idx === lastAssistantIdx && !loading && (\n                        <Tooltip title=\"重新生成\">\n                          <Button\n                            type=\"text\" size=\"small\"\n                            icon={<ReloadOutlined />}\n                            onClick={handleRegenerate}\n                            className=\"msg-action-btn\"\n                          />\n                        </Tooltip>\n                      )}\n                    </div>\n                  </div>\n                ))\n              )}\n              <div ref={messagesEndRef} />\n            </div>\n\n            {/* Input Area */}\n            <div className=\"input-area\">\n              {/* Pending Images Preview */}\n              {pendingImages.length > 0 && (\n                <div className=\"pending-images\">\n                  {pendingImages.map((img, i) => (\n                    <div key={i} className=\"pending-image-item\">\n                      <img src={img.preview} alt=\"upload\" />\n                      <Button\n                        type=\"text\" size=\"small\" danger\n                        icon={<CloseOutlined />}\n                        className=\"remove-image-btn\"\n                        onClick={() => handleImageRemove(i)}\n                      />\n                    </div>\n                  ))}\n                </div>\n              )}\n\n              <div className=\"input-container\">\n                <Tooltip title=\"上传图片\">\n                  <Upload\n                    accept=\"image/*\"\n                    showUploadList={false}\n                    beforeUpload={handleImageAdd}\n                    multiple\n                  >\n                    <Button\n                      type=\"text\"\n                      icon={<PictureOutlined />}\n                      className=\"input-action-btn\"\n                      disabled={loading}\n                    />\n                  </Upload>\n                </Tooltip>\n\n                <Input\n                  ref={inputRef as any}\n                  value={inputText}\n                  onChange={e => setInputText(e.target.value)}\n                  onPressEnter={e => {\n                    if (!e.shiftKey) {\n                      e.preventDefault();\n                      sendMessage();\n                    }\n                  }}\n                  placeholder=\"问问 Timo… (Shift+Enter 换行)\"\n                  bordered={false}\n                  disabled={loading}\n                  className=\"chat-input\"\n                />\n\n                <Select\n                  value={selectedModel}\n                  onChange={setSelectedModel}\n                  options={models.map(m => ({ label: m.display_name, value: m.model_id }))}\n                  bordered={false}\n                  style={{ minWidth: 120, maxWidth: 180 }}\n                  disabled={loading}\n                  placeholder=\"选择模型\"\n                />\n\n                {loading ? (\n                  <Tooltip title=\"停止生成\">\n                    <Button\n                      danger shape=\"circle\"\n                      icon={<StopOutlined />}\n                      onClick={handleStop}\n                      className=\"send-btn\"\n                    />\n                  </Tooltip>\n                ) : (\n                  <Button\n                    type=\"primary\" shape=\"circle\"\n                    icon={<SendOutlined />}\n                    disabled={!inputText.trim() && pendingImages.length === 0}\n                    onClick={sendMessage}\n                    className=\"send-btn\"\n                  />\n                )}\n              </div>\n              <div className=\"input-hint\">Timo 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行</div>\n            </div>\n          </Content>\n        </Layout>\n\n        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />\n        <SystemPromptModal\n          open={showSystemPrompt}\n          onClose={() => setShowSystemPrompt(false)}\n          conversationId={currentConvId}\n          currentPrompt={currentSystemPrompt}\n          onSave={handleSaveSystemPrompt}\n        />\n        <ModelCompareModal\n          open={showCompare}\n          onClose={() => setShowCompare(false)}\n          models={models}\n          conversationId={currentConvId}\n          isDark={isDark}\n        />\n      </Layout>\n    </ConfigProvider>\n  );\n};\n",
       "__isJSFile": true,
       "__absFile": "C:/Users/ZTS/Desktop/dev/timo/src/pages/Chat/index.tsx"
     },
@@ -4952,7 +5222,7 @@
             "format": "esm"
           },
           "src/services/api.ts": {
-            "bytes": 3041,
+            "bytes": 3182,
             "imports": [
               {
                 "path": "src/.umi/exports.ts",
@@ -5552,8 +5822,70 @@
             ],
             "format": "esm"
           },
+          "src/components/SystemPromptModal.tsx": {
+            "bytes": 8222,
+            "imports": [
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "@ant-design/icons",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              }
+            ],
+            "format": "esm"
+          },
+          "src/components/ModelCompareModal.tsx": {
+            "bytes": 11074,
+            "imports": [
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "@ant-design/icons",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "src/components/MarkdownRenderer.tsx",
+                "kind": "import-statement",
+                "original": "@/components/MarkdownRenderer"
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              }
+            ],
+            "format": "esm"
+          },
           "src/pages/Chat/index.tsx": {
-            "bytes": 22038,
+            "bytes": 24612,
             "imports": [
               {
                 "path": "react",
@@ -5584,6 +5916,16 @@
                 "path": "src/components/MarkdownRenderer.tsx",
                 "kind": "import-statement",
                 "original": "@/components/MarkdownRenderer"
+              },
+              {
+                "path": "src/components/SystemPromptModal.tsx",
+                "kind": "import-statement",
+                "original": "@/components/SystemPromptModal"
+              },
+              {
+                "path": "src/components/ModelCompareModal.tsx",
+                "kind": "import-statement",
+                "original": "@/components/ModelCompareModal"
               },
               {
                 "path": "src/services/api.ts",
@@ -6065,6 +6407,51 @@
               },
               {
                 "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "@ant-design/icons",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "@ant-design/icons",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react/jsx-runtime",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "react",
+                "kind": "import-statement",
+                "external": true
+              },
+              {
+                "path": "antd",
                 "kind": "import-statement",
                 "external": true
               },
@@ -7280,7 +7667,7 @@
                 "bytesInOutput": 3175
               },
               "src/services/api.ts": {
-                "bytesInOutput": 2124
+                "bytesInOutput": 2244
               },
               "src/app.tsx": {
                 "bytesInOutput": 2401
@@ -7351,8 +7738,14 @@
               "src/components/MarkdownRenderer.tsx": {
                 "bytesInOutput": 3421
               },
+              "src/components/SystemPromptModal.tsx": {
+                "bytesInOutput": 10920
+              },
+              "src/components/ModelCompareModal.tsx": {
+                "bytesInOutput": 10340
+              },
               "src/pages/Chat/index.tsx": {
-                "bytesInOutput": 25753
+                "bytesInOutput": 28727
               },
               "src/.umi/plugin-layout/Logo.tsx": {
                 "bytesInOutput": 5504
@@ -7361,7 +7754,7 @@
                 "bytesInOutput": 1117
               },
               "src/.umi/plugin-layout/rightRender.tsx": {
-                "bytesInOutput": 2855
+                "bytesInOutput": 2865
               },
               "src/.umi/plugin-layout/Layout.tsx": {
                 "bytesInOutput": 5786
@@ -7376,7 +7769,7 @@
                 "bytesInOutput": 2061
               }
             },
-            "bytes": 117396
+            "bytes": 141842
           }
         }
       }
@@ -11064,6 +11457,128 @@
           "type": "ImportDeclaration"
         }
       ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\components\\ModelCompareModal.tsx": [
+        {
+          "end": 42,
+          "importKind": "value",
+          "source": "react",
+          "specifiers": [
+            {
+              "imported": "useState",
+              "local": "useState",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "useRef",
+              "local": "useRef",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 1,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 125,
+          "importKind": "value",
+          "source": "antd",
+          "specifiers": [
+            {
+              "imported": "Modal",
+              "local": "Modal",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Select",
+              "local": "Select",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Button",
+              "local": "Button",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Spin",
+              "local": "Spin",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Empty",
+              "local": "Empty",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Tooltip",
+              "local": "Tooltip",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Tag",
+              "local": "Tag",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Divider",
+              "local": "Divider",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 44,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 211,
+          "importKind": "value",
+          "source": "@ant-design/icons",
+          "specifiers": [
+            {
+              "imported": "ThunderboltOutlined",
+              "local": "ThunderboltOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "StopOutlined",
+              "local": "StopOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "CopyOutlined",
+              "local": "CopyOutlined",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 127,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 278,
+          "importKind": "value",
+          "source": "@/components/MarkdownRenderer",
+          "specifiers": [
+            {
+              "imported": "MarkdownRenderer",
+              "local": "MarkdownRenderer",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 213,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 326,
+          "importKind": "value",
+          "source": "antd",
+          "specifiers": [
+            {
+              "imported": "message",
+              "local": "antdMessage",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 280,
+          "type": "ImportDeclaration"
+        }
+      ],
       "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\components\\SettingsModal.tsx": [
         {
           "end": 135,
@@ -11241,6 +11756,90 @@
           "type": "ImportDeclaration"
         }
       ],
+      "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\components\\SystemPromptModal.tsx": [
+        {
+          "end": 34,
+          "importKind": "value",
+          "source": "react",
+          "specifiers": [
+            {
+              "imported": "useState",
+              "local": "useState",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 1,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 119,
+          "importKind": "value",
+          "source": "antd",
+          "specifiers": [
+            {
+              "imported": "Modal",
+              "local": "Modal",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Input",
+              "local": "Input",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Button",
+              "local": "Button",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Card",
+              "local": "Card",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Tag",
+              "local": "Tag",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Tooltip",
+              "local": "Tooltip",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Space",
+              "local": "Space",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "Typography",
+              "local": "Typography",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 36,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 191,
+          "importKind": "value",
+          "source": "@ant-design/icons",
+          "specifiers": [
+            {
+              "imported": "EditOutlined",
+              "local": "EditOutlined",
+              "type": "ImportSpecifier"
+            },
+            {
+              "imported": "ThunderboltOutlined",
+              "local": "ThunderboltOutlined",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 121,
+          "type": "ImportDeclaration"
+        }
+      ],
       "C:\\Users\\ZTS\\Desktop\\dev\\timo\\src\\models\\global.ts": [
         {
           "end": 37,
@@ -11376,7 +11975,7 @@
           "type": "ImportDeclaration"
         },
         {
-          "end": 512,
+          "end": 535,
           "importKind": "value",
           "source": "@ant-design/icons",
           "specifiers": [
@@ -11459,13 +12058,18 @@
               "imported": "CloseOutlined",
               "local": "CloseOutlined",
               "type": "ImportSpecifier"
+            },
+            {
+              "imported": "ThunderboltOutlined",
+              "local": "ThunderboltOutlined",
+              "type": "ImportSpecifier"
             }
           ],
           "start": 231,
           "type": "ImportDeclaration"
         },
         {
-          "end": 560,
+          "end": 583,
           "importKind": "value",
           "source": "@umijs/max",
           "specifiers": [
@@ -11480,11 +12084,11 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 513,
+          "start": 536,
           "type": "ImportDeclaration"
         },
         {
-          "end": 620,
+          "end": 643,
           "importKind": "value",
           "source": "@/components/SettingsModal",
           "specifiers": [
@@ -11494,11 +12098,11 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 561,
+          "start": 584,
           "type": "ImportDeclaration"
         },
         {
-          "end": 686,
+          "end": 709,
           "importKind": "value",
           "source": "@/components/MarkdownRenderer",
           "specifiers": [
@@ -11508,11 +12112,39 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 621,
+          "start": 644,
           "type": "ImportDeclaration"
         },
         {
-          "end": 843,
+          "end": 777,
+          "importKind": "value",
+          "source": "@/components/SystemPromptModal",
+          "specifiers": [
+            {
+              "imported": "SystemPromptModal",
+              "local": "SystemPromptModal",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 710,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 845,
+          "importKind": "value",
+          "source": "@/components/ModelCompareModal",
+          "specifiers": [
+            {
+              "imported": "ModelCompareModal",
+              "local": "ModelCompareModal",
+              "type": "ImportSpecifier"
+            }
+          ],
+          "start": 778,
+          "type": "ImportDeclaration"
+        },
+        {
+          "end": 1002,
           "importKind": "value",
           "source": "@/services/api",
           "specifiers": [
@@ -11547,15 +12179,15 @@
               "type": "ImportSpecifier"
             }
           ],
-          "start": 687,
+          "start": 846,
           "type": "ImportDeclaration"
         },
         {
-          "end": 865,
+          "end": 1024,
           "importKind": "value",
           "source": "./index.css",
           "specifiers": [],
-          "start": 844,
+          "start": 1003,
           "type": "ImportDeclaration"
         }
       ],

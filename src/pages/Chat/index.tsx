@@ -8,10 +8,13 @@ import {
   UserOutlined, SendOutlined, StopOutlined, ReloadOutlined,
   CopyOutlined, SunOutlined, MoonOutlined, MenuOutlined,
   PictureOutlined, EditOutlined, CheckOutlined, CloseOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useModel, history } from '@umijs/max';
 import { SettingsModal } from '@/components/SettingsModal';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { SystemPromptModal } from '@/components/SystemPromptModal';
+import { ModelCompareModal } from '@/components/ModelCompareModal';
 import {
   getConversations,
   createConversation,
@@ -78,6 +81,14 @@ export default () => {
 
   // 设置弹窗
   const [showSettings, setShowSettings] = useState(false);
+
+  // System Prompt
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const currentConv = conversations.find(c => c.id === currentConvId) ?? null;
+  const currentSystemPrompt = currentConv?.system_prompt ?? '';
+
+  // 模型对比
+  const [showCompare, setShowCompare] = useState(false);
 
   // 对话重命名状态
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -207,6 +218,20 @@ export default () => {
     }
     setEditingTitleId(null);
   };
+
+  const handleSaveSystemPrompt = async (prompt: string) => {
+    if (!currentConvId) return;
+    try {
+      await updateConversation(currentConvId, undefined as any, prompt);
+      setConversations(prev =>
+        prev.map(c => c.id === currentConvId ? { ...c, system_prompt: prompt } : c)
+      );
+      antdMessage.success('System Prompt 已保存');
+    } catch (e) {
+      antdMessage.error('保存失败');
+    }
+  };
+
 
   // 核心发送函数（兼容 send + regenerate）
   const streamChat = async (convId: string, userMsg: API.Message | null, isRegenerate = false) => {
@@ -484,8 +509,36 @@ export default () => {
                   />
                 )}
                 <span className="header-title">Timo</span>
+                {currentConvId && (
+                  <Tooltip title={currentSystemPrompt ? '编辑 System Prompt（已激活）' : '设置 System Prompt'}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => setShowSystemPrompt(true)}
+                      style={{
+                        color: currentSystemPrompt ? '#f59e0b' : undefined,
+                        fontWeight: currentSystemPrompt ? 600 : undefined,
+                      }}
+                    >
+                      {currentSystemPrompt ? 'System Prompt ✦' : 'System Prompt'}
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
               <div className="header-right">
+                {models.length >= 2 && (
+                  <Tooltip title="多模型并行对比">
+                    <Button
+                      type="text" size="small"
+                      icon={<ThunderboltOutlined />}
+                      onClick={() => setShowCompare(true)}
+                      style={{ color: '#f59e0b' }}
+                    >
+                      对比
+                    </Button>
+                  </Tooltip>
+                )}
                 <span className="header-username">{currentUser?.username}</span>
                 <Avatar style={{ backgroundColor: '#2563eb' }} icon={<UserOutlined />}>
                   {currentUser?.username?.[0]?.toUpperCase()}
@@ -636,6 +689,20 @@ export default () => {
         </Layout>
 
         <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
+        <SystemPromptModal
+          open={showSystemPrompt}
+          onClose={() => setShowSystemPrompt(false)}
+          conversationId={currentConvId}
+          currentPrompt={currentSystemPrompt}
+          onSave={handleSaveSystemPrompt}
+        />
+        <ModelCompareModal
+          open={showCompare}
+          onClose={() => setShowCompare(false)}
+          models={models}
+          conversationId={currentConvId}
+          isDark={isDark}
+        />
       </Layout>
     </ConfigProvider>
   );

@@ -30,6 +30,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     uid TEXT NOT NULL,
     title TEXT NOT NULL,
+    system_prompt TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -155,9 +156,14 @@ export function cleanExpiredSessions() {
 
 // ============ 对话管理 ============
 
+// 运行时迁移：添加 system_prompt 列（已存在时忽略）
+try {
+  db.prepare('ALTER TABLE conversations ADD COLUMN system_prompt TEXT DEFAULT ""').run();
+} catch (e) { /* column already exists */ }
+
 export function getConversations(uid) {
   return db.prepare(`
-    SELECT id, title, created_at, updated_at
+    SELECT id, title, system_prompt, created_at, updated_at
     FROM conversations
     WHERE uid = ?
     ORDER BY updated_at DESC
@@ -168,13 +174,19 @@ export function createConversation(uid, title = '新对话') {
   const result = db.prepare(`
     INSERT INTO conversations (uid, title) VALUES (?, ?)
   `).run(uid, title);
-  return { id: result.lastInsertRowid, title };
+  return { id: result.lastInsertRowid, title, system_prompt: '' };
 }
 
 export function updateConversationTitle(id, uid, title) {
   db.prepare(`
     UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
   `).run(title, id, uid);
+}
+
+export function updateConversationSystemPrompt(id, uid, systemPrompt) {
+  db.prepare(`
+    UPDATE conversations SET system_prompt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
+  `).run(systemPrompt, id, uid);
 }
 
 export function deleteConversation(id, uid) {
