@@ -18,6 +18,7 @@ import OpenAI from 'openai';
 
 const router = Router();
 router.use(authMiddleware);
+const titleSummaryInFlight = new Set();
 
 // ============ 对话 CRUD ============
 
@@ -112,6 +113,65 @@ function getEndpoints(uid) {
   if (!groups.length) return [];
   // 默认的排首位
   return groups.sort((a, b) => b.is_default - a.is_default);
+}
+
+async function summarizeConversationTitle(uid, conversationId, preferredModel) {
+  const taskKey = `${uid}:${conversationId}`;
+  if (titleSummaryInFlight.has(taskKey)) return;
+  titleSummaryInFlight.add(taskKey);
+
+  try {
+    const conversation = getConversation(conversationId, uid);
+    if (!conversation) return;
+
+    // 用户已手动命名时不覆盖
+    if (conversation.title && conversation.title.trim() && conversation.title.trim() !== '新对话') {
+      return;
+    }
+
+    const history = getMessages(conversationId, uid);
+    const firstUser = history.find((m) => m.role === 'user');
+    const firstAssistant = history.find((m) => m.role === 'assistant' && m.content?.trim());
+    if (!firstUser || !firstAssistant) return;
+
+    const userText = extractDisplayText(firstUser.content).slice(0, 400);
+    const assistantText = extractDisplayText(firstAssistant.content).slice(0, 500);
+    const endpoints = getEndpoints(uid);
+    if (!endpoints.length) return;
+
+    for (const ep of endpoints) {
+      try {
+        const client = new OpenAI({ apiKey: ep.api_key, baseURL: ep.base_url });
+        const completion = await client.chat.completions.create({
+          model: preferredModel || 'gpt-4o-mini',
+          temperature: 0.2,
+          max_tokens: 40,
+          messages: [
+            { role: 'system', content: '你是标题生成助手。请将对话总结为简短中文标题，长度 8-20 字，不要加引号、句号和前缀。' },
+            {
+              role: 'user',
+              content: `用户问题：${userText}\n\n助手回答摘要：${assistantText}\n\n请输出标题：`,
+            },
+          ],
+        });
+
+        const rawTitle = completion.choices?.[0]?.message?.content || '';
+        const normalized = rawTitle.replace(/["'“”‘’。！？!?.]/g, '').trim().slice(0, 28);
+        if (!normalized) continue;
+
+        updateConversationTitle(conversationId, uid, normalized);
+        return;
+      } catch (error) {
+        console.warn(`[Title Summary] Endpoint "${ep.name}" failed: ${error.message}`);
+      }
+    }
+  } finally {
+    titleSummaryInFlight.delete(taskKey);
+  }
+}
+
+function extractDisplayText(content) {
+  return (content || '').replace(/\[IMAGE_DATA:[^\]]+\]/g, '[图片]');
 }
 
 async function streamWithFallback(uid, model, messages, res, opts = {}) {
@@ -224,19 +284,30 @@ router.post('/:id/chat', async (req, res) => {
 
     updateMessage(aiMsg.id, uid, fullContent);
 
-    // 首次发言自动设置对话标题
-    if (history.length === 1) {
-      const title = message.slice(0, 30) + (message.length > 30 ? '...' : '');
-      updateConversationTitle(id, uid, title);
-      res.write(`data: ${JSON.stringify({ title })}\n\n`);
-    }
-
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (error) {
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }
+});
+
+// 异步标题总结（不阻塞聊天）
+router.post('/:id/summarize-title', (req, res) => {
+  const { id } = req.params;
+  const { model } = req.body || {};
+  const uid = req.uid;
+
+  const conversation = getConversation(id, uid);
+  if (!conversation) {
+    return res.status(404).json({ error: '对话不存在或无权限' });
+  }
+
+  summarizeConversationTitle(uid, id, model).catch((error) => {
+    console.warn(`[Title Summary] Failed for conversation ${id}: ${error.message}`);
+  });
+
+  res.status(202).json({ queued: true });
 });
 
 // ============ 重新生成 ============

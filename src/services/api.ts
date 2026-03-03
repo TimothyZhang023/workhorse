@@ -64,6 +64,13 @@ export async function regenerateMessage(conversationId: string, model: string) {
   });
 }
 
+export async function summarizeConversationTitle(conversationId: string, model?: string) {
+  return request(`/api/conversations/${conversationId}/summarize-title`, {
+    method: 'POST',
+    data: { model },
+  });
+}
+
 
 export async function getMessages(conversationId: string) {
   return request<API.Message[]>(`/api/conversations/${conversationId}/messages`, {
