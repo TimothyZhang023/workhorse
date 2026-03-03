@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkgemini_chat_unified=self.webpackChunkgemini_chat_unified||[]).push([[390],{96390:function(c,n,t){t.r(n),t.d(n,{default:function(){return i}});var f=t(67294),u=t(76772),e=t(85893);function i(){var E=(0,u.useOutletContext)();return(0,e.jsx)(u.Outlet,{context:E})}}}]);
