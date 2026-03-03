@@ -83,7 +83,62 @@ npm start
 
 ---
 
-## 📁 项目结构
+## � Docker 部署
+
+### 前提条件
+
+- 已安装 [Docker](https://www.docker.com/) 和 Docker Compose
+
+### 一键启动（推荐）
+
+```bash
+docker compose up -d --build
+```
+
+服务启动后访问 `http://localhost:8866`
+
+### 常用命令
+
+```bash
+# 查看日志
+docker compose logs -f
+
+# 停止服务
+docker compose down
+
+# 更新代码后重新构建并启动
+docker compose up -d --build
+
+# 查看容器状态
+docker compose ps
+```
+
+### 数据持久化
+
+所有数据（用户、会话、API Key）保存在 Docker named volume `timo_data` 中：
+
+```bash
+# 查看 volume 位置
+docker volume inspect timo_data
+
+# 备份数据库
+docker cp timo:/app/data/chat.db ./backup_chat.db
+```
+
+> **注意**：执行 `docker compose down -v` 会删除 volume 数据，请谨慎操作。
+
+### 修改端口
+
+如需将服务暴露到其他端口（如 80），修改 `docker-compose.yml`：
+
+```yaml
+ports:
+  - "80:8866"
+```
+
+---
+
+
 
 ```
 timo/

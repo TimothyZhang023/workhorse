@@ -1,0 +1,26 @@
+services:
+  timo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: timo:latest
+    container_name: timo
+    restart: unless-stopped
+    ports:
+      - "8866:8866"
+    volumes:
+      # 持久化 SQLite 数据库（用户、会话、API Key 等）
+      - timo_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=8866
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8866/api/auth/me" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  timo_data:
+    driver: local
