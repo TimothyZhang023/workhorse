@@ -23,6 +23,7 @@ import {
   getMessages,
   getAvailableModels,
   updateConversation,
+  summarizeConversationTitle,
 } from '@/services/api';
 import './index.css';
 
@@ -146,6 +147,15 @@ export default () => {
       setModels(availableModels);
       if (availableModels.length > 0) setSelectedModel(availableModels[0].model_id);
       if (convs.length > 0) handleSelectConversation(convs[0].id);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const refreshConversations = async () => {
+    try {
+      const convs = await getConversations();
+      setConversations(convs);
     } catch (error) {
       console.error(error);
     }
@@ -325,6 +335,7 @@ export default () => {
     if ((!inputText.trim() && pendingImages.length === 0) || loading) return;
 
     let convId = currentConvId;
+    const shouldSummarizeTitle = messages.length === 0;
     if (!convId) {
       const newConv = await createConversation('新对话');
       setConversations(prev => [newConv, ...prev]);
@@ -345,6 +356,12 @@ export default () => {
     setPendingImages([]);
 
     await streamChat(convId, userMsg, false);
+
+    if (shouldSummarizeTitle) {
+      summarizeConversationTitle(convId, selectedModel).catch((e) => console.error(e));
+      // 异步总结会有延迟，稍后刷新会话列表拿到新标题
+      setTimeout(() => refreshConversations(), 2000);
+    }
   };
 
   const handleRegenerate = async () => {
@@ -584,7 +601,17 @@ export default () => {
                           {extractDisplayContent(msg.content)}
                         </div>
                       ) : (
-                        <MarkdownRenderer content={msg.content} isDark={isDark} />
+                        <div className={loading && idx === lastAssistantIdx ? 'assistant-streaming' : ''}>
+                          {msg.content ? (
+                            <MarkdownRenderer content={msg.content} isDark={isDark} />
+                          ) : (
+                            <div className="typing-placeholder">
+                              <span>AI 正在思考</span>
+                              <span className="typing-dots"><i /><i /><i /></span>
+                            </div>
+                          )}
+                          {loading && idx === lastAssistantIdx && <span className="stream-cursor" />}
+                        </div>
                       )}
                     </div>
                     {/* Message Actions */}

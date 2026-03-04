@@ -56,7 +56,7 @@ npm run dev
 ```
 
 - 前端开发地址：`http://localhost:8000`
-- 后端 API 地址：`http://localhost:7866`
+- 后端 API 地址：`http://localhost:8866`
 
 ### 方式三：生产部署
 
@@ -66,7 +66,7 @@ npm run build
 npm start
 ```
 
-构建产物输出到 `public/` 目录，由 Express 直接托管，访问 `http://localhost:7866`。
+构建产物输出到 `dist/` 目录，由 Express 直接托管，访问 `http://localhost:8866`。
 
 ---
 
@@ -166,7 +166,7 @@ timo/
 │   └── models/
 │       └── global.ts       # 全局状态管理
 ├── data/                   # 本地数据库（已 gitignore）
-├── public/                 # 构建输出目录
+├── dist/                   # 构建输出目录
 ├── start_all.bat           # Windows 一键启动
 ├── stop_all.bat            # Windows 停止服务
 └── restart_all.bat         # Windows 重启服务

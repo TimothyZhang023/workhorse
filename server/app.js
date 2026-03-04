@@ -25,7 +25,11 @@ export function createApp() {
   app.use(cors());
   app.use(cookieParser());
   app.use(express.json({ limit: '20mb' }));  // 支持 base64 图片上传
-  app.use(express.static(join(__dirname, '../public')));
+  app.use(express.static(join(__dirname, '../dist')));
+
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
 
   // 速率限制
   const authLimiter = rateLimit({
@@ -52,7 +56,7 @@ export function createApp() {
 
   // 处理 SPA 前端路由
   app.get('*', (req, res) => {
-    const indexPath = join(__dirname, '../public/index.html');
+    const indexPath = join(__dirname, '../dist/index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {

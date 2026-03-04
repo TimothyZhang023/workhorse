@@ -49,7 +49,13 @@ router.get('/', (req, res) => {
   try {
     const groups = getEndpointGroups(req.uid);
     const safeGroups = groups.map(g => ({
-      ...g,
+      id: g.id,
+      name: g.name,
+      base_url: g.base_url,
+      is_default: g.is_default,
+      use_preset_models: g.use_preset_models,
+      created_at: g.created_at,
+      updated_at: g.updated_at,
       api_key_preview: g.api_key ? g.api_key.slice(0, 8) + '...' : ''
     }));
     res.json(safeGroups);
@@ -91,6 +97,9 @@ router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
     const { name, base_url, api_key, use_preset_models } = req.body;
+    if (!name || !base_url) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
     updateEndpointGroup(id, req.uid, name, base_url, api_key, use_preset_models);
     res.json({ success: true });
   } catch (error) {
