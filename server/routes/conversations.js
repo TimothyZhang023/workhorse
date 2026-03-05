@@ -15,6 +15,8 @@ import {
   updateConversationTitle,
   updateMessage,
 } from "../models/database.js";
+import db from "../models/database.js";
+import { executeMcpTool, getAllAvailableTools } from "../models/mcpManager.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -80,7 +82,24 @@ function buildMessages(history, systemPrompt) {
     result.push({ role: "system", content: systemPrompt.trim() });
   }
   for (const m of history) {
-    if (m.role === "user" && m.content.includes("[IMAGE_DATA:")) {
+    if (m.role === "assistant" && m.content && m.content.startsWith("[TOOL_CALLS]:")) {
+      try {
+        const toolCalls = JSON.parse(m.content.slice(13));
+        result.push({ role: "assistant", content: null, tool_calls: toolCalls });
+      } catch (e) {
+        console.warn("Failed to parse tool calls from history", e);
+      }
+    } else if (m.role === "tool" && m.content && m.content.startsWith("[TOOL_RESULT:")) {
+      const match = m.content.match(/^\[TOOL_RESULT:([^:]+):([^\]]+)\]:(.*)$/s);
+      if (match) {
+        result.push({
+          role: "tool",
+          tool_call_id: match[1],
+          name: match[2],
+          content: match[3],
+        });
+      }
+    } else if (m.role === "user" && m.content.includes("[IMAGE_DATA:")) {
       const parts = [];
       const imageRegex = /\[IMAGE_DATA:([^\]]+)\]/g;
       const textContent = m.content.replace(imageRegex, "").trim();
@@ -90,15 +109,10 @@ function buildMessages(history, systemPrompt) {
       const imageRegex2 = /\[IMAGE_DATA:([^\]]+)\]/g;
       while ((match = imageRegex2.exec(m.content)) !== null) {
         const base64Data = match[1];
-        const mimeType = base64Data.startsWith("/9j/")
-          ? "image/jpeg"
-          : "image/png";
+        const mimeType = base64Data.startsWith("/9j/") ? "image/jpeg" : "image/png";
         parts.push({
           type: "image_url",
-          image_url: {
-            url: `data:${mimeType};base64,${base64Data}`,
-            detail: "auto",
-          },
+          image_url: { url: `data:${mimeType};base64,${base64Data}`, detail: "auto" },
         });
       }
       result.push({ role: "user", content: parts });
@@ -201,81 +215,177 @@ function extractDisplayText(content) {
 async function streamWithFallback(uid, model, messages, res, opts = {}) {
   const endpoints = getEndpoints(uid);
   if (!endpoints.length) {
-    res.write(
-      `data: ${JSON.stringify({ error: "请先在设置中配置 API Endpoint" })}\n\n`
-    );
+    res.write(`data: ${JSON.stringify({ error: "请先在设置中配置 API Endpoint" })}\n\n`);
+    res.write("data: [DONE]\n\n");
     res.end();
     return false;
   }
 
-  let lastError = null;
-  for (const ep of endpoints) {
-    try {
-      const client = new OpenAI({ apiKey: ep.api_key, baseURL: ep.base_url });
+  // Get tools from MCP
+  const allTools = await getAllAvailableTools(uid).catch((e) => {
+    console.error("Failed to get MCP tools: ", e);
+    return [];
+  });
+  // Strip internal _mcp_server_id field before sending to OpenAI
+  const requestTools = allTools.length > 0
+    ? allTools.map(({ _mcp_server_id, ...t }) => t)
+    : undefined;
 
-      // 开启 stream usage 统计
-      const streamParams = {
-        model: model || "gpt-4",
-        messages,
-        stream: true,
-        stream_options: { include_usage: true },
-      };
+  let maxToolLoops = 5;
+  let currentLoop = 0;
 
-      const stream = await client.chat.completions.create(streamParams);
+  async function executeTurn(currentMessages, currentAiMsgId) {
+    if (currentLoop >= maxToolLoops) {
+      res.write(`data: ${JSON.stringify({ error: "超出最大工具调用次数" })}\n\n`);
+      return false;
+    }
+    currentLoop++;
 
-      let fullContent = "";
-      let promptTokens = 0;
-      let completionTokens = 0;
-
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        if (content) {
-          fullContent += content;
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
-        }
-        // 捕获最终 usage 数据
-        if (chunk.usage) {
-          promptTokens = chunk.usage.prompt_tokens || 0;
-          completionTokens = chunk.usage.completion_tokens || 0;
-        }
-      }
-
-      // 记录用量日志
+    let lastError = null;
+    for (const ep of endpoints) {
       try {
-        logUsage({
-          uid,
-          conversationId: opts.conversationId,
-          model,
-          endpointName: ep.name,
-          promptTokens,
-          completionTokens,
-          source: opts.source || "chat",
-        });
-      } catch (logErr) {
-        console.warn("[Usage] Failed to log usage:", logErr.message);
-      }
+        const client = new OpenAI({ apiKey: ep.api_key, baseURL: ep.base_url });
+        const streamParams = {
+          model: model || "gpt-4",
+          messages: currentMessages,
+          stream: true,
+          tools: requestTools,
+          stream_options: { include_usage: true },
+        };
 
-      return fullContent;
-    } catch (error) {
-      lastError = error;
-      console.warn(
-        `[Fallback] Endpoint "${ep.name}" failed: ${error.message}.`
-      );
-      if (endpoints.indexOf(ep) < endpoints.length - 1) {
-        res.write(
-          `data: ${JSON.stringify({ notice: "切换到备用端点中..." })}\n\n`
-        );
+        const stream = await client.chat.completions.create(streamParams);
+
+        let fullTextContent = "";
+        let toolCalls = [];
+        let promptTokens = 0;
+        let completionTokens = 0;
+
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta || {};
+
+          if (delta.content) {
+            fullTextContent += delta.content;
+            res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
+          }
+
+          if (delta.tool_calls) {
+            for (const tcDelta of delta.tool_calls) {
+              const idx = tcDelta.index;
+              if (!toolCalls[idx]) {
+                toolCalls[idx] = {
+                  id: tcDelta.id,
+                  type: "function",
+                  function: { name: tcDelta.function?.name || "", arguments: "" },
+                };
+              }
+              if (tcDelta.function?.arguments) {
+                toolCalls[idx].function.arguments += tcDelta.function.arguments;
+              }
+            }
+          }
+
+          if (chunk.usage) {
+            promptTokens = chunk.usage.prompt_tokens || 0;
+            completionTokens = chunk.usage.completion_tokens || 0;
+          }
+        }
+
+        try {
+          if (promptTokens > 0) {
+            logUsage({
+              uid,
+              conversationId: opts.conversationId,
+              model,
+              endpointName: ep.name,
+              promptTokens,
+              completionTokens,
+              source: opts.source || "chat",
+            });
+          }
+        } catch (logErr) {
+          console.warn("[Usage] Failed to log usage:", logErr.message);
+        }
+
+        const finalToolCalls = toolCalls.filter(Boolean);
+
+        // CASE 1: No tools
+        if (finalToolCalls.length === 0) {
+          return fullTextContent;
+        }
+
+        // CASE 2: Tool calls
+        const toolCallsMsgStr = `[TOOL_CALLS]:${JSON.stringify(finalToolCalls)}`;
+        updateMessage(currentAiMsgId, uid, toolCallsMsgStr);
+
+        currentMessages.push({
+          role: "assistant",
+          content: null,
+          tool_calls: finalToolCalls,
+        });
+
+        // Execute Tools
+        for (const tc of finalToolCalls) {
+          try {
+            const funcName = tc.function.name;
+            const funcArgsDecoded = JSON.parse(tc.function.arguments || "{}");
+
+            res.write(`data: ${JSON.stringify({ type: "tool_running", tool_name: funcName })}\n\n`);
+
+            let resultContent = "";
+            const toolDef = allTools.find((t) => t.function.name === funcName);
+            if (toolDef && toolDef._mcp_server_id) {
+              const mcpRes = await executeMcpTool(uid, toolDef._mcp_server_id, funcName, funcArgsDecoded);
+              resultContent = (mcpRes.content || []).map((c) => c.text).join("\n");
+            } else {
+              resultContent = `Unknown tool: ${funcName}`;
+            }
+
+            const toolResultStr = `[TOOL_RESULT:${tc.id}:${funcName}]:${resultContent}`;
+            addMessage(opts.conversationId, uid, "tool", toolResultStr);
+
+            currentMessages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              name: funcName,
+              content: resultContent,
+            });
+          } catch (err) {
+            console.error(err);
+            const errStr = `[TOOL_RESULT:${tc.id}:${tc.function.name}]:Error - ${err.message}`;
+            addMessage(opts.conversationId, uid, "tool", errStr);
+            currentMessages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              name: tc.function.name,
+              content: err.message,
+            });
+          }
+        }
+
+        // Loop next response
+        const nextAiMsg = addMessage(opts.conversationId, uid, "assistant", "");
+        const nextContent = await executeTurn(currentMessages, nextAiMsg.id);
+
+        if (nextContent !== false && nextContent !== "_HANDLED_INTERNALLY_") {
+          updateMessage(nextAiMsg.id, uid, nextContent);
+        }
+
+        return "_HANDLED_INTERNALLY_";
+      } catch (error) {
+        lastError = error;
+        console.warn(`[Fallback] Endpoint "${ep.name}" failed: ${error.message}.`);
+        if (endpoints.indexOf(ep) < endpoints.length - 1) {
+          res.write(`data: ${JSON.stringify({ notice: "切换到备用端点中..." })}\n\n`);
+        }
       }
     }
+
+    res.write(`data: ${JSON.stringify({ error: `所有 API 端点均不可用：${lastError?.message}` })}\n\n`);
+    res.write("data: [DONE]\n\n");
+    return false;
   }
 
-  res.write(
-    `data: ${JSON.stringify({
-      error: `所有 API 端点均不可用：${lastError?.message}`,
-    })}\n\n`
-  );
-  res.end();
-  return false;
+  return await executeTurn(messages, opts.aiMsgId);
 }
 
 // ============ 流式聊天 ============
@@ -315,10 +425,15 @@ router.post("/:id/chat", async (req, res) => {
     const fullContent = await streamWithFallback(uid, model, messages, res, {
       conversationId: id,
       source: "chat",
+      aiMsgId: aiMsg.id,
     });
-    if (fullContent === false) return;
 
-    updateMessage(aiMsg.id, uid, fullContent);
+    if (fullContent === false) {
+      // Early exit handled in stream
+      return;
+    } else if (fullContent !== "_HANDLED_INTERNALLY_") {
+      updateMessage(aiMsg.id, uid, fullContent);
+    }
 
     res.write("data: [DONE]\n\n");
     res.end();
@@ -386,10 +501,73 @@ router.post("/:id/regenerate", async (req, res) => {
     const fullContent = await streamWithFallback(uid, model, messages, res, {
       conversationId: id,
       source: "chat",
+      aiMsgId: aiMsg.id,
     });
-    if (fullContent === false) return;
 
-    updateMessage(aiMsg.id, uid, fullContent);
+    if (fullContent === false) {
+      return;
+    } else if (fullContent !== "_HANDLED_INTERNALLY_") {
+      updateMessage(aiMsg.id, uid, fullContent);
+    }
+
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } catch (error) {
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
+  }
+});
+
+// ============ 编辑消息并重新生成 ============
+
+router.put("/:id/messages/:msgId", async (req, res) => {
+  const { id, msgId } = req.params;
+  const { content, model } = req.body;
+  const uid = req.uid;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    const conversation = getConversation(id, uid);
+    if (!conversation) {
+      res.write(`data: ${JSON.stringify({ error: "对话不存在或无权限" })}\n\n`);
+      res.end();
+      return;
+    }
+
+    const m = db.prepare("SELECT * FROM messages WHERE id = ? AND conversation_id = ? AND uid = ?").get(msgId, id, uid);
+    if (!m) {
+      res.write(`data: ${JSON.stringify({ error: "消息不存在" })}\n\n`);
+      res.end();
+      return;
+    }
+
+    // 截断该消息之后的所有消息
+    db.prepare("DELETE FROM messages WHERE conversation_id = ? AND uid = ? AND id > ?").run(id, uid, msgId);
+
+    // 更新当前消息的内容
+    updateMessage(msgId, uid, content);
+
+    // 重新获取历史并生成
+    const history = getMessages(id, uid);
+    const systemPrompt = conversation?.system_prompt || "";
+    const messages = buildMessages(history, systemPrompt);
+    const aiMsg = addMessage(id, uid, "assistant", "");
+
+    const fullContent = await streamWithFallback(uid, model, messages, res, {
+      conversationId: id,
+      source: "chat",
+      aiMsgId: aiMsg.id,
+    });
+
+    if (fullContent === false) {
+      return;
+    } else if (fullContent !== "_HANDLED_INTERNALLY_") {
+      updateMessage(aiMsg.id, uid, fullContent);
+    }
+
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (error) {

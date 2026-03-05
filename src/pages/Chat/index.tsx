@@ -127,6 +127,13 @@ export default () => {
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
 
+  // 消息编辑状态
+  const [editingMsgId, setEditingMsgId] = useState<number | null>(null);
+  const [editingMsgContent, setEditingMsgContent] = useState("");
+
+  // 会话搜索状态
+  const [searchQuery, setSearchQuery] = useState("");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -344,15 +351,23 @@ export default () => {
           if (data === "[DONE]") continue;
           try {
             const parsed = JSON.parse(data);
-            setMessages((prev) => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg.role === "assistant") {
-                if (parsed.content) lastMsg.content += parsed.content;
-                if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;
-              }
-              return newMessages;
-            });
+            if (parsed.type === "tool_running") {
+              setMessages((prev) => [
+                ...prev,
+                { role: "tool", content: `🔧 正在执行工具：${parsed.tool_name}...` },
+                { role: "assistant", content: "" }
+              ]);
+            } else {
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg.role === "assistant") {
+                  if (parsed.content) lastMsg.content += parsed.content;
+                  if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;
+                }
+                return newMessages;
+              });
+            }
             if (parsed.title) {
               setConversations((prev) =>
                 prev.map((c) =>
@@ -429,6 +444,101 @@ export default () => {
     await streamChat(currentConvId, null, true);
   };
 
+  const handleSaveEdit = async (msgId: number) => {
+    if (!currentConvId || loading || !editingMsgContent.trim()) return;
+
+    const content = editingMsgContent;
+    setEditingMsgId(null);
+    setLoading(true);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // 截断界面消息并替换编辑的消息
+    const msgIndex = messages.findIndex((m) => m.id === msgId);
+    if (msgIndex !== -1) {
+      const updatedMessages = messages.slice(0, msgIndex);
+      const editedMsg = { ...messages[msgIndex], content };
+      updatedMessages.push(editedMsg);
+      // 添加空 assistant 消息占位
+      updatedMessages.push({ role: "assistant", content: "" });
+      setMessages(updatedMessages);
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const url = `/api/conversations/${currentConvId}/messages/${msgId}`;
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content, model: selectedModel }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk
+          .split("\n")
+          .filter((line) => line.startsWith("data: "));
+
+        for (const line of lines) {
+          const data = line.slice(6);
+          if (data === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === "tool_running") {
+              setMessages((prev) => [
+                ...prev,
+                { role: "tool", content: `🔧 正在执行工具：${parsed.tool_name}...` },
+                { role: "assistant", content: "" }
+              ]);
+            } else {
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg.role === "assistant") {
+                  if (parsed.content) lastMsg.content += parsed.content;
+                  if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;
+                }
+                return newMessages;
+              });
+            }
+            if (parsed.title) {
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === currentConvId ? { ...c, title: parsed.title } : c
+                )
+              );
+            }
+          } catch (e) {
+            // ignore parse errors
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        antdMessage.error("发送失败，请检查网络和 API 配置");
+        console.error(error);
+      }
+    } finally {
+      setLoading(false);
+      abortControllerRef.current = null;
+      refreshConversations();
+    }
+  };
+
   const handleStop = () => {
     abortControllerRef.current?.abort();
   };
@@ -449,6 +559,10 @@ export default () => {
     setPendingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const filteredConversations = conversations.filter(c =>
+    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Sidebar 内容
   const siderContent = (
     <div className={`sider-inner ${isDark ? "dark" : ""}`}>
@@ -464,15 +578,20 @@ export default () => {
         </Button>
 
         <div className="conv-list">
-          <div className="conv-list-label">
-            {intl.formatMessage({ id: "menu.chat" })}
+          <div className="conv-list-header" style={{ padding: '0 8px 12px' }}>
+            <Input.Search
+              placeholder="搜索对话..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              allowClear
+              size="small"
+            />
           </div>
-          {conversations.map((conv) => (
+          {filteredConversations.map((conv) => (
             <div
               key={conv.id}
-              className={`conversation-item ${
-                currentConvId === conv.id ? "active" : ""
-              }`}
+              className={`conversation-item ${currentConvId === conv.id ? "active" : ""
+                }`}
               onClick={() => handleSelectConversation(conv.id)}
             >
               {editingTitleId === conv.id ? (
@@ -695,7 +814,27 @@ export default () => {
                           {hasImage(msg.content) && (
                             <div className="image-preview-row">📷 图片</div>
                           )}
-                          {extractDisplayContent(msg.content)}
+                          {editingMsgId === msg.id ? (
+                            <div className="edit-message-container">
+                              <Input.TextArea
+                                autoSize={{ minRows: 2, maxRows: 10 }}
+                                value={editingMsgContent}
+                                onChange={(e) => setEditingMsgContent(e.target.value)}
+                                className="edit-message-input"
+                                disabled={loading}
+                              />
+                              <div className="edit-message-actions" style={{ marginTop: 8, textAlign: 'right' }}>
+                                <Button size="small" onClick={() => setEditingMsgId(null)} disabled={loading} style={{ marginRight: 8 }}>
+                                  取消
+                                </Button>
+                                <Button size="small" type="primary" onClick={() => handleSaveEdit(msg.id!)} loading={loading}>
+                                  发送 / 重新生成
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            extractDisplayContent(msg.content)
+                          )}
                         </div>
                       ) : (
                         <div
@@ -737,6 +876,20 @@ export default () => {
                           className="msg-action-btn"
                         />
                       </Tooltip>
+                      {msg.role === "user" && msg.id && !loading && (
+                        <Tooltip title="编辑">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => {
+                              setEditingMsgId(msg.id!);
+                              setEditingMsgContent(extractDisplayContent(msg.content));
+                            }}
+                            className="msg-action-btn"
+                          />
+                        </Tooltip>
+                      )}
                       {msg.role === "assistant" &&
                         idx === lastAssistantIdx &&
                         !loading && (

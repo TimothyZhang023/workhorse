@@ -122,7 +122,42 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_usage_logs_created ON usage_logs(created_at);
   CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
   CREATE INDEX IF NOT EXISTS idx_webhooks_uid ON webhooks(uid);
+
+  CREATE TABLE IF NOT EXISTS mcp_servers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    command TEXT,
+    args TEXT,
+    url TEXT,
+    is_enabled INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS knowledge_bases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+try {
+  db.prepare('ALTER TABLE conversations ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL').run();
+} catch (e) {
+  /* column already exists */
+}
 
 // 运行时迁移：加密现有的已存储 API Keys
 try {
@@ -520,8 +555,8 @@ export function updateEndpointGroup(
     usePresetModels === undefined
       ? existing.use_preset_models
       : usePresetModels
-      ? 1
-      : 0;
+        ? 1
+        : 0;
 
   db.prepare(
     `
@@ -787,6 +822,57 @@ export async function triggerWebhooks(event, payload) {
       console.error(`[Webhook] Failed to trigger ${hook.name}: ${e.message}`);
     }
   }
+}
+
+// ============ MCP 管理 ============
+
+export function listMcpServers(uid) {
+  return db
+    .prepare("SELECT * FROM mcp_servers WHERE uid = ? ORDER BY created_at DESC")
+    .all(uid)
+    .map((s) => ({
+      ...s,
+      args: s.args ? JSON.parse(s.args) : []
+    }));
+}
+
+export function getMcpServer(id, uid) {
+  const s = db.prepare("SELECT * FROM mcp_servers WHERE id = ? AND uid = ?").get(id, uid);
+  if (s) {
+    s.args = s.args ? JSON.parse(s.args) : [];
+  }
+  return s;
+}
+
+export function createMcpServer(uid, name, type, command, args, url, isEnabled = 1) {
+  const result = db.prepare(`
+    INSERT INTO mcp_servers (uid, name, type, command, args, url, is_enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(uid, name, type, command || null, args ? JSON.stringify(args) : '[]', url || null, isEnabled);
+
+  return { id: result.lastInsertRowid, uid, name, type, command, args: args || [], url, is_enabled: isEnabled };
+}
+
+export function updateMcpServer(id, uid, updates) {
+  const current = getMcpServer(id, uid);
+  if (!current) throw new Error("MCP Server not found");
+
+  const name = updates.name !== undefined ? updates.name : current.name;
+  const type = updates.type !== undefined ? updates.type : current.type;
+  const command = updates.command !== undefined ? updates.command : current.command;
+  const args = updates.args !== undefined ? updates.args : current.args;
+  const url = updates.url !== undefined ? updates.url : current.url;
+  const isEnabled = updates.is_enabled !== undefined ? updates.is_enabled : current.is_enabled;
+
+  db.prepare(`
+    UPDATE mcp_servers 
+    SET name = ?, type = ?, command = ?, args = ?, url = ?, is_enabled = ?
+    WHERE id = ? AND uid = ?
+  `).run(name, type, command || null, JSON.stringify(args || []), url || null, isEnabled ? 1 : 0, id, uid);
+}
+
+export function deleteMcpServer(id, uid) {
+  db.prepare("DELETE FROM mcp_servers WHERE id = ? AND uid = ?").run(id, uid);
 }
 
 export default db;

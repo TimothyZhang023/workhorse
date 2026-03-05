@@ -68,6 +68,13 @@ export async function regenerateMessage(conversationId: string, model: string) {
   });
 }
 
+export async function editMessage(conversationId: string, msgId: number, content: string, model: string) {
+  return request(`/api/conversations/${conversationId}/messages/${msgId}`, {
+    method: "PUT",
+    data: { content, model },
+  });
+}
+
 export async function summarizeConversationTitle(
   conversationId: string,
   model?: string
@@ -89,6 +96,33 @@ export async function getMessages(conversationId: string) {
 
 // Chat stream is handled differently due to SSE, but we can have a helper if needed.
 // Usually handled directly in component for stream reading.
+
+// MCP Servers
+export async function getMcpServers() {
+  return request<any[]>("/api/mcp", {
+    method: "GET",
+  });
+}
+
+export async function createMcpServer(data: any) {
+  return request("/api/mcp", {
+    method: "POST",
+    data,
+  });
+}
+
+export async function updateMcpServer(id: number, data: any) {
+  return request(`/api/mcp/${id}`, {
+    method: "PUT",
+    data,
+  });
+}
+
+export async function deleteMcpServer(id: number) {
+  return request(`/api/mcp/${id}`, {
+    method: "DELETE",
+  });
+}
 
 // Endpoints & Models
 export async function getEndpoints() {

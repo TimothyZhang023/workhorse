@@ -25,8 +25,12 @@ declare namespace API {
   };
 
   type Message = {
-    role: "user" | "assistant" | "system";
+    id?: number;
+    role: "user" | "assistant" | "system" | "tool";
     content: string;
+    tool_calls?: any[];
+    tool_call_id?: string;
+    name?: string;
   };
 
   type Endpoint = {
@@ -45,5 +49,16 @@ declare namespace API {
     id?: number;
     model_id: string;
     display_name: string;
+  };
+
+  type McpServer = {
+    id: number;
+    name: string;
+    type: string;
+    command?: string;
+    args?: string[];
+    url?: string;
+    is_enabled: number;
+    created_at?: string;
   };
 }

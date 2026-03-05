@@ -17,6 +17,7 @@ import {
 } from "@ant-design/pro-components";
 import { Button, Form, message, Modal, Space, Tag } from "antd";
 import { useEffect, useState } from "react";
+import { McpModal } from "./McpModal";
 
 export const SettingsModal = ({
   open,
@@ -31,6 +32,9 @@ export const SettingsModal = ({
   );
   const [selectedEndpointForModels, setSelectedEndpointForModels] =
     useState<API.Endpoint | null>(null);
+
+  // MCP
+  const [showMcpModal, setShowMcpModal] = useState(false);
 
   // Model management state
   const [models, setModels] = useState<API.Model[]>([]);
@@ -102,15 +106,23 @@ export const SettingsModal = ({
         }}
       >
         <h3>API Endpoints</h3>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingEndpoint({} as API.Endpoint);
-          }}
-        >
-          添加 Endpoint
-        </Button>
+        <Space>
+          <Button
+            type="default"
+            onClick={() => setShowMcpModal(true)}
+          >
+            MCP / 工具插件
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingEndpoint({} as API.Endpoint);
+            }}
+          >
+            添加 Endpoint
+          </Button>
+        </Space>
       </div>
 
       <ProList<API.Endpoint>
@@ -274,6 +286,8 @@ export const SettingsModal = ({
           }}
         />
       </Modal>
-    </ModalForm>
+
+      <McpModal open={showMcpModal} onOpenChange={setShowMcpModal} />
+    </ModalForm >
   );
 };

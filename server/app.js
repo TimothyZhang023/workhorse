@@ -14,6 +14,7 @@ import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
 import endpointRoutes from "./routes/endpoints.js";
 import proxyRoutes from "./routes/proxy.js";
+import mcpRoutes from "./routes/mcp.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,6 +51,7 @@ export function createApp() {
   app.use("/api/endpoints", endpointRoutes);
   app.use("/api/account", accountRoutes);
   app.use("/api/admin", adminRoutes);
+  app.use("/api/mcp", mcpRoutes);
 
   // OpenAI 兼容代理 (/v1)
   app.use("/v1", apiLimiter, proxyRoutes);
