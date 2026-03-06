@@ -212,6 +212,27 @@ function extractDisplayText(content) {
   return (content || "").replace(/\[IMAGE_DATA:[^\]]+\]/g, "[图片]");
 }
 
+function normalizeGenerationConfig(input = {}) {
+  const toNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  const temperature = toNumber(input.temperature);
+  const topP = toNumber(input.top_p);
+  const maxTokens = toNumber(input.max_tokens);
+
+  return {
+    ...(temperature !== undefined
+      ? { temperature: Math.min(2, Math.max(0, temperature)) }
+      : {}),
+    ...(topP !== undefined ? { top_p: Math.min(1, Math.max(0, topP)) } : {}),
+    ...(maxTokens !== undefined
+      ? { max_tokens: Math.round(Math.min(8192, Math.max(1, maxTokens))) }
+      : {}),
+  };
+}
+
 async function streamWithFallback(uid, model, messages, res, opts = {}) {
   const endpoints = getEndpoints(uid);
   if (!endpoints.length) {
@@ -251,6 +272,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
           stream: true,
           tools: requestTools,
           stream_options: { include_usage: true },
+          ...(opts.generationConfig || {}),
         };
 
         const stream = await client.chat.completions.create(streamParams);
@@ -394,6 +416,7 @@ router.post("/:id/chat", async (req, res) => {
   const { id } = req.params;
   const { message, model, images } = req.body;
   const uid = req.uid;
+  const generationConfig = normalizeGenerationConfig(req.body);
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -426,6 +449,7 @@ router.post("/:id/chat", async (req, res) => {
       conversationId: id,
       source: "chat",
       aiMsgId: aiMsg.id,
+      generationConfig,
     });
 
     if (fullContent === false) {
@@ -469,6 +493,7 @@ router.post("/:id/regenerate", async (req, res) => {
   const { id } = req.params;
   const { model } = req.body;
   const uid = req.uid;
+  const generationConfig = normalizeGenerationConfig(req.body);
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -502,6 +527,7 @@ router.post("/:id/regenerate", async (req, res) => {
       conversationId: id,
       source: "chat",
       aiMsgId: aiMsg.id,
+      generationConfig,
     });
 
     if (fullContent === false) {
@@ -524,6 +550,7 @@ router.put("/:id/messages/:msgId", async (req, res) => {
   const { id, msgId } = req.params;
   const { content, model } = req.body;
   const uid = req.uid;
+  const generationConfig = normalizeGenerationConfig(req.body);
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -560,6 +587,7 @@ router.put("/:id/messages/:msgId", async (req, res) => {
       conversationId: id,
       source: "chat",
       aiMsgId: aiMsg.id,
+      generationConfig,
     });
 
     if (fullContent === false) {

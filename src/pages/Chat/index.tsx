@@ -27,6 +27,7 @@ import {
   ReloadOutlined,
   SendOutlined,
   SettingOutlined,
+  SlidersOutlined,
   StopOutlined,
   SunOutlined,
   ThunderboltOutlined,
@@ -40,6 +41,8 @@ import {
   Drawer,
   Input,
   Layout,
+  Popover,
+  Slider,
   Popconfirm,
   Select,
   Tooltip,
@@ -51,6 +54,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./index.css";
 
 const { Sider, Content } = Layout;
+const { TextArea } = Input;
 
 // 从 localStorage 获取/保存主题
 const getStoredTheme = (): "light" | "dark" => {
@@ -59,6 +63,11 @@ const getStoredTheme = (): "light" | "dark" => {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
+};
+
+const getStoredNumber = (key: string, fallback: number): number => {
+  const stored = Number(localStorage.getItem(key));
+  return Number.isFinite(stored) ? stored : fallback;
 };
 
 // 将图片文件转为 base64
@@ -105,6 +114,17 @@ export default () => {
     { file: File; preview: string }[]
   >([]);
 
+  // 生成参数（SOTA 级可控性）
+  const [temperature, setTemperature] = useState<number>(() =>
+    getStoredNumber("timo.temperature", 0.7)
+  );
+  const [topP, setTopP] = useState<number>(() =>
+    getStoredNumber("timo.top_p", 1)
+  );
+  const [maxTokens, setMaxTokens] = useState<number>(() =>
+    getStoredNumber("timo.max_tokens", 2048)
+  );
+
   // 流式处理状态
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -135,7 +155,7 @@ export default () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 响应式监听
   useEffect(() => {
@@ -149,6 +169,13 @@ export default () => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("timo-theme", theme);
   }, [theme]);
+
+  // 生成参数持久化
+  useEffect(() => {
+    localStorage.setItem("timo.temperature", String(temperature));
+    localStorage.setItem("timo.top_p", String(topP));
+    localStorage.setItem("timo.max_tokens", String(maxTokens));
+  }, [temperature, topP, maxTokens]);
 
   // 登录检查 & 初始化
   useEffect(() => {
@@ -286,6 +313,12 @@ export default () => {
     }
   };
 
+  const generationConfig = {
+    temperature: Number(temperature.toFixed(2)),
+    top_p: Number(topP.toFixed(2)),
+    max_tokens: Math.max(1, Math.round(maxTokens)),
+  };
+
   // 核心发送函数（兼容 send + regenerate）
   const streamChat = async (
     convId: string,
@@ -302,7 +335,7 @@ export default () => {
         ? `/api/conversations/${convId}/regenerate`
         : `/api/conversations/${convId}/chat`;
 
-      let body: any = { model: selectedModel };
+      let body: any = { model: selectedModel, ...generationConfig };
       if (!isRegenerate && userMsg) {
         body.message =
           userMsg.content.replace(/\[IMAGE_DATA:[^\]]+\]/g, "").trim() ||
@@ -475,7 +508,7 @@ export default () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ content, model: selectedModel }),
+        body: JSON.stringify({ content, model: selectedModel, ...generationConfig }),
         signal: controller.signal,
       });
 
@@ -948,7 +981,7 @@ export default () => {
                   </Upload>
                 </Tooltip>
 
-                <Input
+                <TextArea
                   ref={inputRef as any}
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
@@ -958,10 +991,11 @@ export default () => {
                       sendMessage();
                     }
                   }}
-                  placeholder="问问 Timo… (Shift+Enter 换行)"
+                  placeholder="问问 Timo… (Shift+Enter 换行 / Enter 发送)"
+                  autoSize={{ minRows: 1, maxRows: 6 }}
                   bordered={false}
                   disabled={loading}
-                  className="chat-input"
+                  className="chat-input chat-input-textarea"
                 />
 
                 <Select
@@ -976,6 +1010,36 @@ export default () => {
                   disabled={loading}
                   placeholder="选择模型"
                 />
+
+                <Popover
+                  trigger="click"
+                  placement="topRight"
+                  content={
+                    <div className="generation-config">
+                      <div className="generation-item">
+                        <div className="generation-label">Temperature: {temperature.toFixed(2)}</div>
+                        <Slider min={0} max={2} step={0.01} value={temperature} onChange={setTemperature} />
+                      </div>
+                      <div className="generation-item">
+                        <div className="generation-label">Top P: {topP.toFixed(2)}</div>
+                        <Slider min={0} max={1} step={0.01} value={topP} onChange={setTopP} />
+                      </div>
+                      <div className="generation-item">
+                        <div className="generation-label">Max Tokens: {Math.round(maxTokens)}</div>
+                        <Slider min={256} max={8192} step={64} value={maxTokens} onChange={setMaxTokens} />
+                      </div>
+                    </div>
+                  }
+                >
+                  <Tooltip title="高级参数">
+                    <Button
+                      type="text"
+                      icon={<SlidersOutlined />}
+                      className="input-action-btn"
+                      disabled={loading}
+                    />
+                  </Tooltip>
+                </Popover>
 
                 {loading ? (
                   <Tooltip title="停止生成">
