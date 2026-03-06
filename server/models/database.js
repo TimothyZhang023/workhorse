@@ -1,9 +1,9 @@
-import Database from "better-sqlite3";
 import crypto from "crypto";
 import fs from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { decrypt, encrypt } from "../utils/crypto.js";
+import { createDatabaseClient } from "./dbClient.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,7 +15,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 const dbPath = process.env.DB_PATH || join(dataDir, "chat.db");
-const db = new Database(dbPath);
+const db = createDatabaseClient({ dbPath });
 
 // 初始化数据库表
 db.exec(`

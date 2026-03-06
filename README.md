@@ -16,7 +16,7 @@
 - **Function Calling 引擎**：内置支持递归函数调用（Tool Loop），自动将大语言模型与 MCP 插件结合，实现外部工具和数据的自动获取与执行。
 - **用户权限 & 用量统计**：提供团队角色 (Admin/User) 分别视图，提供全面用量统计和模型计费估算。
 - **平台化网关代理**：内置 `/v1` 兼容 API 代理点，可作为通用网关为其他 AI 开发工具（如 Cursor/Cline）提供统一转发和审计。
-- **数据本地化与安全性**：所有数据（用户、会话、API Key、MCP 配置）保存在本地 SQLite 数据库，敏感信息经过 AES-256 加密，支持 JWT 和 HttpOnly Refresh Token 鉴权。
+- **数据本地化与安全性**：所有数据（用户、会话、API Key、MCP 配置）默认保存在本地 SQLite 数据库，也支持切换 MySQL，敏感信息经过 AES-256 加密，支持 JWT 和 HttpOnly Refresh Token 鉴权。
 
 > 📖 关于该项目的完整演进路线与功能规划，请查看 [产品演进指南](./docs/timo_evolution_spec.md) 与 [架构任务拆解](./docs/project.md)。
 
@@ -30,7 +30,7 @@
 | UI 组件  | [Ant Design 5](https://ant.design/) + Pro Components                   |
 | 样式     | Tailwind CSS                                                           |
 | 后端     | Node.js + [Express](https://expressjs.com/)                            |
-| 数据库   | SQLite（via `better-sqlite3`）                                         |
+| 数据库   | SQLite / MySQL（默认 SQLite）                                          |
 | AI 接入  | [openai SDK](https://github.com/openai/openai-node)（OpenAI 兼容接口） |
 
 ---
@@ -73,6 +73,22 @@ npm start
 构建产物输出到 `dist/` 目录，由 Express 直接托管，访问 `http://localhost:8866`。
 
 ---
+
+
+### 数据库配置（SQLite / MySQL）
+
+默认使用 SQLite（无需额外配置）。如需切换 MySQL，请先安装 `mysql2`（例如 `npm i mysql2`），然后设置以下环境变量：
+
+```bash
+DB_CLIENT=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=gemini_chat
+```
+
+SQLite 模式下可用 `DB_PATH` 指定数据库文件路径。
 
 ## ⚙️ 配置 API
 
