@@ -245,7 +245,7 @@ function normalizeGenerationConfig(input = {}) {
       : {}),
     ...(topP !== undefined ? { top_p: Math.min(1, Math.max(0, topP)) } : {}),
     ...(maxTokens !== undefined
-      ? { max_tokens: Math.round(Math.min(8192, Math.max(1, maxTokens))) }
+      ? { max_tokens: Math.round(Math.min(8192, Math.max(64, maxTokens))) }
       : {}),
   };
 }
@@ -514,17 +514,19 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
 
           // CASE 1: No tools
           if (finalToolCalls.length === 0) {
-            if (
-              !fullTextContent.trim() &&
-              lastFinishReason &&
-              lastFinishReason !== "stop"
-            ) {
-              const reasonText = `上游返回空内容（finish_reason: ${lastFinishReason}）`;
+            if (!fullTextContent.trim() && lastFinishReason) {
+              const requestedMaxTokens =
+                opts?.generationConfig?.max_tokens ?? "未设置";
+              const reasonText =
+                lastFinishReason === "length"
+                  ? `上游返回空内容（finish_reason: length，max_tokens: ${requestedMaxTokens}）。请调大 max_tokens 后重试。`
+                  : `上游返回空内容（finish_reason: ${lastFinishReason}）`;
               requestLog.warn(
                 {
                   endpointName: ep.name,
                   baseURL,
                   lastFinishReason,
+                  requestedMaxTokens,
                 },
                 "Upstream completed without content"
               );

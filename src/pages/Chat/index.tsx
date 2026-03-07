@@ -71,6 +71,9 @@ const getStoredNumber = (key: string, fallback: number): number => {
   return Number.isFinite(stored) ? stored : fallback;
 };
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 const getStoredString = (key: string): string => {
   return localStorage.getItem(key) || "";
 };
@@ -149,13 +152,13 @@ export default () => {
 
   // 生成参数（SOTA 级可控性）
   const [temperature, setTemperature] = useState<number>(() =>
-    getStoredNumber("timo.temperature", 0.7)
+    clamp(getStoredNumber("timo.temperature", 0.7), 0, 2)
   );
   const [topP, setTopP] = useState<number>(() =>
-    getStoredNumber("timo.top_p", 1)
+    clamp(getStoredNumber("timo.top_p", 1), 0, 1)
   );
   const [maxTokens, setMaxTokens] = useState<number>(() =>
-    getStoredNumber("timo.max_tokens", 2048)
+    clamp(getStoredNumber("timo.max_tokens", 2048), 256, 8192)
   );
 
   // 流式处理状态
@@ -512,9 +515,9 @@ export default () => {
   };
 
   const generationConfig = {
-    temperature: Number(temperature.toFixed(2)),
-    top_p: Number(topP.toFixed(2)),
-    max_tokens: Math.max(1, Math.round(maxTokens)),
+    temperature: Number(clamp(temperature, 0, 2).toFixed(2)),
+    top_p: Number(clamp(topP, 0, 1).toFixed(2)),
+    max_tokens: clamp(Math.round(maxTokens), 256, 8192),
   };
 
   // 核心发送函数（兼容 send + regenerate）
