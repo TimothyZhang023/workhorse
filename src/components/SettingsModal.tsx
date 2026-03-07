@@ -6,9 +6,10 @@ import {
   getEndpointModels,
   getEndpoints,
   setDefaultEndpoint,
+  syncEndpointModels,
   updateEndpoint,
 } from "@/services/api";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   ModalForm,
   ProFormSwitch,
@@ -38,6 +39,7 @@ export const SettingsModal = ({
 
   // Model management state
   const [models, setModels] = useState<API.Model[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   const [newModelForm] = Form.useForm();
 
   const loadEndpoints = async () => {
@@ -51,10 +53,32 @@ export const SettingsModal = ({
 
   const loadModels = async (endpointId: number) => {
     try {
+      setLoadingModels(true);
       const data = await getEndpointModels(endpointId);
       setModels(data);
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
+  const handleSyncModels = async () => {
+    if (!selectedEndpointForModels) return;
+    try {
+      setLoadingModels(true);
+      const result = await syncEndpointModels(selectedEndpointForModels.id);
+      setModels(result.models || []);
+      message.success(`已同步 ${result.count || 0} 个模型`);
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.error ||
+        error?.data?.error ||
+        error?.message ||
+        "同步模型列表失败";
+      message.error(msg);
+    } finally {
+      setLoadingModels(false);
     }
   };
 
@@ -222,6 +246,28 @@ export const SettingsModal = ({
         footer={null}
         width={600}
       >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ color: "#6b7280", fontSize: 13 }}>
+            {selectedEndpointForModels?.use_preset_models
+              ? "当前 Endpoint 正在使用预设模型列表；同步后数据会写入数据库，但聊天页仍优先使用预设列表。"
+              : "管理当前 Endpoint 的模型列表"}
+          </div>
+          <Button
+            icon={<ReloadOutlined spin={loadingModels} />}
+            onClick={handleSyncModels}
+            disabled={!selectedEndpointForModels || loadingModels}
+          >
+            刷新列表
+          </Button>
+        </div>
+
         <Form
           form={newModelForm}
           layout="inline"
@@ -260,6 +306,7 @@ export const SettingsModal = ({
         <ProList<API.Model>
           rowKey="id"
           dataSource={models}
+          loading={loadingModels}
           metas={{
             title: { dataIndex: "display_name" },
             description: { dataIndex: "model_id" },

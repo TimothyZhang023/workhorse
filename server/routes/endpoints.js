@@ -1,4 +1,5 @@
 import { Router } from "express";
+import OpenAI from "openai";
 import { authMiddleware } from "../middleware/auth.js";
 import {
   addModel,
@@ -10,11 +11,53 @@ import {
   getEndpointGroups,
   getModels,
   PRESET_MODELS,
+  replaceModels,
   setDefaultEndpointGroup,
   updateEndpointGroup,
 } from "../models/database.js";
 
 const router = Router();
+
+function normalizeBaseUrlCandidates(baseUrl) {
+  const trimmed = String(baseUrl || "").replace(/\/+$/, "");
+  const candidates = [trimmed];
+
+  if (!trimmed.endsWith("/v1")) {
+    candidates.push(`${trimmed}/v1`);
+  }
+  if (!trimmed.endsWith("/api/v1")) {
+    candidates.push(`${trimmed}/api/v1`);
+  }
+
+  return [...new Set(candidates)];
+}
+
+async function fetchRemoteModels(endpoint) {
+  const candidates = normalizeBaseUrlCandidates(endpoint.base_url);
+  let lastError = null;
+
+  for (const candidate of candidates) {
+    try {
+      const client = new OpenAI({
+        apiKey: endpoint.api_key,
+        baseURL: candidate,
+      });
+      const response = await client.models.list();
+      return {
+        models: Array.isArray(response?.data) ? response.data : [],
+        baseURL: candidate,
+      };
+    } catch (error) {
+      lastError = error;
+      const status = error?.status || error?.cause?.status;
+      if (status && status !== 404) {
+        break;
+      }
+    }
+  }
+
+  throw lastError || new Error("获取远程模型列表失败");
+}
 
 // 获取预设模型列表 (无需认证)
 router.get("/preset-models", (req, res) => {
@@ -31,14 +74,17 @@ router.get("/available/models", (req, res) => {
       return res.json([]);
     }
 
-    // 如果使用预设模型，返回预设列表
+    const models = getModels(defaultGroup.id, req.uid);
+    if (models.length > 0) {
+      return res.json(models);
+    }
+
+    // 数据库没有模型时，预设模式才回退到写死列表
     if (defaultGroup.use_preset_models) {
       return res.json(PRESET_MODELS);
     }
 
-    // 否则返回用户自定义模型
-    const models = getModels(defaultGroup.id, req.uid);
-    res.json(models);
+    res.json([]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -151,6 +197,39 @@ router.get("/:id/models", (req, res) => {
     res.json(models);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// 同步模型列表到数据库
+router.post("/:id/models/sync", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const endpoint = getEndpointGroup(id, req.uid);
+    if (!endpoint) {
+      return res.status(404).json({ error: "Endpoint not found" });
+    }
+
+    const { models: remoteModels, baseURL } = await fetchRemoteModels(endpoint);
+
+    const normalizedModels = remoteModels
+      .map((model) => ({
+        model_id: model.id,
+        display_name: model.id,
+      }))
+      .filter((model) => !!model.model_id);
+
+    replaceModels(id, req.uid, normalizedModels);
+
+    res.json({
+      success: true,
+      count: normalizedModels.length,
+      base_url_used: baseURL,
+      models: getModels(id, req.uid),
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error?.message || "同步模型列表失败",
+    });
   }
 });
 

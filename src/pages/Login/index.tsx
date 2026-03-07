@@ -1,13 +1,19 @@
 import { login, register } from "@/services/api";
 import { LockOutlined, UserOutlined, BulbOutlined } from "@ant-design/icons";
-import { LoginForm, ProFormText } from "@ant-design/pro-components";
-import { useModel } from "@umijs/max";
+import { ProForm, ProFormText } from "@ant-design/pro-components";
+import { history, useModel } from "@umijs/max";
 import { message, Tabs, ConfigProvider } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default () => {
   const [type, setType] = useState<string>("login");
-  const { login: loginModel } = useModel("global");
+  const { login: loginModel, isLoggedIn } = useModel("global");
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      history.replace("/chat");
+    }
+  }, [isLoggedIn]);
 
   const handleSubmit = async (
     values: API.LoginParams & { confirmPassword?: string }
@@ -21,13 +27,13 @@ export default () => {
         const res = await register(values);
         if (res.token) {
           message.success("注册成功");
-          loginModel(res.user, res.token);
+          await loginModel(res.user, res.token);
         }
       } else {
         const res = await login(values);
         if (res.token) {
           message.success("登录成功");
-          loginModel(res.user, res.token);
+          await loginModel(res.user, res.token);
         }
       }
     } catch (error: any) {
@@ -64,8 +70,9 @@ export default () => {
         }}
       >
         {/* Soft floating background blobs */}
-        <div style={{ position: "absolute", top: "-10%", left: "-10%", width: "40vw", height: "40vw", background: "#c7d2fe", borderRadius: "50%", filter: "blur(80px)", opacity: 0.6 }} />
-        <div style={{ position: "absolute", bottom: "-10%", right: "-10%", width: "40vw", height: "40vw", background: "#e9d5ff", borderRadius: "50%", filter: "blur(80px)", opacity: 0.6 }} />
+        <div className="blob-float" style={{ position: "absolute", top: "-10%", left: "-10%", width: "40vw", height: "40vw", background: "linear-gradient(135deg, #a78bfa, #818cf8)", borderRadius: "50%", filter: "blur(100px)", opacity: 0.6 }} />
+        <div className="blob-float-delayed" style={{ position: "absolute", bottom: "-10%", right: "-10%", width: "40vw", height: "40vw", background: "linear-gradient(135deg, #c084fc, #e879f9)", borderRadius: "50%", filter: "blur(100px)", opacity: 0.6 }} />
+        <div className="blob-float" style={{ position: "absolute", top: "40%", left: "60%", width: "30vw", height: "30vw", background: "linear-gradient(135deg, #60a5fa, #3b82f6)", borderRadius: "50%", filter: "blur(100px)", opacity: 0.4, animationDelay: "-5s" }} />
 
         <div
           style={{
@@ -90,17 +97,19 @@ export default () => {
             <p style={{ marginTop: 8, color: "#6b7280", fontSize: 14 }}>A premium AI conversation experience</p>
           </div>
 
-          <LoginForm
-            logo={null}
-            title={null}
-            subTitle={null}
+          <ProForm
             submitter={{
+              render: (_, dom) => (
+                <div style={{ display: "flex", width: "100%" }}>
+                  {dom[1]}
+                </div>
+              ),
               searchConfig: {
                 submitText: type === "login" ? "进入系统" : "立即注册",
               },
               submitButtonProps: {
                 size: "large",
-                style: { width: "100%", borderRadius: 12, height: 48, fontSize: 16, fontWeight: 600, marginTop: 8 },
+                style: { width: "100%", borderRadius: 12, height: 48, fontSize: 16, fontWeight: 600, marginTop: 8, background: "linear-gradient(135deg, #4f46e5, #8b5cf6)", border: "none", color: "white" },
               },
             }}
             onFinish={async (values) => {
@@ -172,7 +181,7 @@ export default () => {
                 ]}
               />
             )}
-          </LoginForm>
+          </ProForm>
         </div>
       </div>
     </ConfigProvider>

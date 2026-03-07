@@ -163,6 +163,15 @@ export async function getEndpointModels(endpointId: number) {
   });
 }
 
+export async function syncEndpointModels(endpointId: number) {
+  return request<{ success: boolean; count: number; models: API.Model[] }>(
+    `/api/endpoints/${endpointId}/models/sync`,
+    {
+      method: "POST",
+    }
+  );
+}
+
 export async function addModelToEndpoint(endpointId: number, data: API.Model) {
   return request(`/api/endpoints/${endpointId}/models`, {
     method: "POST",

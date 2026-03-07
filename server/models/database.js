@@ -610,6 +610,31 @@ export function addModel(endpointGroupId, uid, modelId, displayName) {
   return { id: result.lastInsertRowid };
 }
 
+export function replaceModels(endpointGroupId, uid, models) {
+  const deleteStmt = db.prepare(
+    "DELETE FROM models WHERE endpoint_group_id = ? AND uid = ?"
+  );
+  const insertStmt = db.prepare(
+    `
+    INSERT INTO models (endpoint_group_id, uid, model_id, display_name) VALUES (?, ?, ?, ?)
+  `
+  );
+
+  const tx = db.transaction((items) => {
+    deleteStmt.run(endpointGroupId, uid);
+    for (const item of items) {
+      insertStmt.run(
+        endpointGroupId,
+        uid,
+        item.model_id,
+        item.display_name || item.model_id
+      );
+    }
+  });
+
+  tx(models);
+}
+
 export function deleteModel(id, uid) {
   db.prepare("DELETE FROM models WHERE id = ? AND uid = ?").run(id, uid);
 }

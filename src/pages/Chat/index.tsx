@@ -70,6 +70,10 @@ const getStoredNumber = (key: string, fallback: number): number => {
   return Number.isFinite(stored) ? stored : fallback;
 };
 
+const getStoredString = (key: string): string => {
+  return localStorage.getItem(key) || "";
+};
+
 // 将图片文件转为 base64
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -91,6 +95,28 @@ const extractDisplayContent = (content: string): string => {
 // 检查消息是否包含图片
 const hasImage = (content: string): boolean => content.includes("[IMAGE_DATA:");
 
+const STREAM_FLUSH_INTERVAL = 48;
+
+const getResponseErrorMessage = async (response: Response) => {
+  try {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await response.json();
+      return (
+        data?.error?.message ||
+        data?.error ||
+        data?.message ||
+        `请求失败 (${response.status})`
+      );
+    }
+
+    const text = await response.text();
+    return text || `请求失败 (${response.status})`;
+  } catch (error) {
+    return `请求失败 (${response.status})`;
+  }
+};
+
 export default () => {
   const { currentUser, logout, isLoggedIn } = useModel("global");
   const intl = useIntl();
@@ -106,7 +132,9 @@ export default () => {
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<API.Message[]>([]);
   const [models, setModels] = useState<API.Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState<string>(() =>
+    getStoredString("timo.selected_model")
+  );
 
   // 输入状态
   const [inputText, setInputText] = useState("");
@@ -156,6 +184,12 @@ export default () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const streamBufferRef = useRef("");
+  const streamErrorRef = useRef<string | null>(null);
+  const streamTargetIndexRef = useRef<number | null>(null);
+  const streamFlushTimerRef = useRef<number | null>(null);
+  const sseRemainderRef = useRef("");
+  const [streamRenderTick, setStreamRenderTick] = useState(0);
 
   // 响应式监听
   useEffect(() => {
@@ -176,6 +210,14 @@ export default () => {
     localStorage.setItem("timo.top_p", String(topP));
     localStorage.setItem("timo.max_tokens", String(maxTokens));
   }, [temperature, topP, maxTokens]);
+
+  useEffect(() => {
+    if (selectedModel) {
+      localStorage.setItem("timo.selected_model", selectedModel);
+    } else {
+      localStorage.removeItem("timo.selected_model");
+    }
+  }, [selectedModel]);
 
   // 登录检查 & 初始化
   useEffect(() => {
@@ -206,8 +248,12 @@ export default () => {
       ]);
       setConversations(convs);
       setModels(availableModels);
-      if (availableModels.length > 0)
-        setSelectedModel(availableModels[0].model_id);
+      setSelectedModel((prev) => {
+        if (prev && availableModels.some((m) => m.model_id === prev)) {
+          return prev;
+        }
+        return availableModels[0]?.model_id || "";
+      });
       if (convs.length > 0) handleSelectConversation(convs[0].id);
     } catch (error) {
       console.error(error);
@@ -224,12 +270,136 @@ export default () => {
   };
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+    messagesEndRef.current?.scrollIntoView({
+      behavior: loading ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [loading]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    return () => {
+      if (streamFlushTimerRef.current !== null) {
+        window.clearTimeout(streamFlushTimerRef.current);
+      }
+    };
+  }, []);
+
+  const flushStreamBuffer = useCallback(() => {
+    if (streamFlushTimerRef.current !== null) {
+      window.clearTimeout(streamFlushTimerRef.current);
+      streamFlushTimerRef.current = null;
+    }
+
+    const targetIndex = streamTargetIndexRef.current;
+    const bufferedContent = streamBufferRef.current;
+    const bufferedError = streamErrorRef.current;
+
+    if (targetIndex === null && !bufferedError) return;
+    if (!bufferedContent && !bufferedError) return;
+
+    streamBufferRef.current = "";
+    streamErrorRef.current = null;
+
+    setMessages((prev) => {
+      if (targetIndex === null || !prev[targetIndex]) return prev;
+
+      const next = [...prev];
+      const target = next[targetIndex];
+      if (!target || target.role !== "assistant") return prev;
+
+      next[targetIndex] = {
+        ...target,
+        content: bufferedError
+          ? `❌ 错误：${bufferedError}`
+          : `${target.content}${bufferedContent}`,
+      };
+      return next;
+    });
+
+    setStreamRenderTick((tick) => tick + 1);
+  }, []);
+
+  const scheduleStreamFlush = useCallback(() => {
+    if (streamFlushTimerRef.current !== null) return;
+    streamFlushTimerRef.current = window.setTimeout(() => {
+      flushStreamBuffer();
+    }, STREAM_FLUSH_INTERVAL);
+  }, [flushStreamBuffer]);
+
+  const appendAssistantChunk = useCallback(
+    (content?: string, error?: string) => {
+      if (content) {
+        streamBufferRef.current += content;
+      }
+      if (error) {
+        streamErrorRef.current = error;
+      }
+      scheduleStreamFlush();
+    },
+    [scheduleStreamFlush]
+  );
+
+  const createAssistantPlaceholder = useCallback(() => {
+    let assistantIndex = -1;
+    setMessages((prev) => {
+      assistantIndex = prev.length;
+      return [...prev, { role: "assistant", content: "" }];
+    });
+    streamTargetIndexRef.current = assistantIndex;
+    streamBufferRef.current = "";
+    streamErrorRef.current = null;
+    sseRemainderRef.current = "";
+    return assistantIndex;
+  }, []);
+
+  const replaceAssistantMessage = useCallback((index: number | null, content: string) => {
+    if (index === null || !content) return;
+    streamBufferRef.current = "";
+    streamErrorRef.current = null;
+    if (streamFlushTimerRef.current !== null) {
+      window.clearTimeout(streamFlushTimerRef.current);
+      streamFlushTimerRef.current = null;
+    }
+
+    setMessages((prev) => {
+      if (!prev[index]) return prev;
+      const next = [...prev];
+      const target = next[index];
+      if (!target || target.role !== "assistant") return prev;
+      next[index] = { ...target, content };
+      return next;
+    });
+    setStreamRenderTick((tick) => tick + 1);
+  }, []);
+
+  const processSseChunk = useCallback(
+    (
+      rawChunk: string,
+      handlers: {
+        onData: (parsed: any) => void;
+      }
+    ) => {
+      const combined = sseRemainderRef.current + rawChunk;
+      const parts = combined.split("\n");
+      sseRemainderRef.current = parts.pop() ?? "";
+
+      for (const part of parts) {
+        if (!part.startsWith("data: ")) continue;
+        const data = part.slice(6).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          handlers.onData(JSON.parse(data));
+        } catch (e) {
+          // ignore partial parse errors and malformed lines
+        }
+      }
+    },
+    []
+  );
 
   const handleCreateChat = async () => {
     try {
@@ -328,8 +498,12 @@ export default () => {
     setLoading(true);
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    let assistantIndex: number | null = null;
+    let sawAssistantContent = false;
+    let sawAssistantError = false;
 
     try {
+      assistantIndex = createAssistantPlaceholder();
       const token = localStorage.getItem("token");
       const url = isRegenerate
         ? `/api/conversations/${convId}/regenerate`
@@ -362,45 +536,45 @@ export default () => {
         signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        const errorMessage = await getResponseErrorMessage(response);
+        replaceAssistantMessage(assistantIndex, `❌ ${errorMessage}`);
+        throw new Error(errorMessage);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-
-      // 添加空 assistant 消息占位
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
       while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk
-          .split("\n")
-          .filter((line) => line.startsWith("data: "));
-
-        for (const line of lines) {
-          const data = line.slice(6);
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
+        const chunk = decoder.decode(value, { stream: true });
+        processSseChunk(chunk, {
+          onData: (parsed) => {
             if (parsed.type === "tool_running") {
-              setMessages((prev) => [
-                ...prev,
-                { role: "tool", content: `🔧 正在执行工具：${parsed.tool_name}...` },
-                { role: "assistant", content: "" }
-              ]);
-            } else {
+              flushStreamBuffer();
               setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg.role === "assistant") {
-                  if (parsed.content) lastMsg.content += parsed.content;
-                  if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;
-                }
-                return newMessages;
+                const next = [
+                  ...prev,
+                  {
+                    role: "tool" as const,
+                    content: `🔧 正在执行工具：${parsed.tool_name}...`,
+                  },
+                  { role: "assistant" as const, content: "" },
+                ];
+                streamTargetIndexRef.current = next.length - 1;
+                return next;
               });
+              assistantIndex = streamTargetIndexRef.current;
+              sawAssistantContent = false;
+              sawAssistantError = false;
+            } else {
+              if (parsed.content) sawAssistantContent = true;
+              if (parsed.error) sawAssistantError = true;
+              appendAssistantChunk(parsed.content, parsed.error);
             }
+
             if (parsed.title) {
               setConversations((prev) =>
                 prev.map((c) =>
@@ -408,19 +582,33 @@ export default () => {
                 )
               );
             }
-          } catch (e) {
-            // ignore parse errors
-          }
-        }
+          },
+        });
+      }
+      flushStreamBuffer();
+      if (!sawAssistantContent && !sawAssistantError) {
+        replaceAssistantMessage(
+          assistantIndex,
+          "⚠️ 上游返回空内容，未生成可展示的回复。"
+        );
       }
     } catch (error: any) {
       if (error.name !== "AbortError") {
-        antdMessage.error("发送失败，请检查网络和 API 配置");
+        if (!sawAssistantError) {
+          replaceAssistantMessage(
+            assistantIndex,
+            `❌ ${error.message || "发送失败，请检查网络和 API 配置"}`
+          );
+        }
+        antdMessage.error(error.message || "发送失败，请检查网络和 API 配置");
         console.error(error);
       }
     } finally {
+      flushStreamBuffer();
       setLoading(false);
       abortControllerRef.current = null;
+      streamTargetIndexRef.current = null;
+      sseRemainderRef.current = "";
     }
   };
 
@@ -486,6 +674,9 @@ export default () => {
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    let assistantIndex: number | null = null;
+    let sawAssistantContent = false;
+    let sawAssistantError = false;
 
     // 截断界面消息并替换编辑的消息
     const msgIndex = messages.findIndex((m) => m.id === msgId);
@@ -496,6 +687,7 @@ export default () => {
       // 添加空 assistant 消息占位
       updatedMessages.push({ role: "assistant", content: "" });
       setMessages(updatedMessages);
+      assistantIndex = updatedMessages.length - 1;
     }
 
     try {
@@ -512,42 +704,50 @@ export default () => {
         signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        const errorMessage = await getResponseErrorMessage(response);
+        replaceAssistantMessage(assistantIndex, `❌ ${errorMessage}`);
+        throw new Error(errorMessage);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+
+      streamTargetIndexRef.current = assistantIndex;
+      streamBufferRef.current = "";
+      streamErrorRef.current = null;
+      sseRemainderRef.current = "";
 
       while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk
-          .split("\n")
-          .filter((line) => line.startsWith("data: "));
-
-        for (const line of lines) {
-          const data = line.slice(6);
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
+        const chunk = decoder.decode(value, { stream: true });
+        processSseChunk(chunk, {
+          onData: (parsed) => {
             if (parsed.type === "tool_running") {
-              setMessages((prev) => [
-                ...prev,
-                { role: "tool", content: `🔧 正在执行工具：${parsed.tool_name}...` },
-                { role: "assistant", content: "" }
-              ]);
-            } else {
+              flushStreamBuffer();
               setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg.role === "assistant") {
-                  if (parsed.content) lastMsg.content += parsed.content;
-                  if (parsed.error) lastMsg.content = `❌ 错误：${parsed.error}`;
-                }
-                return newMessages;
+                const next = [
+                  ...prev,
+                  {
+                    role: "tool" as const,
+                    content: `🔧 正在执行工具：${parsed.tool_name}...`,
+                  },
+                  { role: "assistant" as const, content: "" },
+                ];
+                streamTargetIndexRef.current = next.length - 1;
+                return next;
               });
+              assistantIndex = streamTargetIndexRef.current;
+              sawAssistantContent = false;
+              sawAssistantError = false;
+            } else {
+              if (parsed.content) sawAssistantContent = true;
+              if (parsed.error) sawAssistantError = true;
+              appendAssistantChunk(parsed.content, parsed.error);
             }
+
             if (parsed.title) {
               setConversations((prev) =>
                 prev.map((c) =>
@@ -555,19 +755,33 @@ export default () => {
                 )
               );
             }
-          } catch (e) {
-            // ignore parse errors
-          }
-        }
+          },
+        });
+      }
+      flushStreamBuffer();
+      if (!sawAssistantContent && !sawAssistantError) {
+        replaceAssistantMessage(
+          assistantIndex,
+          "⚠️ 上游返回空内容，未生成可展示的回复。"
+        );
       }
     } catch (error: any) {
       if (error.name !== "AbortError") {
-        antdMessage.error("发送失败，请检查网络和 API 配置");
+        if (!sawAssistantError) {
+          replaceAssistantMessage(
+            assistantIndex,
+            `❌ ${error.message || "发送失败，请检查网络和 API 配置"}`
+          );
+        }
+        antdMessage.error(error.message || "发送失败，请检查网络和 API 配置");
         console.error(error);
       }
     } finally {
+      flushStreamBuffer();
       setLoading(false);
       abortControllerRef.current = null;
+      streamTargetIndexRef.current = null;
+      sseRemainderRef.current = "";
       refreshConversations();
     }
   };
@@ -595,6 +809,11 @@ export default () => {
   const filteredConversations = conversations.filter(c =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const modelOptions = models.map((model) => ({
+    label: model.model_id,
+    value: model.model_id,
+    searchText: `${model.model_id} ${model.display_name}`.toLowerCase(),
+  }));
 
   // Sidebar 内容
   const siderContent = (
@@ -775,7 +994,7 @@ export default () => {
                     onClick={() => setSiderVisible(true)}
                   />
                 )}
-                <span className="header-title">Timo</span>
+                <span className="header-title">Gemini Chat</span>
                 {currentConvId && (
                   <Tooltip
                     title={
@@ -878,10 +1097,20 @@ export default () => {
                           }
                         >
                           {msg.content ? (
-                            <MarkdownRenderer
-                              content={msg.content}
-                              isDark={isDark}
-                            />
+                            <div
+                              key={
+                                loading && idx === lastAssistantIdx
+                                  ? `stream-${streamRenderTick}`
+                                  : `static-${idx}`
+                              }
+                              className="stream-fade-shell"
+                              data-streaming={loading && idx === lastAssistantIdx}
+                            >
+                              <MarkdownRenderer
+                                content={msg.content}
+                                isDark={isDark}
+                              />
+                            </div>
                           ) : (
                             <div className="typing-placeholder">
                               <span>AI 正在思考</span>
@@ -891,9 +1120,6 @@ export default () => {
                                 <i />
                               </span>
                             </div>
-                          )}
-                          {loading && idx === lastAssistantIdx && (
-                            <span className="stream-cursor" />
                           )}
                         </div>
                       )}
@@ -998,18 +1224,24 @@ export default () => {
                   className="chat-input chat-input-textarea"
                 />
 
-                <Select
-                  value={selectedModel}
-                  onChange={setSelectedModel}
-                  options={models.map((m) => ({
-                    label: m.display_name,
-                    value: m.model_id,
-                  }))}
-                  bordered={false}
-                  style={{ minWidth: 120, maxWidth: 180 }}
-                  disabled={loading}
-                  placeholder="选择模型"
-                />
+                <div className="model-picker">
+                  <Select
+                    value={selectedModel || undefined}
+                    onChange={setSelectedModel}
+                    options={modelOptions}
+                    showSearch
+                    filterOption={(input, option) =>
+                      String(option?.searchText || "")
+                        .includes(input.trim().toLowerCase())
+                    }
+                    popupMatchSelectWidth={460}
+                    bordered={false}
+                    className="model-select"
+                    disabled={loading}
+                    placeholder="搜索或选择模型"
+                    notFoundContent="暂无可用模型"
+                  />
+                </div>
 
                 <Popover
                   trigger="click"

@@ -17,6 +17,7 @@ import {
 } from "../models/database.js";
 import db from "../models/database.js";
 import { executeMcpTool, getAllAvailableTools } from "../models/mcpManager.js";
+import { logger } from "../utils/logger.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -233,9 +234,66 @@ function normalizeGenerationConfig(input = {}) {
   };
 }
 
+function getUpstreamErrorMessage(error) {
+  const bodyMessage =
+    error?.error?.message ||
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.error ||
+    error?.response?.error?.message ||
+    error?.cause?.error?.message ||
+    error?.cause?.message;
+
+  const rawMessage = bodyMessage || error?.message || "上游服务请求失败";
+  const status = error?.status || error?.response?.status || error?.cause?.status;
+
+  return status ? `[${status}] ${rawMessage}` : rawMessage;
+}
+
+function normalizeBaseUrlCandidates(baseUrl) {
+  const trimmed = String(baseUrl || "").replace(/\/+$/, "");
+  const candidates = [trimmed];
+
+  if (!trimmed.endsWith("/v1")) {
+    candidates.push(`${trimmed}/v1`);
+  }
+  if (!trimmed.endsWith("/api/v1")) {
+    candidates.push(`${trimmed}/api/v1`);
+  }
+
+  return [...new Set(candidates)];
+}
+
+function isUnsupportedStreamOptionsError(error) {
+  const message = getUpstreamErrorMessage(error).toLowerCase();
+  return (
+    message.includes("stream_options") ||
+    message.includes("unknown parameter") ||
+    message.includes("unsupported") ||
+    message.includes("include_usage")
+  );
+}
+
 async function streamWithFallback(uid, model, messages, res, opts = {}) {
   const endpoints = getEndpoints(uid);
+  const requestLog = logger.child({
+    route: "conversations.stream",
+    uid,
+    conversationId: opts.conversationId,
+    source: opts.source || "chat",
+    model,
+  });
+
+  requestLog.info(
+    {
+      endpointCount: endpoints.length,
+      messageCount: messages.length,
+      generationConfig: opts.generationConfig || {},
+    },
+    "Starting upstream stream request"
+  );
+
   if (!endpoints.length) {
+    requestLog.warn("No API endpoints configured");
     res.write(`data: ${JSON.stringify({ error: "请先在设置中配置 API Endpoint" })}\n\n`);
     res.write("data: [DONE]\n\n");
     res.end();
@@ -264,145 +322,224 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
 
     let lastError = null;
     for (const ep of endpoints) {
-      try {
-        const client = new OpenAI({ apiKey: ep.api_key, baseURL: ep.base_url });
-        const streamParams = {
-          model: model || "gpt-4",
-          messages: currentMessages,
-          stream: true,
-          tools: requestTools,
-          stream_options: { include_usage: true },
-          ...(opts.generationConfig || {}),
-        };
+      const baseUrlCandidates = normalizeBaseUrlCandidates(ep.base_url);
+      for (const baseURL of baseUrlCandidates) {
+        let triedWithoutStreamOptions = false;
+        try {
+          const client = new OpenAI({ apiKey: ep.api_key, baseURL });
+          const baseParams = {
+            model: model || "gpt-4",
+            messages: currentMessages,
+            stream: true,
+            tools: requestTools,
+            ...(opts.generationConfig || {}),
+          };
 
-        const stream = await client.chat.completions.create(streamParams);
-
-        let fullTextContent = "";
-        let toolCalls = [];
-        let promptTokens = 0;
-        let completionTokens = 0;
-
-        for await (const chunk of stream) {
-          const delta = chunk.choices[0]?.delta || {};
-
-          if (delta.content) {
-            fullTextContent += delta.content;
-            res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
+          let stream;
+          try {
+            stream = await client.chat.completions.create({
+              ...baseParams,
+              stream_options: { include_usage: true },
+            });
+          } catch (error) {
+            if (!isUnsupportedStreamOptionsError(error)) {
+              throw error;
+            }
+            triedWithoutStreamOptions = true;
+            requestLog.warn(
+              {
+                endpointName: ep.name,
+                baseURL,
+                reason: getUpstreamErrorMessage(error),
+              },
+              "Upstream rejected stream_options, retrying without it"
+            );
+            stream = await client.chat.completions.create(baseParams);
           }
 
-          if (delta.tool_calls) {
-            for (const tcDelta of delta.tool_calls) {
-              const idx = tcDelta.index;
-              if (!toolCalls[idx]) {
-                toolCalls[idx] = {
-                  id: tcDelta.id,
-                  type: "function",
-                  function: { name: tcDelta.function?.name || "", arguments: "" },
-                };
+          requestLog.info(
+            {
+              endpointName: ep.name,
+              baseURL,
+              messageCount: currentMessages.length,
+              hasTools: !!requestTools?.length,
+              retriedWithoutStreamOptions: triedWithoutStreamOptions,
+            },
+            "Upstream stream connected"
+          );
+
+          let fullTextContent = "";
+          let toolCalls = [];
+          let promptTokens = 0;
+          let completionTokens = 0;
+          let chunkCount = 0;
+          let firstContentAt = null;
+
+          for await (const chunk of stream) {
+            chunkCount++;
+            const delta = chunk.choices[0]?.delta || {};
+
+            if (delta.content) {
+              if (!firstContentAt) {
+                firstContentAt = Date.now();
+                requestLog.info(
+                  {
+                    endpointName: ep.name,
+                    baseURL,
+                    chunkCount,
+                  },
+                  "Received first upstream content chunk"
+                );
               }
-              if (tcDelta.function?.arguments) {
-                toolCalls[idx].function.arguments += tcDelta.function.arguments;
+              fullTextContent += delta.content;
+              res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
+            }
+
+            if (delta.tool_calls) {
+              for (const tcDelta of delta.tool_calls) {
+                const idx = tcDelta.index;
+                if (!toolCalls[idx]) {
+                  toolCalls[idx] = {
+                    id: tcDelta.id,
+                    type: "function",
+                    function: { name: tcDelta.function?.name || "", arguments: "" },
+                  };
+                }
+                if (tcDelta.function?.arguments) {
+                  toolCalls[idx].function.arguments += tcDelta.function.arguments;
+                }
               }
+            }
+
+            if (chunk.usage) {
+              promptTokens = chunk.usage.prompt_tokens || 0;
+              completionTokens = chunk.usage.completion_tokens || 0;
             }
           }
 
-          if (chunk.usage) {
-            promptTokens = chunk.usage.prompt_tokens || 0;
-            completionTokens = chunk.usage.completion_tokens || 0;
-          }
-        }
-
-        try {
-          if (promptTokens > 0) {
-            logUsage({
-              uid,
-              conversationId: opts.conversationId,
-              model,
+          requestLog.info(
+            {
               endpointName: ep.name,
+              baseURL,
+              chunkCount,
+              contentLength: fullTextContent.length,
+              toolCallCount: toolCalls.filter(Boolean).length,
               promptTokens,
               completionTokens,
-              source: opts.source || "chat",
-            });
-          }
-        } catch (logErr) {
-          console.warn("[Usage] Failed to log usage:", logErr.message);
-        }
+            },
+            "Upstream stream completed"
+          );
 
-        const finalToolCalls = toolCalls.filter(Boolean);
-
-        // CASE 1: No tools
-        if (finalToolCalls.length === 0) {
-          return fullTextContent;
-        }
-
-        // CASE 2: Tool calls
-        const toolCallsMsgStr = `[TOOL_CALLS]:${JSON.stringify(finalToolCalls)}`;
-        updateMessage(currentAiMsgId, uid, toolCallsMsgStr);
-
-        currentMessages.push({
-          role: "assistant",
-          content: null,
-          tool_calls: finalToolCalls,
-        });
-
-        // Execute Tools
-        for (const tc of finalToolCalls) {
           try {
-            const funcName = tc.function.name;
-            const funcArgsDecoded = JSON.parse(tc.function.arguments || "{}");
-
-            res.write(`data: ${JSON.stringify({ type: "tool_running", tool_name: funcName })}\n\n`);
-
-            let resultContent = "";
-            const toolDef = allTools.find((t) => t.function.name === funcName);
-            if (toolDef && toolDef._mcp_server_id) {
-              const mcpRes = await executeMcpTool(uid, toolDef._mcp_server_id, funcName, funcArgsDecoded);
-              resultContent = (mcpRes.content || []).map((c) => c.text).join("\n");
-            } else {
-              resultContent = `Unknown tool: ${funcName}`;
+            if (promptTokens > 0) {
+              logUsage({
+                uid,
+                conversationId: opts.conversationId,
+                model,
+                endpointName: ep.name,
+                promptTokens,
+                completionTokens,
+                source: opts.source || "chat",
+              });
             }
-
-            const toolResultStr = `[TOOL_RESULT:${tc.id}:${funcName}]:${resultContent}`;
-            addMessage(opts.conversationId, uid, "tool", toolResultStr);
-
-            currentMessages.push({
-              role: "tool",
-              tool_call_id: tc.id,
-              name: funcName,
-              content: resultContent,
-            });
-          } catch (err) {
-            console.error(err);
-            const errStr = `[TOOL_RESULT:${tc.id}:${tc.function.name}]:Error - ${err.message}`;
-            addMessage(opts.conversationId, uid, "tool", errStr);
-            currentMessages.push({
-              role: "tool",
-              tool_call_id: tc.id,
-              name: tc.function.name,
-              content: err.message,
-            });
+          } catch (logErr) {
+            requestLog.warn(
+              { err: logErr, endpointName: ep.name, baseURL },
+              "Failed to log usage"
+            );
           }
-        }
 
-        // Loop next response
-        const nextAiMsg = addMessage(opts.conversationId, uid, "assistant", "");
-        const nextContent = await executeTurn(currentMessages, nextAiMsg.id);
+          const finalToolCalls = toolCalls.filter(Boolean);
 
-        if (nextContent !== false && nextContent !== "_HANDLED_INTERNALLY_") {
-          updateMessage(nextAiMsg.id, uid, nextContent);
-        }
+          // CASE 1: No tools
+          if (finalToolCalls.length === 0) {
+            return fullTextContent;
+          }
 
-        return "_HANDLED_INTERNALLY_";
-      } catch (error) {
-        lastError = error;
-        console.warn(`[Fallback] Endpoint "${ep.name}" failed: ${error.message}.`);
-        if (endpoints.indexOf(ep) < endpoints.length - 1) {
-          res.write(`data: ${JSON.stringify({ notice: "切换到备用端点中..." })}\n\n`);
+          // CASE 2: Tool calls
+          const toolCallsMsgStr = `[TOOL_CALLS]:${JSON.stringify(finalToolCalls)}`;
+          updateMessage(currentAiMsgId, uid, toolCallsMsgStr);
+
+          currentMessages.push({
+            role: "assistant",
+            content: null,
+            tool_calls: finalToolCalls,
+          });
+
+          // Execute Tools
+          for (const tc of finalToolCalls) {
+            try {
+              const funcName = tc.function.name;
+              const funcArgsDecoded = JSON.parse(tc.function.arguments || "{}");
+
+              res.write(`data: ${JSON.stringify({ type: "tool_running", tool_name: funcName })}\n\n`);
+
+              let resultContent = "";
+              const toolDef = allTools.find((t) => t.function.name === funcName);
+              if (toolDef && toolDef._mcp_server_id) {
+                const mcpRes = await executeMcpTool(uid, toolDef._mcp_server_id, funcName, funcArgsDecoded);
+                resultContent = (mcpRes.content || []).map((c) => c.text).join("\n");
+              } else {
+                resultContent = `Unknown tool: ${funcName}`;
+              }
+
+              const toolResultStr = `[TOOL_RESULT:${tc.id}:${funcName}]:${resultContent}`;
+              addMessage(opts.conversationId, uid, "tool", toolResultStr);
+
+              currentMessages.push({
+                role: "tool",
+                tool_call_id: tc.id,
+                name: funcName,
+                content: resultContent,
+              });
+            } catch (err) {
+              requestLog.error(
+                { err, endpointName: ep.name, baseURL, toolName: tc.function.name },
+                "Tool execution failed"
+              );
+              const errStr = `[TOOL_RESULT:${tc.id}:${tc.function.name}]:Error - ${err.message}`;
+              addMessage(opts.conversationId, uid, "tool", errStr);
+              currentMessages.push({
+                role: "tool",
+                tool_call_id: tc.id,
+                name: tc.function.name,
+                content: err.message,
+              });
+            }
+          }
+
+          // Loop next response
+          const nextAiMsg = addMessage(opts.conversationId, uid, "assistant", "");
+          const nextContent = await executeTurn(currentMessages, nextAiMsg.id);
+
+          if (nextContent !== false && nextContent !== "_HANDLED_INTERNALLY_") {
+            updateMessage(nextAiMsg.id, uid, nextContent);
+          }
+
+          return "_HANDLED_INTERNALLY_";
+        } catch (error) {
+          lastError = error;
+          requestLog.warn(
+            {
+              endpointName: ep.name,
+              baseURL,
+              error: getUpstreamErrorMessage(error),
+            },
+            "Upstream endpoint attempt failed"
+          );
         }
+      }
+
+      if (endpoints.indexOf(ep) < endpoints.length - 1) {
+        res.write(`data: ${JSON.stringify({ notice: "切换到备用端点中..." })}\n\n`);
       }
     }
 
-    res.write(`data: ${JSON.stringify({ error: `所有 API 端点均不可用：${lastError?.message}` })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({
+        error: `所有 API 端点均不可用：${getUpstreamErrorMessage(lastError)}`,
+      })}\n\n`
+    );
     res.write("data: [DONE]\n\n");
     return false;
   }
@@ -423,6 +560,17 @@ router.post("/:id/chat", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
 
   try {
+    logger.info(
+      {
+        route: "conversations.chat",
+        uid,
+        conversationId: id,
+        requestedModel: model,
+        imageCount: Array.isArray(images) ? images.length : 0,
+        generationConfig,
+      },
+      "Incoming chat request"
+    );
     // 获取对话（含 system_prompt）
     const conversation = getConversation(id, uid);
     if (!conversation) {
@@ -462,6 +610,10 @@ router.post("/:id/chat", async (req, res) => {
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (error) {
+    logger.error(
+      { err: error, route: "conversations.chat", uid, conversationId: id },
+      "Chat request failed before stream completion"
+    );
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }
@@ -479,8 +631,14 @@ router.post("/:id/summarize-title", (req, res) => {
   }
 
   summarizeConversationTitle(uid, id, model).catch((error) => {
-    console.warn(
-      `[Title Summary] Failed for conversation ${id}: ${error.message}`
+    logger.warn(
+      {
+        route: "conversations.summarizeTitle",
+        uid,
+        conversationId: id,
+        error: getUpstreamErrorMessage(error),
+      },
+      "Title summary failed"
     );
   });
 
@@ -500,6 +658,16 @@ router.post("/:id/regenerate", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
 
   try {
+    logger.info(
+      {
+        route: "conversations.regenerate",
+        uid,
+        conversationId: id,
+        requestedModel: model,
+        generationConfig,
+      },
+      "Incoming regenerate request"
+    );
     const deleted = deleteLastAssistantMessage(id, uid);
     if (!deleted) {
       res.write(
@@ -539,6 +707,10 @@ router.post("/:id/regenerate", async (req, res) => {
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (error) {
+    logger.error(
+      { err: error, route: "conversations.regenerate", uid, conversationId: id },
+      "Regenerate request failed before stream completion"
+    );
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }
@@ -557,6 +729,17 @@ router.put("/:id/messages/:msgId", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
 
   try {
+    logger.info(
+      {
+        route: "conversations.editMessage",
+        uid,
+        conversationId: id,
+        messageId: msgId,
+        requestedModel: model,
+        generationConfig,
+      },
+      "Incoming edit-and-regenerate request"
+    );
     const conversation = getConversation(id, uid);
     if (!conversation) {
       res.write(`data: ${JSON.stringify({ error: "对话不存在或无权限" })}\n\n`);
@@ -599,6 +782,16 @@ router.put("/:id/messages/:msgId", async (req, res) => {
     res.write("data: [DONE]\n\n");
     res.end();
   } catch (error) {
+    logger.error(
+      {
+        err: error,
+        route: "conversations.editMessage",
+        uid,
+        conversationId: id,
+        messageId: msgId,
+      },
+      "Edit-and-regenerate request failed before stream completion"
+    );
     res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
     res.end();
   }

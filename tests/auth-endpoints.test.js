@@ -73,4 +73,48 @@ describe("auth + endpoints", () => {
     expect(singleRes.body.api_key).toBe("sk-test-secret-key");
     expect(singleRes.body.use_preset_models).toBe(0);
   });
+
+  it("prefers endpoint-linked models over preset models for available model list", async () => {
+    const createRes = await request(app)
+      .post("/api/endpoints")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        name: "OpenRouter",
+        base_url: "https://openrouter.ai/api/v1",
+        api_key: "sk-or-test",
+        is_default: true,
+        use_preset_models: true,
+      })
+      .expect(200);
+
+    const endpointId = createRes.body.id;
+
+    await request(app)
+      .post(`/api/endpoints/${endpointId}/models`)
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        model_id: "openrouter/test-model",
+        display_name: "OpenRouter Test Model",
+      })
+      .expect(200);
+
+    const availableRes = await request(app)
+      .get("/api/endpoints/available/models")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(availableRes.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          model_id: "openrouter/test-model",
+          display_name: "OpenRouter Test Model",
+        }),
+      ])
+    );
+    expect(availableRes.body).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ model_id: "gemini-3-flash" }),
+      ])
+    );
+  });
 });

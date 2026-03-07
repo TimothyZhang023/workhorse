@@ -12,7 +12,7 @@ export async function getInitialState(): Promise<{
         return await getCurrentUser();
       }
     } catch (error) {
-      history.push("/login");
+      localStorage.removeItem("token");
     }
     return undefined;
   };
