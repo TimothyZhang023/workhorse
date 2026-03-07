@@ -293,22 +293,33 @@ function isUnsupportedStreamOptionsError(error) {
   );
 }
 
-function collectTextFragments(value, depth = 0) {
+function isReasoningLikeType(value) {
+  const t = String(value || "").toLowerCase();
+  return /reason|think|analysis|thought/.test(t);
+}
+
+function collectTextFragments(value, depth = 0, mode = "any") {
   if (value === null || value === undefined || depth > 6) return [];
   if (typeof value === "string") return value ? [value] : [];
   if (Array.isArray(value)) {
-    return value.flatMap((item) => collectTextFragments(item, depth + 1));
+    return value.flatMap((item) => collectTextFragments(item, depth + 1, mode));
   }
   if (typeof value !== "object") return [];
 
   const obj = value;
-  const directTextKeys = [
-    "text",
-    "content",
+  const objectType = String(
+    obj.type || obj.delta_type || obj.content_type || ""
+  ).toLowerCase();
+  const objectIsReasoning = isReasoningLikeType(objectType);
+  const reasoningOnlyKeys = [
     "reasoning",
     "reasoning_content",
     "thinking",
     "thinking_content",
+  ];
+  const directTextKeys = [
+    "text",
+    "content",
     "output_text",
     "refusal",
     "value",
@@ -325,23 +336,48 @@ function collectTextFragments(value, depth = 0) {
   ];
 
   const fragments = [];
-  for (const key of directTextKeys) {
+
+  if (mode === "answer" && objectIsReasoning) {
+    for (const key of nestedKeys) {
+      if (!(key in obj)) continue;
+      fragments.push(...collectTextFragments(obj[key], depth + 1, mode));
+    }
+    return fragments;
+  }
+
+  if (mode === "reasoning" && objectType && !objectIsReasoning) {
+    for (const key of reasoningOnlyKeys) {
+      if (!(key in obj)) continue;
+      fragments.push(...collectTextFragments(obj[key], depth + 1, mode));
+    }
+    for (const key of nestedKeys) {
+      if (!(key in obj)) continue;
+      fragments.push(...collectTextFragments(obj[key], depth + 1, mode));
+    }
+    return fragments;
+  }
+
+  const keysToRead =
+    mode === "answer"
+      ? directTextKeys
+      : [...reasoningOnlyKeys, ...directTextKeys];
+  for (const key of keysToRead) {
     if (!(key in obj)) continue;
-    fragments.push(...collectTextFragments(obj[key], depth + 1));
+    fragments.push(...collectTextFragments(obj[key], depth + 1, mode));
   }
   for (const key of nestedKeys) {
     if (!(key in obj)) continue;
-    fragments.push(...collectTextFragments(obj[key], depth + 1));
+    fragments.push(...collectTextFragments(obj[key], depth + 1, mode));
   }
 
   return fragments;
 }
 
-function collectUniqueText(candidates) {
+function collectUniqueText(candidates, mode = "any") {
   const seen = new Set();
   const parts = [];
   for (const candidate of candidates || []) {
-    const text = collectTextFragments(candidate).join("");
+    const text = collectTextFragments(candidate, 0, mode).join("");
     if (!text || seen.has(text)) continue;
     seen.add(text);
     parts.push(text);
@@ -352,32 +388,41 @@ function collectUniqueText(candidates) {
 function extractStreamParts(choice, chunk) {
   const delta = choice?.delta || {};
 
-  const answerText = collectUniqueText([
-    delta.content,
-    delta.text,
-    delta.output_text,
-    delta.refusal,
-    choice?.message?.content,
-    choice?.message?.text,
-    chunk?.content,
-    chunk?.text,
-    chunk?.output_text,
-  ]);
+  const answerText = collectUniqueText(
+    [
+      delta.content,
+      delta.text,
+      delta.output_text,
+      delta.refusal,
+      choice?.message?.content,
+      choice?.message?.text,
+      chunk?.content,
+      chunk?.text,
+      chunk?.output_text,
+    ],
+    "answer"
+  );
 
-  const reasoningText = collectUniqueText([
-    delta.reasoning,
-    delta.reasoning_content,
-    delta.thinking,
-    delta.thinking_content,
-    choice?.message?.reasoning,
-    choice?.message?.reasoning_content,
-    choice?.message?.thinking,
-    choice?.message?.thinking_content,
-    chunk?.reasoning,
-    chunk?.reasoning_content,
-    chunk?.thinking,
-    chunk?.thinking_content,
-  ]);
+  const reasoningText = collectUniqueText(
+    [
+      delta.content,
+      delta.reasoning,
+      delta.reasoning_content,
+      delta.thinking,
+      delta.thinking_content,
+      choice?.message?.content,
+      choice?.message?.reasoning,
+      choice?.message?.reasoning_content,
+      choice?.message?.thinking,
+      choice?.message?.thinking_content,
+      chunk?.content,
+      chunk?.reasoning,
+      chunk?.reasoning_content,
+      chunk?.thinking,
+      chunk?.thinking_content,
+    ],
+    "reasoning"
+  );
 
   return { answerText, reasoningText };
 }

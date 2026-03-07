@@ -38,6 +38,38 @@ const toThinkDetails = (rawBody: string) => {
   )}</pre></details>`;
 };
 
+const tryWrapImplicitThinking = (content: string) => {
+  const trimmed = String(content || "").trim();
+  if (!trimmed || /<details class="think-block">/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const cuePattern =
+    /(Interpreting the Query|Clarifying|Confirming|I need to|I'm currently|I should|根据我的系统提示|我需要|首先|接下来|用户问|用户用中文说)/gi;
+  const cueCount = (trimmed.match(cuePattern) || []).length;
+  if (cueCount < 2) return trimmed;
+
+  const blocks = trimmed
+    .split(/\n{2,}/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (blocks.length < 2) return trimmed;
+
+  const answerBlock = blocks[blocks.length - 1];
+  const answerLikePattern =
+    /^(你好|您好|我是|很高兴|请问|有什么我可以|好的|当然|Hello|Hi|Sure|I am|I'm)/i;
+  const answerLooksValid =
+    (answerLikePattern.test(answerBlock) && answerBlock.length <= 260) ||
+    (answerBlock.length <= 180 && /[。！？!?]$/.test(answerBlock));
+  if (!answerLooksValid) return trimmed;
+
+  const thinkBody = blocks.slice(0, -1).join("\n\n").trim();
+  if (!thinkBody || thinkBody.length < 80) return trimmed;
+  if (thinkBody.length < answerBlock.length * 1.2) return trimmed;
+
+  return `<think>\n${thinkBody}\n</think>\n\n${answerBlock}`;
+};
+
 const normalizeThinkingBlocks = (rawContent: string) => {
   if (!rawContent) return rawContent;
 
@@ -56,6 +88,11 @@ const normalizeThinkingBlocks = (rawContent: string) => {
     (_, body) => `<think>\n${body}\n</think>`
   );
   normalized = normalized.replace(
+    /<think(?:\s[^>]*)?>([\s\S]*?)<\/think>/gi,
+    (_, body) => toThinkDetails(body)
+  );
+
+  normalized = tryWrapImplicitThinking(normalized).replace(
     /<think(?:\s[^>]*)?>([\s\S]*?)<\/think>/gi,
     (_, body) => toThinkDetails(body)
   );
