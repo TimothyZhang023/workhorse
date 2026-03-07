@@ -157,9 +157,11 @@ export default () => {
   const [topP, setTopP] = useState<number>(() =>
     clamp(getStoredNumber("timo.top_p", 1), 0, 1)
   );
-  const [maxTokens, setMaxTokens] = useState<number>(() =>
-    clamp(getStoredNumber("timo.max_tokens", 2048), 256, 8192)
-  );
+  const [maxTokens, setMaxTokens] = useState<number>(() => {
+    const stored = getStoredNumber("timo.max_tokens", -1);
+    if (stored === -1) return -1;
+    return clamp(stored, 256, 8192);
+  });
 
   // 流式处理状态
   const [loading, setLoading] = useState(false);
@@ -514,11 +516,13 @@ export default () => {
     }
   };
 
-  const generationConfig = {
+  const generationConfig: Record<string, number> = {
     temperature: Number(clamp(temperature, 0, 2).toFixed(2)),
     top_p: Number(clamp(topP, 0, 1).toFixed(2)),
-    max_tokens: clamp(Math.round(maxTokens), 256, 8192),
   };
+  if (maxTokens !== -1) {
+    generationConfig.max_tokens = clamp(Math.round(maxTokens), 256, 8192);
+  }
 
   // 核心发送函数（兼容 send + regenerate）
   const streamChat = async (
@@ -1344,15 +1348,38 @@ export default () => {
                         />
                       </div>
                       <div className="generation-item">
-                        <div className="generation-label">
-                          Max Tokens: {Math.round(maxTokens)}
+                        <div
+                          className="generation-label"
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span>
+                            Max Tokens:{" "}
+                            {maxTokens === -1
+                              ? "自动（不传）"
+                              : Math.round(maxTokens)}
+                          </span>
+                          <Button
+                            type="link"
+                            size="small"
+                            style={{ padding: 0, height: "auto" }}
+                            onClick={() =>
+                              setMaxTokens((prev) => (prev === -1 ? 2048 : -1))
+                            }
+                          >
+                            {maxTokens === -1 ? "改为固定值" : "自动(-1)"}
+                          </Button>
                         </div>
                         <Slider
                           min={256}
                           max={8192}
                           step={64}
-                          value={maxTokens}
+                          value={maxTokens === -1 ? 2048 : maxTokens}
                           onChange={setMaxTokens}
+                          disabled={maxTokens === -1}
                         />
                       </div>
                     </div>

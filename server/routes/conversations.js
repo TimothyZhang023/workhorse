@@ -238,13 +238,16 @@ function normalizeGenerationConfig(input = {}) {
   const temperature = toNumber(input.temperature);
   const topP = toNumber(input.top_p);
   const maxTokens = toNumber(input.max_tokens);
+  const hasTemperature = temperature !== undefined;
+  const hasTopP = topP !== undefined;
+  const hasMaxTokens = maxTokens !== undefined;
+  const shouldOmitMaxTokens = hasMaxTokens && maxTokens <= 0;
 
   return {
-    ...(temperature !== undefined
-      ? { temperature: Math.min(2, Math.max(0, temperature)) }
-      : {}),
-    ...(topP !== undefined ? { top_p: Math.min(1, Math.max(0, topP)) } : {}),
-    ...(maxTokens !== undefined
+    // 中性默认值：temperature=0.7, top_p=1
+    temperature: hasTemperature ? Math.min(2, Math.max(0, temperature)) : 0.7,
+    top_p: hasTopP ? Math.min(1, Math.max(0, topP)) : 1,
+    ...(hasMaxTokens && !shouldOmitMaxTokens
       ? { max_tokens: Math.round(Math.min(8192, Math.max(64, maxTokens))) }
       : {}),
   };
