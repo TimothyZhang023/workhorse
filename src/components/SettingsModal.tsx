@@ -1,5 +1,6 @@
 import {
   addModelToEndpoint,
+  clearAllHistory,
   createEndpoint,
   deleteEndpoint,
   deleteModelFromEndpoint,
@@ -9,7 +10,12 @@ import {
   syncEndpointModels,
   updateEndpoint,
 } from "@/services/api";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import {
   ModalForm,
   ProFormSelect,
@@ -359,6 +365,61 @@ export const SettingsModal = ({
       </Modal>
 
       <McpModal open={showMcpModal} onOpenChange={setShowMcpModal} />
+
+      {/* 危险操作区域 */}
+      <div
+        style={{
+          marginTop: 32,
+          padding: 16,
+          border: "1px solid #ff4d4f",
+          borderRadius: 8,
+          background: "rgba(255, 77, 79, 0.04)",
+        }}
+      >
+        <h3 style={{ color: "#ff4d4f", marginBottom: 8 }}>危险操作</h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 500 }}>清空所有历史消息</div>
+            <div style={{ color: "#6b7280", fontSize: 13 }}>
+              删除当前账户的所有对话和消息，此操作不可恢复
+            </div>
+          </div>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              Modal.confirm({
+                title: "确认清空所有历史消息？",
+                icon: <ExclamationCircleOutlined />,
+                content:
+                  "此操作将永久删除你的所有对话和消息，无法恢复。确定要继续吗？",
+                okText: "确认清空",
+                okType: "danger",
+                cancelText: "取消",
+                onOk: async () => {
+                  try {
+                    const result = await clearAllHistory();
+                    message.success(
+                      `已清空 ${result.deleted_conversations || 0} 个对话`
+                    );
+                    onOpenChange(false);
+                  } catch (error) {
+                    message.error("清空失败，请重试");
+                  }
+                },
+              });
+            }}
+          >
+            清空所有消息
+          </Button>
+        </div>
+      </div>
     </ModalForm>
   );
 };

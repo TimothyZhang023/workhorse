@@ -196,6 +196,16 @@ export async function getAvailableModels() {
   });
 }
 
+// Clear All History
+export async function clearAllHistory() {
+  return request<{ success: boolean; deleted_conversations: number }>(
+    "/api/account/history",
+    {
+      method: "DELETE",
+    }
+  );
+}
+
 // Admin
 export async function getAllUsers() {
   return request<any[]>("/api/admin/users", {

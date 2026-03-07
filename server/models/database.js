@@ -375,6 +375,17 @@ export function deleteConversation(id, uid) {
   db.prepare("DELETE FROM conversations WHERE id = ? AND uid = ?").run(id, uid);
 }
 
+export function clearAllHistory(uid) {
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM messages WHERE uid = ?").run(uid);
+    const result = db
+      .prepare("DELETE FROM conversations WHERE uid = ?")
+      .run(uid);
+    return result.changes;
+  });
+  return tx();
+}
+
 export function getConversation(id, uid) {
   return db
     .prepare("SELECT * FROM conversations WHERE id = ? AND uid = ?")

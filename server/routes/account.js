@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.js";
 import {
+  clearAllHistory,
   createApiKey,
   createWebhook,
   deleteApiKey,
@@ -28,6 +29,17 @@ router.get("/summary", (req, res) => {
       getUsageSummary(req.uid, days),
     ];
     res.json({ totals, byModel, daily });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ 清空历史消息 ============
+
+router.delete("/history", (req, res) => {
+  try {
+    const deletedCount = clearAllHistory(req.uid);
+    res.json({ success: true, deleted_conversations: deletedCount });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
