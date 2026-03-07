@@ -61,13 +61,30 @@ const tryWrapImplicitThinking = (content: string) => {
   const answerLooksValid =
     (answerLikePattern.test(answerBlock) && answerBlock.length <= 260) ||
     (answerBlock.length <= 180 && /[。！？!?]$/.test(answerBlock));
-  if (!answerLooksValid) return trimmed;
+  if (answerLooksValid) {
+    const thinkBody = blocks.slice(0, -1).join("\n\n").trim();
+    if (!thinkBody || thinkBody.length < 80) return trimmed;
+    if (thinkBody.length < answerBlock.length * 1.2) return trimmed;
+    return `<think>\n${thinkBody}\n</think>\n\n${answerBlock}`;
+  }
 
-  const thinkBody = blocks.slice(0, -1).join("\n\n").trim();
-  if (!thinkBody || thinkBody.length < 80) return trimmed;
-  if (thinkBody.length < answerBlock.length * 1.2) return trimmed;
+  // 同一段里混入“最后回复”的场景：按结尾问候/自我介绍锚点拆分
+  const pivotPattern =
+    /(?:^|\n|[。！？!?]\s*)(你好|您好|我是|Hello|Hi|Sure|当然|好的)/g;
+  const matches = [...trimmed.matchAll(pivotPattern)];
+  if (!matches.length) return trimmed;
 
-  return `<think>\n${thinkBody}\n</think>\n\n${answerBlock}`;
+  const last = matches[matches.length - 1];
+  const pivot = last.index ?? -1;
+  if (pivot <= 0) return trimmed;
+
+  const thinkBody = trimmed.slice(0, pivot).trim();
+  const answerBody = trimmed.slice(pivot).trim();
+  if (!thinkBody || !answerBody) return trimmed;
+  if (thinkBody.length < 100 || answerBody.length > 320) return trimmed;
+  if (!/(我需要|应该|用户|首先|接下来|最后)/.test(thinkBody)) return trimmed;
+
+  return `<think>\n${thinkBody}\n</think>\n\n${answerBody}`;
 };
 
 const normalizeThinkingBlocks = (rawContent: string) => {
