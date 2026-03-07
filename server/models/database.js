@@ -827,7 +827,7 @@ export function createWebhook(uid, name, url, events = []) {
 export function listWebhooks(uid) {
   return db
     .prepare("SELECT * FROM webhooks WHERE uid = ?")
-    .all()
+    .all(uid)
     .map((w) => ({
       ...w,
       events: JSON.parse(w.events || "[]"),
