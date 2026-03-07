@@ -640,6 +640,10 @@ export default () => {
 
   const sendMessage = async () => {
     if ((!inputText.trim() && pendingImages.length === 0) || loading) return;
+    if (!selectedModel) {
+      antdMessage.error("请先选择模型");
+      return;
+    }
 
     let convId = currentConvId;
     const shouldSummarizeTitle = messages.length === 0;
@@ -677,6 +681,10 @@ export default () => {
 
   const handleRegenerate = async () => {
     if (!currentConvId || loading) return;
+    if (!selectedModel) {
+      antdMessage.error("请先选择模型");
+      return;
+    }
     // 删除界面上最后一条 assistant 消息
     setMessages((prev) => {
       const newMsgs = [...prev];
@@ -693,6 +701,10 @@ export default () => {
 
   const handleSaveEdit = async (msgId: number) => {
     if (!currentConvId || loading || !editingMsgContent.trim()) return;
+    if (!selectedModel) {
+      antdMessage.error("请先选择模型");
+      return;
+    }
 
     const content = editingMsgContent;
     setEditingMsgId(null);
@@ -1363,7 +1375,10 @@ export default () => {
                     type="primary"
                     shape="circle"
                     icon={<SendOutlined />}
-                    disabled={!inputText.trim() && pendingImages.length === 0}
+                    disabled={
+                      (!inputText.trim() && pendingImages.length === 0) ||
+                      !selectedModel
+                    }
                     onClick={sendMessage}
                     className="send-btn"
                   />

@@ -33,9 +33,7 @@ const DEFAULT_BASE_URL_BY_PROVIDER = {
 
 function normalizeProvider(provider) {
   const normalized = String(provider || "openai_compatible").toLowerCase();
-  return SUPPORTED_PROVIDERS.has(normalized)
-    ? normalized
-    : "openai_compatible";
+  return SUPPORTED_PROVIDERS.has(normalized) ? normalized : "openai_compatible";
 }
 
 function resolveBaseUrl(provider, baseUrl) {
@@ -60,22 +58,62 @@ function normalizeBaseUrlCandidates(baseUrl) {
   return [...new Set(candidates)];
 }
 
+function normalizeOpenRouterBaseCandidates(baseUrl) {
+  const trimmed = String(baseUrl || "").replace(/\/+$/, "");
+  const variants = new Set([
+    trimmed,
+    trimmed.replace(/\/models$/i, ""),
+    trimmed.replace(/\/chat\/completions$/i, ""),
+    trimmed.replace(/\/completions$/i, ""),
+  ]);
+
+  const candidates = [];
+  for (const item of variants) {
+    if (!item) continue;
+    candidates.push(item);
+    if (!item.endsWith("/api/v1")) {
+      candidates.push(`${item.replace(/\/+$/, "")}/api/v1`);
+    }
+  }
+
+  return [...new Set(candidates)];
+}
+
 async function fetchRemoteModels(endpoint) {
   if (endpoint.provider === "openrouter") {
-    const baseURL = endpoint.base_url.replace(/\/+$/, "");
-    const response = await fetch(`${baseURL}/models`, {
-      headers: {
-        Authorization: `Bearer ${endpoint.api_key}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`OpenRouter 获取模型失败: HTTP ${response.status}`);
+    const candidates = normalizeOpenRouterBaseCandidates(endpoint.base_url);
+    let lastStatus = null;
+    let lastError = null;
+
+    for (const baseURL of candidates) {
+      try {
+        const response = await fetch(`${baseURL}/models`, {
+          headers: {
+            Authorization: `Bearer ${endpoint.api_key}`,
+          },
+        });
+        if (!response.ok) {
+          lastStatus = response.status;
+          if (response.status === 404) {
+            continue;
+          }
+          throw new Error(`OpenRouter 获取模型失败: HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        return {
+          models: Array.isArray(payload?.data) ? payload.data : [],
+          baseURL,
+        };
+      } catch (error) {
+        lastError = error;
+        continue;
+      }
     }
-    const payload = await response.json();
-    return {
-      models: Array.isArray(payload?.data) ? payload.data : [],
-      baseURL,
-    };
+
+    if (lastError && !lastStatus) {
+      throw lastError;
+    }
+    throw new Error(`OpenRouter 获取模型失败: HTTP ${lastStatus || 404}`);
   }
 
   if (
@@ -197,14 +235,8 @@ router.get("/:id", (req, res) => {
 // 创建 endpoint 组
 router.post("/", (req, res) => {
   try {
-    const {
-      name,
-      provider,
-      base_url,
-      api_key,
-      is_default,
-      use_preset_models,
-    } = req.body;
+    const { name, provider, base_url, api_key, is_default, use_preset_models } =
+      req.body;
     const normalizedProvider = normalizeProvider(provider);
     const resolvedBaseUrl = resolveBaseUrl(normalizedProvider, base_url);
     if (!name || !resolvedBaseUrl || !api_key) {

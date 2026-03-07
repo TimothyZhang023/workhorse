@@ -290,6 +290,12 @@ function isUnsupportedStreamOptionsError(error) {
   );
 }
 
+function finalizeSse(res) {
+  if (res.writableEnded) return;
+  res.write("data: [DONE]\n\n");
+  res.end();
+}
+
 async function streamWithFallback(uid, model, messages, res, opts = {}) {
   const endpoints = getEndpoints(uid);
   const requestLog = logger.child({
@@ -314,8 +320,6 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
     res.write(
       `data: ${JSON.stringify({ error: "请先在设置中配置 API Endpoint" })}\n\n`
     );
-    res.write("data: [DONE]\n\n");
-    res.end();
     return false;
   }
 
@@ -350,7 +354,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
         try {
           const client = new OpenAI({ apiKey: ep.api_key, baseURL });
           const baseParams = {
-            model: model || "gpt-4",
+            model,
             messages: currentMessages,
             stream: true,
             tools: requestTools,
@@ -566,7 +570,10 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
           );
           const nextContent = await executeTurn(currentMessages, nextAiMsg.id);
 
-          if (nextContent !== false && nextContent !== "_HANDLED_INTERNALLY_") {
+          if (nextContent === false) {
+            return false;
+          }
+          if (nextContent !== "_HANDLED_INTERNALLY_") {
             updateMessage(nextAiMsg.id, uid, nextContent);
           }
 
@@ -596,7 +603,6 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
         error: `所有 API 端点均不可用：${getUpstreamErrorMessage(lastError)}`,
       })}\n\n`
     );
-    res.write("data: [DONE]\n\n");
     return false;
   }
 
@@ -610,6 +616,7 @@ router.post("/:id/chat", async (req, res) => {
   const { message, model, images } = req.body;
   const uid = req.uid;
   const generationConfig = normalizeGenerationConfig(req.body);
+  const requestedModel = String(model || "").trim();
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -621,12 +628,17 @@ router.post("/:id/chat", async (req, res) => {
         route: "conversations.chat",
         uid,
         conversationId: id,
-        requestedModel: model,
+        requestedModel,
         imageCount: Array.isArray(images) ? images.length : 0,
         generationConfig,
       },
       "Incoming chat request"
     );
+    if (!requestedModel) {
+      res.write(`data: ${JSON.stringify({ error: "请选择模型后再发送" })}\n\n`);
+      finalizeSse(res);
+      return;
+    }
     // 获取对话（含 system_prompt）
     const conversation = getConversation(id, uid);
     if (!conversation) {
@@ -649,29 +661,36 @@ router.post("/:id/chat", async (req, res) => {
 
     const aiMsg = addMessage(id, uid, "assistant", "");
 
-    const fullContent = await streamWithFallback(uid, model, messages, res, {
-      conversationId: id,
-      source: "chat",
-      aiMsgId: aiMsg.id,
-      generationConfig,
-    });
+    const fullContent = await streamWithFallback(
+      uid,
+      requestedModel,
+      messages,
+      res,
+      {
+        conversationId: id,
+        source: "chat",
+        aiMsgId: aiMsg.id,
+        generationConfig,
+      }
+    );
 
     if (fullContent === false) {
-      // Early exit handled in stream
+      finalizeSse(res);
       return;
     } else if (fullContent !== "_HANDLED_INTERNALLY_") {
       updateMessage(aiMsg.id, uid, fullContent);
     }
 
-    res.write("data: [DONE]\n\n");
-    res.end();
+    finalizeSse(res);
   } catch (error) {
     logger.error(
       { err: error, route: "conversations.chat", uid, conversationId: id },
       "Chat request failed before stream completion"
     );
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      finalizeSse(res);
+    }
   }
 });
 
@@ -708,6 +727,7 @@ router.post("/:id/regenerate", async (req, res) => {
   const { model } = req.body;
   const uid = req.uid;
   const generationConfig = normalizeGenerationConfig(req.body);
+  const requestedModel = String(model || "").trim();
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -719,11 +739,16 @@ router.post("/:id/regenerate", async (req, res) => {
         route: "conversations.regenerate",
         uid,
         conversationId: id,
-        requestedModel: model,
+        requestedModel,
         generationConfig,
       },
       "Incoming regenerate request"
     );
+    if (!requestedModel) {
+      res.write(`data: ${JSON.stringify({ error: "请选择模型后再重试" })}\n\n`);
+      finalizeSse(res);
+      return;
+    }
     const deleted = deleteLastAssistantMessage(id, uid);
     if (!deleted) {
       res.write(
@@ -747,21 +772,27 @@ router.post("/:id/regenerate", async (req, res) => {
     const messages = buildMessages(history, systemPrompt);
     const aiMsg = addMessage(id, uid, "assistant", "");
 
-    const fullContent = await streamWithFallback(uid, model, messages, res, {
-      conversationId: id,
-      source: "chat",
-      aiMsgId: aiMsg.id,
-      generationConfig,
-    });
+    const fullContent = await streamWithFallback(
+      uid,
+      requestedModel,
+      messages,
+      res,
+      {
+        conversationId: id,
+        source: "chat",
+        aiMsgId: aiMsg.id,
+        generationConfig,
+      }
+    );
 
     if (fullContent === false) {
+      finalizeSse(res);
       return;
     } else if (fullContent !== "_HANDLED_INTERNALLY_") {
       updateMessage(aiMsg.id, uid, fullContent);
     }
 
-    res.write("data: [DONE]\n\n");
-    res.end();
+    finalizeSse(res);
   } catch (error) {
     logger.error(
       {
@@ -772,8 +803,10 @@ router.post("/:id/regenerate", async (req, res) => {
       },
       "Regenerate request failed before stream completion"
     );
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      finalizeSse(res);
+    }
   }
 });
 
@@ -784,6 +817,7 @@ router.put("/:id/messages/:msgId", async (req, res) => {
   const { content, model } = req.body;
   const uid = req.uid;
   const generationConfig = normalizeGenerationConfig(req.body);
+  const requestedModel = String(model || "").trim();
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -796,11 +830,16 @@ router.put("/:id/messages/:msgId", async (req, res) => {
         uid,
         conversationId: id,
         messageId: msgId,
-        requestedModel: model,
+        requestedModel,
         generationConfig,
       },
       "Incoming edit-and-regenerate request"
     );
+    if (!requestedModel) {
+      res.write(`data: ${JSON.stringify({ error: "请选择模型后再重试" })}\n\n`);
+      finalizeSse(res);
+      return;
+    }
     const conversation = getConversation(id, uid);
     if (!conversation) {
       res.write(`data: ${JSON.stringify({ error: "对话不存在或无权限" })}\n\n`);
@@ -833,21 +872,27 @@ router.put("/:id/messages/:msgId", async (req, res) => {
     const messages = buildMessages(history, systemPrompt);
     const aiMsg = addMessage(id, uid, "assistant", "");
 
-    const fullContent = await streamWithFallback(uid, model, messages, res, {
-      conversationId: id,
-      source: "chat",
-      aiMsgId: aiMsg.id,
-      generationConfig,
-    });
+    const fullContent = await streamWithFallback(
+      uid,
+      requestedModel,
+      messages,
+      res,
+      {
+        conversationId: id,
+        source: "chat",
+        aiMsgId: aiMsg.id,
+        generationConfig,
+      }
+    );
 
     if (fullContent === false) {
+      finalizeSse(res);
       return;
     } else if (fullContent !== "_HANDLED_INTERNALLY_") {
       updateMessage(aiMsg.id, uid, fullContent);
     }
 
-    res.write("data: [DONE]\n\n");
-    res.end();
+    finalizeSse(res);
   } catch (error) {
     logger.error(
       {
@@ -859,8 +904,10 @@ router.put("/:id/messages/:msgId", async (req, res) => {
       },
       "Edit-and-regenerate request failed before stream completion"
     );
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      finalizeSse(res);
+    }
   }
 });
 

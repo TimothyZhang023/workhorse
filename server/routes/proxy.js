@@ -15,7 +15,9 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import {
+  getDefaultEndpointGroup,
   getEndpointGroups,
+  getModels,
   logUsage,
   PRESET_MODELS,
   verifyApiKey,
@@ -54,7 +56,29 @@ router.use(proxyAuth);
 // GET /v1/models - 列出可用模型
 router.get("/models", (req, res) => {
   try {
-    const models = PRESET_MODELS.map((m) => ({
+    const defaultEndpoint =
+      getDefaultEndpointGroup(req.uid) ||
+      getEndpointGroups(req.uid).sort((a, b) => b.is_default - a.is_default)[0];
+
+    let effectiveModels = PRESET_MODELS;
+    if (defaultEndpoint) {
+      const endpointModels = getModels(defaultEndpoint.id, req.uid);
+      if (endpointModels.length > 0) {
+        effectiveModels = endpointModels.map((m) => ({
+          model_id: m.model_id,
+          display_name: m.display_name,
+        }));
+      } else if (defaultEndpoint.use_preset_models) {
+        effectiveModels = PRESET_MODELS;
+      } else {
+        effectiveModels = [];
+      }
+    }
+
+    const deduped = Array.from(
+      new Map(effectiveModels.map((m) => [m.model_id, m])).values()
+    );
+    const models = deduped.map((m) => ({
       id: m.model_id,
       object: "model",
       created: Math.floor(Date.now() / 1000),

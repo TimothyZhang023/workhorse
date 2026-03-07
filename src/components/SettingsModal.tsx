@@ -72,6 +72,8 @@ export const SettingsModal = ({
       const data = await getEndpointModels(endpointId);
       setModels(data);
     } catch (error) {
+      setModels([]);
+      message.error("加载模型列表失败");
       console.error(error);
     } finally {
       setLoadingModels(false);
@@ -206,7 +208,10 @@ export const SettingsModal = ({
         title={editingEndpoint?.id ? "编辑 Endpoint" : "添加 Endpoint"}
         open={!!editingEndpoint}
         onOpenChange={(visible) => !visible && setEditingEndpoint(null)}
-        initialValues={{ provider: "openai_compatible", ...(editingEndpoint || {}) }}
+        initialValues={{
+          provider: "openai_compatible",
+          ...(editingEndpoint || {}),
+        }}
         onFinish={async (values) => {
           try {
             if (editingEndpoint?.id) {
