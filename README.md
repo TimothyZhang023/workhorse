@@ -42,15 +42,7 @@
 - Node.js >= 18
 - npm >= 9
 
-### 方式一：一键启动（Windows）
-
-```bat
-start_all.bat
-```
-
-该脚本会自动完成依赖安装、前端构建，并启动服务器。
-
-### 方式二：开发模式
+### 方式一：开发模式
 
 同时启动前端开发服务器和后端服务器（支持热重载）：
 
@@ -62,7 +54,14 @@ npm run dev
 - 前端开发地址：`http://localhost:8000`
 - 后端 API 地址：`http://localhost:8866`
 
-### 方式三：生产部署
+常用进程命令：
+
+```bash
+npm run stop        # 释放 8000 / 8866 端口
+npm run restart     # stop 后重启开发模式
+```
+
+### 方式二：生产部署
 
 ```bash
 npm install
@@ -71,6 +70,12 @@ npm start
 ```
 
 构建产物输出到 `dist/` 目录，由 Express 直接托管，访问 `http://localhost:8866`。
+
+生产模式重启命令：
+
+```bash
+npm run restart:prod
+```
 
 ---
 
@@ -186,10 +191,7 @@ timo/
 │   └── models/
 │       └── global.ts       # 全局状态管理
 ├── data/                   # 本地数据库（已 gitignore）
-├── dist/                   # 构建输出目录
-├── start_all.bat           # Windows 一键启动
-├── stop_all.bat            # Windows 停止服务
-└── restart_all.bat         # Windows 重启服务
+└── dist/                   # 构建输出目录
 ```
 
 ---
