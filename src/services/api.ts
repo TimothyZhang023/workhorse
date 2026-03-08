@@ -109,6 +109,12 @@ export async function getMcpServers() {
   });
 }
 
+export async function getMcpTools() {
+  return request<any[]>("/api/mcp/tools", {
+    method: "GET",
+  });
+}
+
 export async function createMcpServer(data: any) {
   return request("/api/mcp", {
     method: "POST",
@@ -203,12 +209,103 @@ export async function clearAllHistory() {
     deleted_conversations: number;
     deleted_messages: number;
     deleted_usage_logs: number;
-  }>(
-    "/api/account/history",
+  }>("/api/account/history", {
+    method: "DELETE",
+  });
+}
+
+// Skills
+export async function getSkills() {
+  return request<API.Skill[]>("/api/skills", {
+    method: "GET",
+  });
+}
+
+export async function createSkill(data: Partial<API.Skill>) {
+  return request<API.Skill>("/api/skills", {
+    method: "POST",
+    data,
+  });
+}
+
+export async function updateSkill(id: number, data: Partial<API.Skill>) {
+  return request(`/api/skills/${id}`, {
+    method: "PUT",
+    data,
+  });
+}
+
+export async function deleteSkill(id: number) {
+  return request(`/api/skills/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// Agent Tasks
+export async function getAgentTasks() {
+  return request<API.AgentTask[]>("/api/agent-tasks", {
+    method: "GET",
+  });
+}
+
+export async function createAgentTask(data: Partial<API.AgentTask>) {
+  return request<API.AgentTask>("/api/agent-tasks", {
+    method: "POST",
+    data,
+  });
+}
+
+export async function updateAgentTask(
+  id: number,
+  data: Partial<API.AgentTask>
+) {
+  return request(`/api/agent-tasks/${id}`, {
+    method: "PUT",
+    data,
+  });
+}
+
+export async function deleteAgentTask(id: number) {
+  return request(`/api/agent-tasks/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function runAgentTask(id: number, message?: string) {
+  return request<{ conversationId: string; finalResponse: string }>(
+    `/api/agent-tasks/${id}/run`,
     {
-      method: "DELETE",
+      method: "POST",
+      data: { message },
     }
   );
+}
+
+// Cron Jobs
+export async function getCronJobs() {
+  return request<API.CronJob[]>("/api/cron-jobs", {
+    method: "GET",
+  });
+}
+
+export async function createCronJob(data: Partial<API.CronJob>) {
+  return request<API.CronJob>("/api/cron-jobs", {
+    method: "POST",
+    data,
+  });
+}
+
+export async function updateCronJob(id: number, data: Partial<API.CronJob>) {
+  return request(`/api/cron-jobs/${id}`, {
+    method: "PUT",
+    data,
+  });
+}
+
+export async function deleteCronJob(id: number) {
+  return request(`/api/cron-jobs/${id}`, {
+    method: "DELETE",
+  });
 }
 
 // Admin

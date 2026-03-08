@@ -444,8 +444,8 @@ export const AccountModal = ({ open, onClose, isDark }: AccountModalProps) => {
       <Alert
         message={
           <span>
-            使用 cowhouse API Key 可将任何支持 OpenAI 格式的工具（Cursor /
-            Cline / Chatbox / Open WebUI 等）接入 cowhouse 管理的所有模型。
+            使用 cowhouse API Key 可将任何支持 OpenAI 格式的工具（Cursor / Cline
+            / Chatbox / Open WebUI 等）接入 cowhouse 管理的所有模型。
             <br />
             <Text code style={{ fontSize: 12 }}>
               Base URL: {window.location.origin}/v1

@@ -6,7 +6,10 @@ import {
   listMcpServers,
   updateMcpServer,
 } from "../models/database.js";
-import { disconnectMcpServer } from "../models/mcpManager.js";
+import {
+  disconnectMcpServer,
+  getAllAvailableTools,
+} from "../models/mcpManager.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -21,10 +24,21 @@ router.get("/", (req, res) => {
   }
 });
 
+// 获取所有已启用的 MCP Server 注册的 Tools
+router.get("/tools", async (req, res) => {
+  try {
+    const tools = await getAllAvailableTools(req.uid);
+    res.json(tools);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 添加新的 MCP Server
 router.post("/", (req, res) => {
   try {
-    const { name, type, command, args, url, is_enabled } = req.body;
+    const { name, type, command, args, url, is_enabled, headers, auth } =
+      req.body;
 
     if (!name || !type) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -41,7 +55,9 @@ router.post("/", (req, res) => {
       command,
       args,
       url,
-      is_enabled
+      is_enabled,
+      headers,
+      auth
     );
     res.json(server);
   } catch (error) {

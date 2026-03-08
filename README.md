@@ -65,18 +65,18 @@
 
 ## 技术栈
 
-| 层级 | 技术 |
-| --- | --- |
-| 前端 | Umi Max + React 18 |
-| UI | Ant Design 5 + Pro Components |
-| 后端 | Node.js + Express |
-| 数据库 | SQLite / MySQL |
-| AI SDK | OpenAI Node SDK |
-| MCP | `@modelcontextprotocol/sdk` |
-| 样式 | Tailwind CSS + 自定义 CSS |
-| 测试 | Vitest + Supertest |
-| 日志 | Pino + pino-http |
-| 部署 | Docker + Docker Compose |
+| 层级   | 技术                          |
+| ------ | ----------------------------- |
+| 前端   | Umi Max + React 18            |
+| UI     | Ant Design 5 + Pro Components |
+| 后端   | Node.js + Express             |
+| 数据库 | SQLite / MySQL                |
+| AI SDK | OpenAI Node SDK               |
+| MCP    | `@modelcontextprotocol/sdk`   |
+| 样式   | Tailwind CSS + 自定义 CSS     |
+| 测试   | Vitest + Supertest            |
+| 日志   | Pino + pino-http              |
+| 部署   | Docker + Docker Compose       |
 
 ## 仓库结构
 
@@ -197,32 +197,32 @@ npm run format
 
 ### 服务与运行时
 
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `PORT` | `8000` | 服务监听端口 |
-| `NODE_ENV` | 非 `production` | 运行模式 |
-| `LOG_LEVEL` | `info` | Pino 日志级别 |
-| `FRONTEND_DEV_URL` | 空 | 单端口开发代理时使用，未设置则直接托管 `dist/` |
+| 变量               | 默认值          | 说明                                           |
+| ------------------ | --------------- | ---------------------------------------------- |
+| `PORT`             | `8000`          | 服务监听端口                                   |
+| `NODE_ENV`         | 非 `production` | 运行模式                                       |
+| `LOG_LEVEL`        | `info`          | Pino 日志级别                                  |
+| `FRONTEND_DEV_URL` | 空              | 单端口开发代理时使用，未设置则直接托管 `dist/` |
 
 ### 数据库
 
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `DB_CLIENT` | `sqlite` | 数据库类型，支持 `sqlite` / `mysql` |
-| `DB_PATH` | `data/chat.db` | SQLite 数据库文件路径 |
-| `DB_HOST` | `127.0.0.1` | MySQL 主机 |
-| `DB_PORT` | `3306` | MySQL 端口 |
-| `DB_USER` | `root` | MySQL 用户名 |
-| `DB_PASSWORD` | 空 | MySQL 密码 |
-| `DB_NAME` | `gemini_chat` | MySQL 数据库名 |
-| `DB_POOL_SIZE` | `10` | MySQL 连接池大小 |
+| 变量           | 默认值         | 说明                                |
+| -------------- | -------------- | ----------------------------------- |
+| `DB_CLIENT`    | `sqlite`       | 数据库类型，支持 `sqlite` / `mysql` |
+| `DB_PATH`      | `data/chat.db` | SQLite 数据库文件路径               |
+| `DB_HOST`      | `127.0.0.1`    | MySQL 主机                          |
+| `DB_PORT`      | `3306`         | MySQL 端口                          |
+| `DB_USER`      | `root`         | MySQL 用户名                        |
+| `DB_PASSWORD`  | 空             | MySQL 密码                          |
+| `DB_NAME`      | `gemini_chat`  | MySQL 数据库名                      |
+| `DB_POOL_SIZE` | `10`           | MySQL 连接池大小                    |
 
 ### 鉴权与加密
 
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `JWT_SECRET` | 内置默认值 | Access Token 签名密钥 |
-| `REFRESH_SECRET` | 内置默认值 | Refresh Token 签名密钥 |
+| 变量             | 默认值     | 说明                                   |
+| ---------------- | ---------- | -------------------------------------- |
+| `JWT_SECRET`     | 内置默认值 | Access Token 签名密钥                  |
+| `REFRESH_SECRET` | 内置默认值 | Refresh Token 签名密钥                 |
 | `ENCRYPTION_KEY` | 内置默认值 | API Key 等敏感信息加密密钥，要求 32 位 |
 
 建议：

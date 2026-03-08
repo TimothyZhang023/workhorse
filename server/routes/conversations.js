@@ -9,8 +9,8 @@ import db, {
   getConversation,
   getConversations,
   getEndpointGroups,
-  getModels,
   getMessages,
+  getModels,
   logUsage,
   updateConversationSystemPrompt,
   updateConversationTitle,
@@ -154,7 +154,9 @@ function getEndpoints(uid) {
 }
 
 function buildFallbackTitleFromUserText(text, maxLength = 12) {
-  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const normalized = String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!normalized) return "新对话";
   const sliced = normalized.slice(0, maxLength).trim();
   return normalized.length > maxLength ? `${sliced}...` : sliced;

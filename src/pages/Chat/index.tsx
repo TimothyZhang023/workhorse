@@ -2,6 +2,7 @@ import { AccountModal } from "@/components/AccountModal";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { ModelCompareModal } from "@/components/ModelCompareModal";
 import { SettingsModal } from "@/components/SettingsModal";
+import { Sidebar } from "@/components/Sidebar";
 import { SystemPromptModal } from "@/components/SystemPromptModal";
 import {
   createConversation,
@@ -15,27 +16,18 @@ import {
 } from "@/services/api";
 import {
   AppstoreOutlined,
-  BarChartOutlined,
   CheckOutlined,
   CloseOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
-  HomeOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
   MenuOutlined,
-  MenuUnfoldOutlined,
-  MessageOutlined,
-  MoonOutlined,
   PictureOutlined,
   PlusOutlined,
   ReloadOutlined,
   SendOutlined,
-  SettingOutlined,
   SlidersOutlined,
   StopOutlined,
-  SunOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -102,7 +94,10 @@ const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
 const getStoredString = (key: string, legacyKey?: string): string => {
-  return localStorage.getItem(key) || (legacyKey ? localStorage.getItem(legacyKey) || "" : "");
+  return (
+    localStorage.getItem(key) ||
+    (legacyKey ? localStorage.getItem(legacyKey) || "" : "")
+  );
 };
 
 const getStoredBoolean = (key: string, fallback: boolean): boolean => {
@@ -227,11 +222,7 @@ export default () => {
     )
   );
   const [topP, setTopP] = useState<number>(() =>
-    clamp(
-      getStoredNumber(STORAGE_KEYS.topP, 1, STORAGE_KEYS.legacyTopP),
-      0,
-      1
-    )
+    clamp(getStoredNumber(STORAGE_KEYS.topP, 1, STORAGE_KEYS.legacyTopP), 0, 1)
   );
   const [maxTokens, setMaxTokens] = useState<number>(() => {
     const stored = getStoredNumber(
@@ -501,7 +492,6 @@ export default () => {
       };
       return next;
     });
-
   }, []);
 
   const scheduleStreamFlush = useCallback(() => {
@@ -625,11 +615,7 @@ export default () => {
   );
 
   const flushSseRemainder = useCallback(
-    (
-      handlers: {
-        onData: (parsed: any) => void;
-      }
-    ) => {
+    (handlers: { onData: (parsed: any) => void }) => {
       if (!sseRemainderRef.current.trim()) return;
       processSseChunk("\n", handlers);
     },
@@ -1189,76 +1175,15 @@ export default () => {
   }));
 
   const moduleNavContent = (
-    <div
-      className={`module-nav ${isDark ? "dark" : ""} ${
-        moduleExpanded ? "expanded" : "collapsed"
-      }`}
-    >
-      <div className="module-nav-top">
-        <div className="module-brand-row">
-          <div className="module-brand">CW</div>
-          {moduleExpanded && <span className="module-brand-text">cowhouse</span>}
-          {!isMobile && (
-            <Button
-              type="text"
-              className="module-toggle-btn"
-              icon={moduleExpanded ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-              onClick={() => setModuleExpanded((v) => !v)}
-            />
-          )}
-        </div>
-        <Button
-          type="text"
-          icon={<HomeOutlined />}
-          className="module-btn"
-          onClick={() => history.push("/dashboard")}
-        >
-          {moduleExpanded && <span>Dashboard</span>}
-        </Button>
-        <Button
-          type="text"
-          icon={<MessageOutlined />}
-          className="module-btn module-btn-active"
-        >
-          {moduleExpanded && <span>对话</span>}
-        </Button>
-      </div>
-
-      <div className="module-nav-bottom">
-        <Button
-          type="text"
-          icon={isDark ? <SunOutlined /> : <MoonOutlined />}
-          className="module-btn"
-          onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-        >
-          {moduleExpanded && <span>{isDark ? "浅色模式" : "深色模式"}</span>}
-        </Button>
-        <Button
-          type="text"
-          icon={<BarChartOutlined />}
-          className="module-btn"
-          onClick={() => setShowAccount(true)}
-        >
-          {moduleExpanded && <span>{intl.formatMessage({ id: "account.title" })}</span>}
-        </Button>
-        <Button
-          type="text"
-          icon={<SettingOutlined />}
-          className="module-btn"
-          onClick={() => setShowSettings(true)}
-        >
-          {moduleExpanded && <span>{intl.formatMessage({ id: "chat.settings" })}</span>}
-        </Button>
-        <Button
-          type="text"
-          icon={<LogoutOutlined />}
-          className="module-btn module-btn-danger"
-          onClick={logout}
-        >
-          {moduleExpanded && <span>退出登录</span>}
-        </Button>
-      </div>
-    </div>
+    <Sidebar
+      moduleExpanded={moduleExpanded}
+      setModuleExpanded={setModuleExpanded}
+      theme={theme}
+      setTheme={setTheme}
+      activePath="/chat"
+      setShowAccount={setShowAccount}
+      setShowSettings={setShowSettings}
+    />
   );
 
   const conversationListContent = (
@@ -1292,7 +1217,9 @@ export default () => {
         {filteredConversations.map((conv) => (
           <div
             key={conv.id}
-            className={`conversation-item ${currentConvId === conv.id ? "active" : ""}`}
+            className={`conversation-item ${
+              currentConvId === conv.id ? "active" : ""
+            }`}
             onClick={() => handleSelectConversation(conv.id)}
           >
             {editingTitleId === conv.id ? (
@@ -1331,7 +1258,9 @@ export default () => {
                   <Popconfirm
                     title="删除对话"
                     description="确定要删除这个对话吗？"
-                    onConfirm={(e) => handleDeleteConversation(conv.id, e as any)}
+                    onConfirm={(e) =>
+                      handleDeleteConversation(conv.id, e as any)
+                    }
                     onCancel={(e) => (e as any)?.stopPropagation()}
                   >
                     <Button
@@ -1347,7 +1276,9 @@ export default () => {
             )}
           </div>
         ))}
-        {conversations.length === 0 && <div className="empty-conv">暂无对话记录</div>}
+        {conversations.length === 0 && (
+          <div className="empty-conv">暂无对话记录</div>
+        )}
       </div>
     </div>
   );
@@ -1368,12 +1299,10 @@ export default () => {
         },
       }}
     >
-      <Layout className={`chat-layout ${isDark ? "dark" : ""}`}>
-        {!isMobile && (
-          <Sider width={moduleExpanded ? 220 : 80} className="module-sider">
-            {moduleNavContent}
-          </Sider>
-        )}
+      <div
+        className={`chat-layout cw-dashboard-layout ${isDark ? "dark" : ""}`}
+      >
+        {!isMobile && moduleNavContent}
 
         {isMobile && (
           <>
@@ -1400,208 +1329,215 @@ export default () => {
           </>
         )}
 
-        <Layout>
-          <Content className="chat-content">
-            <div className="chat-header">
-              <div className="header-left">
-                {isMobile && (
+        <main className="chat-content" style={{ flex: 1, minWidth: 0 }}>
+          <div className="chat-header">
+            <div className="header-left">
+              {isMobile && (
+                <Button
+                  type="text"
+                  icon={<MenuOutlined />}
+                  onClick={() => setModuleDrawerVisible(true)}
+                />
+              )}
+              <span className="header-title">CW · 对话</span>
+              {currentConvId && (
+                <Tooltip
+                  title={
+                    currentSystemPrompt
+                      ? "编辑 System Prompt（已激活）"
+                      : "设置 System Prompt"
+                  }
+                >
                   <Button
                     type="text"
-                    icon={<MenuOutlined />}
-                    onClick={() => setModuleDrawerVisible(true)}
-                  />
-                )}
-                <span className="header-title">CW · 对话</span>
-                {currentConvId && (
-                  <Tooltip
-                    title={
-                      currentSystemPrompt
-                        ? "编辑 System Prompt（已激活）"
-                        : "设置 System Prompt"
-                    }
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => setShowSystemPrompt(true)}
+                    style={{
+                      color: currentSystemPrompt ? "#f59e0b" : undefined,
+                      fontWeight: currentSystemPrompt ? 600 : undefined,
+                    }}
                   >
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => setShowSystemPrompt(true)}
-                      style={{
-                        color: currentSystemPrompt ? "#f59e0b" : undefined,
-                        fontWeight: currentSystemPrompt ? 600 : undefined,
-                      }}
-                    >
-                      {currentSystemPrompt
-                        ? "System Prompt ✦"
-                        : "System Prompt"}
-                    </Button>
-                  </Tooltip>
-                )}
-              </div>
-              <div className="header-right">
-                {isMobile && (
-                  <Tooltip title="对话列表">
-                    <Button
-                      type="text"
-                      icon={<AppstoreOutlined />}
-                      onClick={() => setConversationDrawerVisible(true)}
-                    />
-                  </Tooltip>
-                )}
-                {models.length >= 2 && (
-                  <Tooltip title="多模型并行对比">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<ThunderboltOutlined />}
-                      onClick={() => setShowCompare(true)}
-                      style={{ color: "#f59e0b" }}
-                    >
-                      对比
-                    </Button>
-                  </Tooltip>
-                )}
-                <span className="header-username">{currentUser?.username}</span>
-                <Avatar
-                  style={{ backgroundColor: "#2563eb" }}
-                  icon={<UserOutlined />}
-                >
-                  {currentUser?.username?.[0]?.toUpperCase()}
-                </Avatar>
-              </div>
+                    {currentSystemPrompt ? "System Prompt ✦" : "System Prompt"}
+                  </Button>
+                </Tooltip>
+              )}
             </div>
+            <div className="header-right">
+              {isMobile && (
+                <Tooltip title="对话列表">
+                  <Button
+                    type="text"
+                    icon={<AppstoreOutlined />}
+                    onClick={() => setConversationDrawerVisible(true)}
+                  />
+                </Tooltip>
+              )}
+              {models.length >= 2 && (
+                <Tooltip title="多模型并行对比">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<ThunderboltOutlined />}
+                    onClick={() => setShowCompare(true)}
+                    style={{ color: "#f59e0b" }}
+                  >
+                    对比
+                  </Button>
+                </Tooltip>
+              )}
+              <span className="header-username">{currentUser?.username}</span>
+              <Avatar
+                style={{ backgroundColor: "#2563eb" }}
+                icon={<UserOutlined />}
+              >
+                {currentUser?.username?.[0]?.toUpperCase()}
+              </Avatar>
+            </div>
+          </div>
 
-            <div className="chat-main">
-              <div className="chat-center">
-                <div className="messages-area">
-                  {messages.length === 0 ? (
-                    <div className="empty-messages">
-                      <div className="empty-icon">✨</div>
-                      <div className="empty-title">有什么我可以帮你的？</div>
-                      <div className="empty-hint">按 Ctrl+N 创建新对话</div>
-                    </div>
-                  ) : (
-                    messages.map((msg, idx) => (
-                      <div key={idx} className={`message-row ${msg.role}`}>
-                        {msg.role === "assistant" && (
-                          <Avatar className="msg-avatar assistant-avatar" size={32}>
-                            AI
-                          </Avatar>
-                        )}
-                        <div className={`message-bubble ${msg.role}`}>
-                          {msg.role === "user" ? (
-                            <div className="user-content">
-                              {hasImage(msg.content) && (
-                                <div className="image-preview-row">📷 图片</div>
-                              )}
-                              {editingMsgId === msg.id ? (
-                                <div className="edit-message-container">
-                                  <Input.TextArea
-                                    autoSize={{ minRows: 2, maxRows: 10 }}
-                                    value={editingMsgContent}
-                                    onChange={(e) =>
-                                      setEditingMsgContent(e.target.value)
-                                    }
-                                    className="edit-message-input"
-                                    disabled={loading}
-                                  />
-                                  <div
-                                    className="edit-message-actions"
-                                    style={{ marginTop: 8, textAlign: "right" }}
-                                  >
-                                    <Button
-                                      size="small"
-                                      onClick={() => setEditingMsgId(null)}
-                                      disabled={loading}
-                                      style={{ marginRight: 8 }}
-                                    >
-                                      取消
-                                    </Button>
-                                    <Button
-                                      size="small"
-                                      type="primary"
-                                      onClick={() => handleSaveEdit(msg.id!)}
-                                      loading={loading}
-                                    >
-                                      发送 / 重新生成
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                extractDisplayContent(msg.content)
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              className={
-                                loading && idx === lastAssistantIdx
-                                  ? "assistant-streaming"
-                                  : ""
-                              }
-                            >
-                              {msg.content ? (
+          <div className="chat-main">
+            <div className="chat-center">
+              <div className="messages-area">
+                {messages.length === 0 ? (
+                  <div className="empty-messages">
+                    <div className="empty-icon">✨</div>
+                    <div className="empty-title">有什么我可以帮你的？</div>
+                    <div className="empty-hint">按 Ctrl+N 创建新对话</div>
+                  </div>
+                ) : (
+                  messages.map((msg, idx) => (
+                    <div key={idx} className={`message-row ${msg.role}`}>
+                      {msg.role === "assistant" && (
+                        <Avatar
+                          className="msg-avatar assistant-avatar"
+                          size={32}
+                        >
+                          AI
+                        </Avatar>
+                      )}
+                      <div className={`message-bubble ${msg.role}`}>
+                        {msg.role === "user" ? (
+                          <div className="user-content">
+                            {hasImage(msg.content) && (
+                              <div className="image-preview-row">📷 图片</div>
+                            )}
+                            {editingMsgId === msg.id ? (
+                              <div className="edit-message-container">
+                                <Input.TextArea
+                                  autoSize={{ minRows: 2, maxRows: 10 }}
+                                  value={editingMsgContent}
+                                  onChange={(e) =>
+                                    setEditingMsgContent(e.target.value)
+                                  }
+                                  className="edit-message-input"
+                                  disabled={loading}
+                                />
                                 <div
-                                  className="stream-fade-shell"
-                                  data-streaming={loading && idx === lastAssistantIdx}
+                                  className="edit-message-actions"
+                                  style={{ marginTop: 8, textAlign: "right" }}
                                 >
-                                  <MarkdownRenderer
-                                    content={msg.content}
-                                    isDark={isDark}
-                                    expandThinking={loading && idx === lastAssistantIdx}
-                                  />
+                                  <Button
+                                    size="small"
+                                    onClick={() => setEditingMsgId(null)}
+                                    disabled={loading}
+                                    style={{ marginRight: 8 }}
+                                  >
+                                    取消
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    type="primary"
+                                    onClick={() => handleSaveEdit(msg.id!)}
+                                    loading={loading}
+                                  >
+                                    发送 / 重新生成
+                                  </Button>
                                 </div>
-                              ) : (
-                                <>
-                                  {loading && idx === lastAssistantIdx ? (
-                                    <div className="typing-placeholder">
-                                      <span>AI 正在思考</span>
-                                      <span className="typing-dots">
-                                        <i />
-                                        <i />
-                                        <i />
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <div
-                                      style={{
-                                        color: "var(--text-tertiary)",
-                                        fontSize: 14,
-                                      }}
-                                    >
-                                      ⚠️ 这条回复未完成（可能因刷新或上游中断），请点击重新生成。
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className={`msg-actions ${msg.role}`}>
-                          <Tooltip title="复制">
+                              </div>
+                            ) : (
+                              extractDisplayContent(msg.content)
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            className={
+                              loading && idx === lastAssistantIdx
+                                ? "assistant-streaming"
+                                : ""
+                            }
+                          >
+                            {msg.content ? (
+                              <div
+                                className="stream-fade-shell"
+                                data-streaming={
+                                  loading && idx === lastAssistantIdx
+                                }
+                              >
+                                <MarkdownRenderer
+                                  content={msg.content}
+                                  isDark={isDark}
+                                  expandThinking={
+                                    loading && idx === lastAssistantIdx
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                {loading && idx === lastAssistantIdx ? (
+                                  <div className="typing-placeholder">
+                                    <span>AI 正在思考</span>
+                                    <span className="typing-dots">
+                                      <i />
+                                      <i />
+                                      <i />
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      color: "var(--text-tertiary)",
+                                      fontSize: 14,
+                                    }}
+                                  >
+                                    ⚠️
+                                    这条回复未完成（可能因刷新或上游中断），请点击重新生成。
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className={`msg-actions ${msg.role}`}>
+                        <Tooltip title="复制">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<CopyOutlined />}
+                            onClick={() => handleCopyMessage(msg.content)}
+                            className="msg-action-btn"
+                          />
+                        </Tooltip>
+                        {msg.role === "user" && msg.id && !loading && (
+                          <Tooltip title="编辑">
                             <Button
                               type="text"
                               size="small"
-                              icon={<CopyOutlined />}
-                              onClick={() => handleCopyMessage(msg.content)}
+                              icon={<EditOutlined />}
+                              onClick={() => {
+                                setEditingMsgId(msg.id!);
+                                setEditingMsgContent(
+                                  extractDisplayContent(msg.content)
+                                );
+                              }}
                               className="msg-action-btn"
                             />
                           </Tooltip>
-                          {msg.role === "user" && msg.id && !loading && (
-                            <Tooltip title="编辑">
-                              <Button
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined />}
-                                onClick={() => {
-                                  setEditingMsgId(msg.id!);
-                                  setEditingMsgContent(
-                                    extractDisplayContent(msg.content)
-                                  );
-                                }}
-                                className="msg-action-btn"
-                              />
-                            </Tooltip>
-                          )}
-                          {msg.role === "assistant" && idx === lastAssistantIdx && !loading && (
+                        )}
+                        {msg.role === "assistant" &&
+                          idx === lastAssistantIdx &&
+                          !loading && (
                             <Tooltip title="重新生成">
                               <Button
                                 type="text"
@@ -1612,198 +1548,199 @@ export default () => {
                               />
                             </Tooltip>
                           )}
-                        </div>
                       </div>
-                    ))
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
 
-                <div className="input-area">
-                  {pendingImages.length > 0 && (
-                    <div className="pending-images">
-                      {pendingImages.map((img, i) => (
-                        <div key={i} className="pending-image-item">
-                          <img src={img.preview} alt="upload" />
-                          <Button
-                            type="text"
-                            size="small"
-                            danger
-                            icon={<CloseOutlined />}
-                            className="remove-image-btn"
-                            onClick={() => handleImageRemove(i)}
+              <div className="input-area">
+                {pendingImages.length > 0 && (
+                  <div className="pending-images">
+                    {pendingImages.map((img, i) => (
+                      <div key={i} className="pending-image-item">
+                        <img src={img.preview} alt="upload" />
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<CloseOutlined />}
+                          className="remove-image-btn"
+                          onClick={() => handleImageRemove(i)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="input-container">
+                  <Tooltip title="上传图片">
+                    <Upload
+                      accept="image/*"
+                      showUploadList={false}
+                      beforeUpload={handleImageAdd}
+                      multiple
+                    >
+                      <Button
+                        type="text"
+                        icon={<PictureOutlined />}
+                        className="input-action-btn"
+                        disabled={loading}
+                      />
+                    </Upload>
+                  </Tooltip>
+
+                  <TextArea
+                    ref={inputRef as any}
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onPaste={handleInputPaste}
+                    onPressEnter={(e) => {
+                      if (!e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    placeholder="问问 CW… (Shift+Enter 换行 / Enter 发送)"
+                    autoSize={{ minRows: 1, maxRows: 6 }}
+                    bordered={false}
+                    disabled={loading}
+                    className="chat-input chat-input-textarea"
+                  />
+
+                  <div className="model-picker">
+                    <Select
+                      value={selectedModel || undefined}
+                      onChange={setSelectedModel}
+                      options={modelOptions}
+                      showSearch
+                      filterOption={(input, option) =>
+                        String(option?.searchText || "").includes(
+                          input.trim().toLowerCase()
+                        )
+                      }
+                      popupMatchSelectWidth={460}
+                      bordered={false}
+                      className="model-select"
+                      disabled={loading}
+                      placeholder="搜索或选择模型"
+                      notFoundContent="暂无可用模型"
+                    />
+                  </div>
+
+                  <Popover
+                    trigger="click"
+                    placement="topRight"
+                    content={
+                      <div className="generation-config">
+                        <div className="generation-item">
+                          <div className="generation-label">
+                            Temperature: {temperature.toFixed(2)}
+                          </div>
+                          <Slider
+                            min={0}
+                            max={2}
+                            step={0.01}
+                            value={temperature}
+                            onChange={setTemperature}
                           />
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="input-container">
-                <Tooltip title="上传图片">
-                  <Upload
-                    accept="image/*"
-                    showUploadList={false}
-                    beforeUpload={handleImageAdd}
-                    multiple
-                  >
-                    <Button
-                      type="text"
-                      icon={<PictureOutlined />}
-                      className="input-action-btn"
-                      disabled={loading}
-                    />
-                  </Upload>
-                </Tooltip>
-
-                <TextArea
-                  ref={inputRef as any}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onPaste={handleInputPaste}
-                  onPressEnter={(e) => {
-                    if (!e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  placeholder="问问 CW… (Shift+Enter 换行 / Enter 发送)"
-                  autoSize={{ minRows: 1, maxRows: 6 }}
-                  bordered={false}
-                  disabled={loading}
-                  className="chat-input chat-input-textarea"
-                />
-
-                <div className="model-picker">
-                  <Select
-                    value={selectedModel || undefined}
-                    onChange={setSelectedModel}
-                    options={modelOptions}
-                    showSearch
-                    filterOption={(input, option) =>
-                      String(option?.searchText || "").includes(
-                        input.trim().toLowerCase()
-                      )
-                    }
-                    popupMatchSelectWidth={460}
-                    bordered={false}
-                    className="model-select"
-                    disabled={loading}
-                    placeholder="搜索或选择模型"
-                    notFoundContent="暂无可用模型"
-                  />
-                </div>
-
-                <Popover
-                  trigger="click"
-                  placement="topRight"
-                  content={
-                    <div className="generation-config">
-                      <div className="generation-item">
-                        <div className="generation-label">
-                          Temperature: {temperature.toFixed(2)}
+                        <div className="generation-item">
+                          <div className="generation-label">
+                            Top P: {topP.toFixed(2)}
+                          </div>
+                          <Slider
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={topP}
+                            onChange={setTopP}
+                          />
                         </div>
-                        <Slider
-                          min={0}
-                          max={2}
-                          step={0.01}
-                          value={temperature}
-                          onChange={setTemperature}
-                        />
-                      </div>
-                      <div className="generation-item">
-                        <div className="generation-label">
-                          Top P: {topP.toFixed(2)}
-                        </div>
-                        <Slider
-                          min={0}
-                          max={1}
-                          step={0.01}
-                          value={topP}
-                          onChange={setTopP}
-                        />
-                      </div>
-                      <div className="generation-item">
-                        <div
-                          className="generation-label"
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span>
-                            Max Tokens:{" "}
-                            {maxTokens === -1
-                              ? "自动（不传）"
-                              : Math.round(maxTokens)}
-                          </span>
-                          <Button
-                            type="link"
-                            size="small"
-                            style={{ padding: 0, height: "auto" }}
-                            onClick={() =>
-                              setMaxTokens((prev) => (prev === -1 ? 2048 : -1))
-                            }
+                        <div className="generation-item">
+                          <div
+                            className="generation-label"
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
                           >
-                            {maxTokens === -1 ? "改为固定值" : "自动(-1)"}
-                          </Button>
+                            <span>
+                              Max Tokens:{" "}
+                              {maxTokens === -1
+                                ? "自动（不传）"
+                                : Math.round(maxTokens)}
+                            </span>
+                            <Button
+                              type="link"
+                              size="small"
+                              style={{ padding: 0, height: "auto" }}
+                              onClick={() =>
+                                setMaxTokens((prev) =>
+                                  prev === -1 ? 2048 : -1
+                                )
+                              }
+                            >
+                              {maxTokens === -1 ? "改为固定值" : "自动(-1)"}
+                            </Button>
+                          </div>
+                          <Slider
+                            min={256}
+                            max={8192}
+                            step={64}
+                            value={maxTokens === -1 ? 2048 : maxTokens}
+                            onChange={setMaxTokens}
+                            disabled={maxTokens === -1}
+                          />
                         </div>
-                        <Slider
-                          min={256}
-                          max={8192}
-                          step={64}
-                          value={maxTokens === -1 ? 2048 : maxTokens}
-                          onChange={setMaxTokens}
-                          disabled={maxTokens === -1}
-                        />
                       </div>
-                    </div>
-                  }
-                >
-                  <Tooltip title="高级参数">
-                    <Button
-                      type="text"
-                      icon={<SlidersOutlined />}
-                      className="input-action-btn"
-                      disabled={loading}
-                    />
-                  </Tooltip>
-                </Popover>
+                    }
+                  >
+                    <Tooltip title="高级参数">
+                      <Button
+                        type="text"
+                        icon={<SlidersOutlined />}
+                        className="input-action-btn"
+                        disabled={loading}
+                      />
+                    </Tooltip>
+                  </Popover>
 
-                {loading ? (
-                  <Tooltip title="停止生成">
+                  {loading ? (
+                    <Tooltip title="停止生成">
+                      <Button
+                        danger
+                        shape="circle"
+                        icon={<StopOutlined />}
+                        onClick={handleStop}
+                        className="send-btn"
+                      />
+                    </Tooltip>
+                  ) : (
                     <Button
-                      danger
+                      type="primary"
                       shape="circle"
-                      icon={<StopOutlined />}
-                      onClick={handleStop}
+                      icon={<SendOutlined />}
+                      disabled={
+                        (!inputText.trim() && pendingImages.length === 0) ||
+                        !selectedModel
+                      }
+                      onClick={sendMessage}
                       className="send-btn"
                     />
-                  </Tooltip>
-                ) : (
-                  <Button
-                    type="primary"
-                    shape="circle"
-                    icon={<SendOutlined />}
-                    disabled={
-                      (!inputText.trim() && pendingImages.length === 0) ||
-                      !selectedModel
-                    }
-                    onClick={sendMessage}
-                    className="send-btn"
-                  />
-                )}
-              </div>
-                  <div className="input-hint">
-                    CW 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行
-                  </div>
+                  )}
+                </div>
+                <div className="input-hint">
+                  CW 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行
                 </div>
               </div>
-
-              {!isMobile && conversationListContent}
             </div>
-          </Content>
-        </Layout>
+
+            {!isMobile && conversationListContent}
+          </div>
+        </main>
 
         <SettingsModal
           open={showSettings}
@@ -1838,7 +1775,7 @@ export default () => {
           onClose={() => setShowAccount(false)}
           isDark={isDark}
         />
-      </Layout>
+      </div>
     </ConfigProvider>
   );
 };

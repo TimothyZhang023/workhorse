@@ -4,19 +4,24 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import fs from "fs";
 import http from "http";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { dirname, join } from "path";
 import pinoHttp from "pino-http";
 import { fileURLToPath } from "url";
-import { createProxyMiddleware } from "http-proxy-middleware";
 import { logger } from "./utils/logger.js";
 
+import { syncCronJobs } from "./models/cronRunner.js";
+import { listAllCronJobs } from "./models/database.js";
 import accountRoutes from "./routes/account.js";
 import adminRoutes from "./routes/admin.js";
+import agentTasksRoutes from "./routes/agentTasks.js";
 import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
+import cronJobsRoutes from "./routes/cronJobs.js";
 import endpointRoutes from "./routes/endpoints.js";
 import mcpRoutes from "./routes/mcp.js";
 import proxyRoutes from "./routes/proxy.js";
+import skillsRoutes from "./routes/skills.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,6 +72,9 @@ export function createApp() {
   app.use("/api/account", accountRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/mcp", mcpRoutes);
+  app.use("/api/skills", skillsRoutes);
+  app.use("/api/agent-tasks", agentTasksRoutes);
+  app.use("/api/cron-jobs", cronJobsRoutes);
 
   // OpenAI 兼容代理 (/v1)
   app.use("/v1", apiLimiter, proxyRoutes);
@@ -127,6 +135,14 @@ export function startServer(port = 8000) {
     console.log(`Server running at http://localhost:${port}`);
     if (frontendInfo) {
       console.log(`Mode: single-port dev${frontendInfo}`);
+    }
+
+    // Initialize Cron Jobs
+    try {
+      syncCronJobs(listAllCronJobs());
+      console.log("[Scheduler] Initialized all cron jobs");
+    } catch (e) {
+      console.error("[Scheduler] Failed to initialize cron jobs:", e.message);
     }
   });
 

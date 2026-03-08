@@ -1,14 +1,10 @@
+import { AccountModal } from "@/components/AccountModal";
+import { SettingsModal } from "@/components/SettingsModal";
+import { Sidebar } from "@/components/Sidebar";
 import {
   BarChartOutlined,
-  HomeOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
   MessageOutlined,
-  MoonOutlined,
   ReloadOutlined,
-  SettingOutlined,
-  SunOutlined,
 } from "@ant-design/icons";
 import { history, request, useModel } from "@umijs/max";
 import {
@@ -23,8 +19,6 @@ import {
   theme as antdTheme,
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
-import { AccountModal } from "@/components/AccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import "./index.css";
 
 const getStoredBool = (key: string, fallback: boolean): boolean => {
@@ -114,77 +108,22 @@ export default () => {
     <ConfigProvider
       wave={{ disabled: true }}
       theme={{
-        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        algorithm: isDark
+          ? antdTheme.darkAlgorithm
+          : antdTheme.defaultAlgorithm,
         token: { motion: false },
       }}
     >
       <div className={`cw-dashboard-layout ${isDark ? "dark" : ""}`}>
-        <aside
-          className={`cw-dashboard-sider ${moduleExpanded ? "expanded" : "collapsed"}`}
-        >
-          <div className="cw-sider-top">
-            <div className="cw-sider-brand-row">
-              <div className="cw-sider-badge">CW</div>
-              {moduleExpanded && <span className="cw-sider-brand-text">cowhouse</span>}
-              <Button
-                type="text"
-                icon={moduleExpanded ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-                className="cw-sider-toggle"
-                onClick={() => setModuleExpanded((v) => !v)}
-              />
-            </div>
-
-            <Button
-              type="text"
-              icon={<HomeOutlined />}
-              className="cw-sider-btn cw-sider-btn-active"
-            >
-              {moduleExpanded && <span>Dashboard</span>}
-            </Button>
-            <Button
-              type="text"
-              icon={<MessageOutlined />}
-              className="cw-sider-btn"
-              onClick={() => history.push("/chat")}
-            >
-              {moduleExpanded && <span>对话</span>}
-            </Button>
-          </div>
-          <div className="cw-sider-bottom">
-            <Button
-              type="text"
-              icon={theme === "dark" ? <SunOutlined /> : <MoonOutlined />}
-              className="cw-sider-btn"
-              onClick={() => setTheme((v) => (v === "dark" ? "light" : "dark"))}
-            >
-              {moduleExpanded && <span>{theme === "dark" ? "浅色模式" : "深色模式"}</span>}
-            </Button>
-            <Button
-              type="text"
-              icon={<BarChartOutlined />}
-              className="cw-sider-btn"
-              onClick={() => setShowAccount(true)}
-            >
-              {moduleExpanded && <span>账户</span>}
-            </Button>
-            <Button
-              type="text"
-              icon={<SettingOutlined />}
-              className="cw-sider-btn"
-              onClick={() => setShowSettings(true)}
-            >
-              {moduleExpanded && <span>设置</span>}
-            </Button>
-            <Button
-              type="text"
-              icon={<LogoutOutlined />}
-              className="cw-sider-btn cw-sider-btn-danger"
-              onClick={logout}
-            >
-              {moduleExpanded && <span>退出登录</span>}
-            </Button>
-          </div>
-        </aside>
+        <Sidebar
+          moduleExpanded={moduleExpanded}
+          setModuleExpanded={setModuleExpanded}
+          theme={theme}
+          setTheme={setTheme}
+          activePath="/dashboard"
+          setShowAccount={setShowAccount}
+          setShowSettings={setShowSettings}
+        />
 
         <main className="cw-dashboard-main-wrap">
           <section className="cw-dashboard-hero">
@@ -192,7 +131,8 @@ export default () => {
               <div className="cw-dashboard-eyebrow">Dashboard</div>
               <h1>欢迎回来，{currentUser?.username || "CW 用户"}</h1>
               <p>
-                cowhouse 是你的个人助理 Agent 工作台，当前已启用对话模块、统一模型接入和用量统计。
+                cowhouse 是你的个人助理 Agent
+                工作台，当前已启用对话模块、统一模型接入和用量统计。
               </p>
             </div>
             <div className="cw-user-card">
@@ -252,22 +192,26 @@ export default () => {
                       <div className="cw-usage-item">
                         <div className="cw-usage-label">总请求数</div>
                         <div className="cw-usage-value">
-                          {totals.total_requests.toLocaleString()}
+                          {totals.total_requests?.toLocaleString() ?? "0"}
                         </div>
                       </div>
                       <div className="cw-usage-item">
                         <div className="cw-usage-label">总 Token</div>
                         <div className="cw-usage-value">
-                          {totals.total_tokens.toLocaleString()}
+                          {totals.total_tokens?.toLocaleString() ?? "0"}
                         </div>
                       </div>
                       <div className="cw-usage-item">
                         <div className="cw-usage-label">使用模型数</div>
-                        <div className="cw-usage-value">{totals.models_used}</div>
+                        <div className="cw-usage-value">
+                          {totals.models_used ?? 0}
+                        </div>
                       </div>
                       <div className="cw-usage-item">
                         <div className="cw-usage-label">活跃天数</div>
-                        <div className="cw-usage-value">{totals.active_days}</div>
+                        <div className="cw-usage-value">
+                          {totals.active_days ?? 0}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -282,7 +226,9 @@ export default () => {
                 >
                   <MessageOutlined className="cw-module-icon" />
                   <h3>对话</h3>
-                  <p>多模型流式对话、会话管理、System Prompt 和模型切换都在这里。</p>
+                  <p>
+                    多模型流式对话、会话管理、System Prompt 和模型切换都在这里。
+                  </p>
                 </Card>
               </Col>
 
@@ -290,7 +236,10 @@ export default () => {
                 <Card className="cw-module-card">
                   <BarChartOutlined className="cw-module-icon" />
                   <h3>更多模块</h3>
-                  <p>后续扩展知识库、任务流和工具编排等能力，统一收敛在 CW 工作台。</p>
+                  <p>
+                    后续扩展知识库、任务流和工具编排等能力，统一收敛在 CW
+                    工作台。
+                  </p>
                 </Card>
               </Col>
             </Row>

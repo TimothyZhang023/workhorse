@@ -49,12 +49,54 @@ export async function getConnectedMcpClient(serverConfig) {
               ? JSON.parse(serverConfig.args)
               : serverConfig.args;
         }
+
+        // Stdio doesn't natively support headers/auth in the same way as SSE,
+        // but we can inject them as environment variables if needed.
+        const env = { ...process.env };
+        if (serverConfig.headers) {
+          Object.entries(serverConfig.headers).forEach(([k, v]) => {
+            env[k] = v;
+          });
+        }
+        if (serverConfig.auth) {
+          if (serverConfig.auth.type === "bearer") {
+            env["AUTHORIZATION"] = `Bearer ${serverConfig.auth.token}`;
+          } else if (serverConfig.auth.type === "basic") {
+            const creds = Buffer.from(
+              `${serverConfig.auth.username}:${serverConfig.auth.password}`
+            ).toString("base64");
+            env["AUTHORIZATION"] = `Basic ${creds}`;
+          }
+        }
+
         transport = new StdioClientTransport({
           command: serverConfig.command,
           args: args,
+          env: env,
         });
       } else if (serverConfig.type === "sse") {
-        transport = new SSEClientTransport(new URL(serverConfig.url));
+        const url = new URL(serverConfig.url);
+        const headers = { ...serverConfig.headers };
+
+        if (serverConfig.auth) {
+          if (serverConfig.auth.type === "bearer") {
+            headers["Authorization"] = `Bearer ${serverConfig.auth.token}`;
+          } else if (serverConfig.auth.type === "basic") {
+            const creds = Buffer.from(
+              `${serverConfig.auth.username}:${serverConfig.auth.password}`
+            ).toString("base64");
+            headers["Authorization"] = `Basic ${creds}`;
+          }
+        }
+
+        transport = new SSEClientTransport(url, {
+          eventSourceInit: {
+            headers: headers,
+          },
+          requestInit: {
+            headers: headers,
+          },
+        });
       } else {
         throw new Error(`Unsupported MCP transport type: ${serverConfig.type}`);
       }

@@ -132,9 +132,55 @@ db.exec(`
     command TEXT,
     args TEXT,
     url TEXT,
+    headers TEXT, -- JSON 对象：{"X-Custom": "value"}
+    auth TEXT,    -- JSON 对象：{"type": "bearer", "token": "..."}
     is_enabled INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS skills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    prompt TEXT NOT NULL,
+    examples TEXT, -- JSON 数组: [{"thought": "...", "action": "..."}]
+    tools TEXT,    -- JSON 数组 of strings (MCP tool names)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS agent_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    system_prompt TEXT NOT NULL,
+    skill_ids TEXT, -- JSON 数组 of skill IDs
+    tool_names TEXT, -- JSON 数组 of tool names (mcp)
+    model_id TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS cron_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    task_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    cron_expression TEXT NOT NULL,
+    next_run DATETIME,
+    last_run DATETIME,
+    last_status TEXT, -- 'success', 'failed', 'running'
+    is_enabled INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE,
+    FOREIGN KEY(task_id) REFERENCES agent_tasks(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS folders (
@@ -145,13 +191,11 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS knowledge_bases (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid TEXT NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+  CREATE INDEX IF NOT EXISTS idx_mcp_servers_uid ON mcp_servers(uid);
+  CREATE INDEX IF NOT EXISTS idx_skills_uid ON skills(uid);
+  CREATE INDEX IF NOT EXISTS idx_agent_tasks_uid ON agent_tasks(uid);
+  CREATE INDEX IF NOT EXISTS idx_cron_jobs_uid ON cron_jobs(uid);
+  CREATE INDEX IF NOT EXISTS idx_cron_jobs_task_id ON cron_jobs(task_id);
 `);
 
 try {
@@ -191,13 +235,22 @@ try {
 }
 
 // 全局预设模型列表（仅作兜底，建议用户通过"同步模型"拉取真实列表）
-export const PRESET_MODELS = [
-  { model_id: "default", display_name: "Default" },
-];
+export const PRESET_MODELS = [{ model_id: "default", display_name: "Default" }];
 
-// 运行时迁移：添加 role 列（已存在时忽略）
+// MCP 动态迁移
 try {
-  db.prepare("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'").run();
+  db.prepare("ALTER TABLE mcp_servers ADD COLUMN headers TEXT").run();
+} catch (e) {
+  /* column already exists */
+}
+try {
+  db.prepare("ALTER TABLE mcp_servers ADD COLUMN auth TEXT").run();
+} catch (e) {
+  /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE agent_tasks ADD COLUMN model_id TEXT").run();
 } catch (e) {
   /* column already exists */
 }
@@ -891,6 +944,8 @@ export function listMcpServers(uid) {
     .map((s) => ({
       ...s,
       args: s.args ? JSON.parse(s.args) : [],
+      headers: s.headers ? JSON.parse(s.headers) : {},
+      auth: s.auth ? JSON.parse(decrypt(s.auth)) : null,
     }));
 }
 
@@ -900,6 +955,8 @@ export function getMcpServer(id, uid) {
     .get(id, uid);
   if (s) {
     s.args = s.args ? JSON.parse(s.args) : [];
+    s.headers = s.headers ? JSON.parse(s.headers) : {};
+    s.auth = s.auth ? JSON.parse(decrypt(s.auth)) : null;
   }
   return s;
 }
@@ -911,13 +968,16 @@ export function createMcpServer(
   command,
   args,
   url,
-  isEnabled = 1
+  isEnabled = 1,
+  headers = {},
+  auth = null
 ) {
+  const encryptedAuth = auth ? encrypt(JSON.stringify(auth)) : null;
   const result = db
     .prepare(
       `
-    INSERT INTO mcp_servers (uid, name, type, command, args, url, is_enabled)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO mcp_servers (uid, name, type, command, args, url, is_enabled, headers, auth)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `
     )
     .run(
@@ -927,7 +987,9 @@ export function createMcpServer(
       command || null,
       args ? JSON.stringify(args) : "[]",
       url || null,
-      isEnabled
+      isEnabled,
+      JSON.stringify(headers || {}),
+      encryptedAuth
     );
 
   return {
@@ -939,6 +1001,8 @@ export function createMcpServer(
     args: args || [],
     url,
     is_enabled: isEnabled,
+    headers,
+    auth,
   };
 }
 
@@ -954,11 +1018,20 @@ export function updateMcpServer(id, uid, updates) {
   const url = updates.url !== undefined ? updates.url : current.url;
   const isEnabled =
     updates.is_enabled !== undefined ? updates.is_enabled : current.is_enabled;
+  const headers =
+    updates.headers !== undefined ? updates.headers : current.headers;
+  const auth = updates.auth !== undefined ? updates.auth : current.auth;
+
+  const encryptedAuth = auth
+    ? encrypt(JSON.stringify(auth))
+    : current.auth
+    ? encrypt(JSON.stringify(current.auth))
+    : null;
 
   db.prepare(
     `
     UPDATE mcp_servers 
-    SET name = ?, type = ?, command = ?, args = ?, url = ?, is_enabled = ?
+    SET name = ?, type = ?, command = ?, args = ?, url = ?, is_enabled = ?, headers = ?, auth = ?
     WHERE id = ? AND uid = ?
   `
   ).run(
@@ -968,6 +1041,8 @@ export function updateMcpServer(id, uid, updates) {
     JSON.stringify(args || []),
     url || null,
     isEnabled ? 1 : 0,
+    JSON.stringify(headers || {}),
+    encryptedAuth,
     id,
     uid
   );
@@ -975,6 +1050,235 @@ export function updateMcpServer(id, uid, updates) {
 
 export function deleteMcpServer(id, uid) {
   db.prepare("DELETE FROM mcp_servers WHERE id = ? AND uid = ?").run(id, uid);
+}
+
+// ============ Skills 管理 ============
+
+export function listSkills(uid) {
+  return db
+    .prepare("SELECT * FROM skills WHERE uid = ? ORDER BY created_at DESC")
+    .all(uid)
+    .map((s) => ({
+      ...s,
+      examples: s.examples ? JSON.parse(s.examples) : [],
+      tools: s.tools ? JSON.parse(s.tools) : [],
+    }));
+}
+
+export function createSkill(
+  uid,
+  name,
+  description,
+  prompt,
+  examples = [],
+  tools = []
+) {
+  const result = db
+    .prepare(
+      `
+    INSERT INTO skills (uid, name, description, prompt, examples, tools)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `
+    )
+    .run(
+      uid,
+      name,
+      description,
+      prompt,
+      JSON.stringify(examples),
+      JSON.stringify(tools)
+    );
+
+  return {
+    id: result.lastInsertRowid,
+    uid,
+    name,
+    description,
+    prompt,
+    examples,
+    tools,
+  };
+}
+
+export function updateSkill(id, uid, updates) {
+  const fields = [];
+  const values = [];
+  for (const [key, value] of Object.entries(updates)) {
+    if (["name", "description", "prompt", "examples", "tools"].includes(key)) {
+      fields.push(`${key} = ?`);
+      values.push(typeof value === "object" ? JSON.stringify(value) : value);
+    }
+  }
+  if (fields.length === 0) return;
+  fields.push("updated_at = CURRENT_TIMESTAMP");
+  values.push(id, uid);
+
+  db.prepare(
+    `UPDATE skills SET ${fields.join(", ")} WHERE id = ? AND uid = ?`
+  ).run(...values);
+}
+
+export function deleteSkill(id, uid) {
+  db.prepare("DELETE FROM skills WHERE id = ? AND uid = ?").run(id, uid);
+}
+
+// ============ Agent Tasks 管理 ============
+
+export function listAgentTasks(uid) {
+  return db
+    .prepare("SELECT * FROM agent_tasks WHERE uid = ? ORDER BY created_at DESC")
+    .all(uid)
+    .map((t) => ({
+      ...t,
+      skill_ids: t.skill_ids ? JSON.parse(t.skill_ids) : [],
+      tool_names: t.tool_names ? JSON.parse(t.tool_names) : [],
+      model_id: t.model_id || "",
+    }));
+}
+
+export function getAgentTask(id, uid) {
+  const t = db
+    .prepare("SELECT * FROM agent_tasks WHERE id = ? AND uid = ?")
+    .get(id, uid);
+  if (t) {
+    t.skill_ids = t.skill_ids ? JSON.parse(t.skill_ids) : [];
+    t.tool_names = t.tool_names ? JSON.parse(t.tool_names) : [];
+    t.model_id = t.model_id || "";
+  }
+  return t;
+}
+
+export function createAgentTask(
+  uid,
+  name,
+  description,
+  systemPrompt,
+  skillIds = [],
+  toolNames = [],
+  modelId = ""
+) {
+  const result = db
+    .prepare(
+      `
+    INSERT INTO agent_tasks (uid, name, description, system_prompt, skill_ids, tool_names, model_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `
+    )
+    .run(
+      uid,
+      name,
+      description,
+      systemPrompt,
+      JSON.stringify(skillIds),
+      JSON.stringify(toolNames),
+      modelId
+    );
+
+  return {
+    id: result.lastInsertRowid,
+    uid,
+    name,
+    description,
+    system_prompt: systemPrompt,
+    skill_ids: skillIds,
+    tool_names: toolNames,
+    model_id: modelId,
+  };
+}
+
+export function updateAgentTask(id, uid, updates) {
+  const fields = [];
+  const values = [];
+  for (const [key, value] of Object.entries(updates)) {
+    if (
+      [
+        "name",
+        "description",
+        "system_prompt",
+        "skill_ids",
+        "tool_names",
+        "is_active",
+        "model_id",
+      ].includes(key)
+    ) {
+      fields.push(`${key} = ?`);
+      values.push(typeof value === "object" ? JSON.stringify(value) : value);
+    }
+  }
+  if (fields.length === 0) return;
+  fields.push("updated_at = CURRENT_TIMESTAMP");
+  values.push(id, uid);
+
+  db.prepare(
+    `UPDATE agent_tasks SET ${fields.join(", ")} WHERE id = ? AND uid = ?`
+  ).run(...values);
+}
+
+export function deleteAgentTask(id, uid) {
+  db.prepare("DELETE FROM agent_tasks WHERE id = ? AND uid = ?").run(id, uid);
+}
+
+// ============ Cron Jobs 管理 ============
+
+export function listCronJobs(uid) {
+  return db
+    .prepare("SELECT * FROM cron_jobs WHERE uid = ? ORDER BY created_at DESC")
+    .all(uid);
+}
+
+export function createCronJob(uid, taskId, name, cronExpression) {
+  const result = db
+    .prepare(
+      `
+    INSERT INTO cron_jobs (uid, task_id, name, cron_expression)
+    VALUES (?, ?, ?, ?)
+  `
+    )
+    .run(uid, taskId, name, cronExpression);
+
+  return {
+    id: result.lastInsertRowid,
+    uid,
+    task_id: taskId,
+    name,
+    cron_expression: cronExpression,
+  };
+}
+
+export function updateCronJob(id, uid, updates) {
+  const fields = [];
+  const values = [];
+  for (const [key, value] of Object.entries(updates)) {
+    if (
+      [
+        "name",
+        "cron_expression",
+        "next_run",
+        "last_run",
+        "last_status",
+        "is_enabled",
+        "task_id",
+      ].includes(key)
+    ) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
+  if (fields.length === 0) return;
+  fields.push("updated_at = CURRENT_TIMESTAMP");
+  values.push(id, uid);
+
+  db.prepare(
+    `UPDATE cron_jobs SET ${fields.join(", ")} WHERE id = ? AND uid = ?`
+  ).run(...values);
+}
+
+export function listAllCronJobs() {
+  return db.prepare("SELECT * FROM cron_jobs").all();
+}
+
+export function deleteCronJob(id, uid) {
+  db.prepare("DELETE FROM cron_jobs WHERE id = ? AND uid = ?").run(id, uid);
 }
 
 export default db;
