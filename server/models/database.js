@@ -611,7 +611,19 @@ export function deleteLastAssistantMessage(conversationId, uid) {
     )
     .get(conversationId, uid);
   if (!row) return false;
-  db.prepare("DELETE FROM messages WHERE id = ?").run(row.id);
+
+  const tx = db.transaction(() => {
+    db.prepare("DELETE FROM messages WHERE id = ?").run(row.id);
+    db.prepare(
+      `
+    UPDATE conversations
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND uid = ?
+  `
+    ).run(conversationId, uid);
+  });
+
+  tx();
   return true;
 }
 
