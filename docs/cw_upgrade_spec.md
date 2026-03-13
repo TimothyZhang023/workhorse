@@ -1,74 +1,57 @@
-# Cowhorse (CW) Upgrade Spec
+# cowhouse 桌面化升级结果
 
-## 1. Goal
+> 最后更新：2026-03-14  
+> 状态：已落地
 
-把当前单一 Chat Web 升级为个人助理 Agent 产品 **cowhouse (CW)**：
+## 1. 本轮升级目标
 
-- 首页改为 **Dashboard**（产品入口，不直接进聊天）
-- 左侧改为 **功能模块导航**（非会话列表）
-- `对话` 作为一个模块，模块内再展示会话数据
-- 对话列表从左侧迁移到聊天页右侧面板
+把原来的 Web 项目重构为桌面优先的 standalone agent 工作台，核心要求：
 
-## 2. Information Architecture
+- 移除对 Umi Max 的依赖
+- 切换到 `Vite + React Router`
+- 引入 `Tauri 2` 桌面壳
+- 保留 `Node.js` 后端作为 sidecar
+- 默认本地免登录运行
 
-- `/dashboard`
-  - 产品总览（欢迎语、模块入口卡片、快捷操作）
-- `/chat`
-  - 模块名：`对话`
-  - 页面结构：
-    - 左：模块导航（Dashboard / 对话）
-    - 中：消息流 + 输入区
-    - 右：会话列表（搜索、新建、重命名、删除）
+## 2. 实际落地结果
 
-## 3. Routing & Auth Rules
+### 前端层
 
-- 根路由 `/` 重定向到 `/dashboard`
-- 登录成功后跳转 `/dashboard`
-- 已登录访问 `/login` 自动跳转 `/dashboard`
-- 未登录访问受保护页面仍跳转 `/login`
+- 入口从 `src/app.tsx` 切到 `src/main.tsx`
+- 路由由 React Router 承担
+- 根路由 `/` 默认跳到 `/chat`
+- Dashboard、Chat、MCP、Skills、Agent Tasks、Cron Jobs 作为独立模块页面
 
-## 4. Chat Module Layout Spec
+### 后端层
 
-- 左侧模块导航（固定窄栏）
-  - 品牌：`CW`
-  - 模块入口：
-    - `Dashboard`（跳转 `/dashboard`）
-    - `对话`（当前页高亮）
-  - 底部保留：主题切换、账户、设置、退出登录
-- 中间聊天主区
-  - 头部：模块标题 + 当前用户
-  - 内容：消息列表
-  - 底部：输入框、模型选择、参数、发送
-- 右侧会话面板
-  - 搜索
-  - 新建会话
-  - 会话项（选择/重命名/删除）
+- `server/app.js` 不再承担旧的 Web 静态托管和 Umi 开发代理职责
+- `/api/*` 默认统一注入本地用户上下文
+- 登录、账户、后台管理相关旧路由已经移除
+- 新增系统概览和历史清理等 standalone 场景接口
 
-## 5. Mobile Behavior
+### 桌面层
 
-- 左侧模块导航改为左抽屉
-- 会话列表改为右抽屉
-- 聊天主区保持全宽
+- `src-tauri/` 新增 Tauri 配置
+- 桌面壳启动时拉起 Node sidecar
+- 前端请求层在桌面环境下默认指向 `http://127.0.0.1:8080`
 
-## 6. Data & Backward Compatibility
+## 3. 当前关键约束
 
-- 会话、消息、模型、系统提示词、参数逻辑不变
-- API 与数据库 schema 不改
-- 仅调整前端路由和布局结构
+- 当前主路径是桌面单机模式，不再默认支持旧登录流
+- 直接使用相对 `/api` 路径在桌面生产环境会断，所以请求层必须统一处理基址
+- Node sidecar 和打包平台需要匹配，否则桌面产物无法正常运行
 
-## 7. Phased Implementation
+## 4. 本轮补齐的配套
 
-1. 新增 Dashboard 页面与样式
-2. 路由与登录跳转迁移到 `/dashboard`
-3. Chat 页面重构为三栏（桌面）+ 双抽屉（移动）
-4. 样式重构：移除“左侧会话列表”耦合样式，补充模块导航与右面板样式
-5. 回归验证（构建 + 核心交互）
+- README 已更新为当前桌面优先说明
+- `docs/project.md` 已更新为当前架构说明
+- Tauri 元数据与版本号需要跟随主版本维护
+- 新增请求层回归测试，覆盖桌面环境下的 API 基址解析
 
-## 8. Acceptance Criteria
+## 5. 验收标准
 
-- 打开系统默认进入 Dashboard
-- 登录后进入 Dashboard
-- Chat 左侧显示模块列表，不再显示会话列表
-- Chat 右侧可完整管理会话（搜索/新建/改名/删除）
-- 移动端可分别打开模块抽屉与会话抽屉
-- 现有对话功能与流式能力不回退
+- `npx tsc --noEmit` 通过
+- `npm test` 通过
+- `npm run build:frontend` 通过
+- `npm run build:tauri` 能产出桌面包
+- 打开的桌面版能够正常访问本地后端

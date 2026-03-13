@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "cowhouse",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "version": "2.0.0",
+  "identifier": "com.cowhouse.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -26,9 +26,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "externalBin": [
-      "sidecar/cowhouse-server"
-    ],
+    "externalBin": ["sidecar/cowhouse-server"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
