@@ -1,4 +1,40 @@
+use tauri::{LogicalSize, Manager, Size, WebviewWindow};
 use tauri_plugin_shell::ShellExt;
+
+fn fit_main_window(window: &WebviewWindow) -> tauri::Result<()> {
+  const DEFAULT_WIDTH: f64 = 1280.0;
+  const DEFAULT_HEIGHT: f64 = 820.0;
+  const MIN_WIDTH: f64 = 1100.0;
+  const MIN_HEIGHT: f64 = 760.0;
+  const TARGET_AREA_RATIO: f64 = 0.8;
+
+  let mut target_width = DEFAULT_WIDTH;
+  let mut target_height = DEFAULT_HEIGHT;
+
+  if let Some(monitor) = window.current_monitor()? {
+    let monitor_size = monitor.size().to_logical::<f64>(monitor.scale_factor());
+    let edge_ratio = TARGET_AREA_RATIO.sqrt();
+    let min_width = MIN_WIDTH.min(monitor_size.width);
+    let min_height = MIN_HEIGHT.min(monitor_size.height);
+
+    target_width = (monitor_size.width * edge_ratio)
+      .max(min_width)
+      .min(monitor_size.width);
+    target_height = (monitor_size.height * edge_ratio)
+      .max(min_height)
+      .min(monitor_size.height);
+  }
+
+  window.set_size(Size::Logical(LogicalSize::new(
+    target_width,
+    target_height,
+  )))?;
+  window.center()?;
+  window.show()?;
+  window.set_focus()?;
+
+  Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -33,6 +69,10 @@ pub fn run() {
               }
           }
       });
+
+      if let Some(window) = app.get_webview_window("main") {
+        fit_main_window(&window)?;
+      }
 
       Ok(())
     })

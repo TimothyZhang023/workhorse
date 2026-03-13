@@ -5,41 +5,74 @@ import {
   useEffect,
   useState,
 } from "react";
-
-type Theme = "light" | "dark";
+import {
+  getStoredThemeMode,
+  getSystemTheme,
+  resolveThemeMode,
+  Theme,
+  ThemeMode,
+  THEME_MODE_STORAGE_KEY,
+} from "@/utils/theme";
 
 interface ThemeContextType {
-  theme: Theme;
+  themeMode: ThemeMode;
+  resolvedTheme: Theme;
   isDark: boolean;
+  setThemeMode: (themeMode: ThemeMode) => void;
   toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "light",
+  themeMode: "system",
+  resolvedTheme: "light",
   isDark: false,
+  setThemeMode: () => {},
   toggleTheme: () => {},
 });
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved =
-      localStorage.getItem("cw-theme") || localStorage.getItem("timo-theme");
-    if (saved === "dark" || saved === "light") return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  });
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    getStoredThemeMode()
+  );
+  const [systemTheme, setSystemTheme] = useState<Theme>(() => getSystemTheme());
+
+  const resolvedTheme = resolveThemeMode(themeMode, systemTheme);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("cw-theme", theme);
-  }, [theme]);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const updateSystemTheme = () => setSystemTheme(getSystemTheme());
+    updateSystemTheme();
 
-  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateSystemTheme);
+      return () => mediaQuery.removeEventListener("change", updateSystemTheme);
+    }
+
+    mediaQuery.addListener(updateSystemTheme);
+    return () => mediaQuery.removeListener(updateSystemTheme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", resolvedTheme);
+    document.documentElement.setAttribute("data-theme-mode", themeMode);
+    localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+    localStorage.setItem("cw-theme", resolvedTheme);
+  }, [resolvedTheme, themeMode]);
+
+  const toggleTheme = () =>
+    setThemeMode((mode) =>
+      resolveThemeMode(mode, systemTheme) === "dark" ? "light" : "dark"
+    );
 
   return (
     <ThemeContext.Provider
-      value={{ theme, isDark: theme === "dark", toggleTheme }}
+      value={{
+        themeMode,
+        resolvedTheme,
+        isDark: resolvedTheme === "dark",
+        setThemeMode,
+        toggleTheme,
+      }}
     >
       {children}
     </ThemeContext.Provider>

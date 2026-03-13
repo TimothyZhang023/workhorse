@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   createSkill,
+  deleteSkillsBySource,
   deleteSkill,
   listSkills,
   updateSkill,
@@ -12,16 +13,21 @@ import {
   searchDefaultSkillTemplates,
 } from "../utils/defaultSkillCatalog.js";
 import { generateSkillDraft } from "../utils/skillGenerator.js";
+import {
+  installSkillsFromGitRepository,
+  installSkillsFromZipArchive,
+} from "../utils/skillInstaller.js";
 
 const router = Router();
-
 
 function normalizeTools(tools) {
   if (!Array.isArray(tools)) {
     return [];
   }
 
-  return [...new Set(tools.map((item) => String(item || "").trim()).filter(Boolean))];
+  return [
+    ...new Set(tools.map((item) => String(item || "").trim()).filter(Boolean)),
+  ];
 }
 
 function validateSkillPayload(payload = {}) {
@@ -122,7 +128,11 @@ router.post("/import", (req, res) => {
     const results = items.map((item) => {
       const validation = validateSkillPayload(item);
       if (!validation.valid) {
-        return { status: "invalid", name: item?.name, errors: validation.errors };
+        return {
+          status: "invalid",
+          name: item?.name,
+          errors: validation.errors,
+        };
       }
 
       const skill = createSkill(
@@ -139,6 +149,77 @@ router.post("/import", (req, res) => {
     return res.json({ results });
   } catch (error) {
     return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/install/git", async (req, res) => {
+  try {
+    const repoUrl = String(req.body?.repo_url || "").trim();
+    const result = await installSkillsFromGitRepository(repoUrl);
+
+    deleteSkillsBySource(req.uid, result.source_type, result.source_location);
+    const installed = result.skills.map((skill) =>
+      createSkill(
+        req.uid,
+        skill.name,
+        skill.description,
+        skill.prompt,
+        skill.examples,
+        skill.tools,
+        {
+          source_type: result.source_type,
+          source_location: result.source_location,
+          source_item_path: skill.source_item_path,
+          source_refreshed_at: new Date().toISOString(),
+        }
+      )
+    );
+
+    return res.json({
+      source_type: result.source_type,
+      source_location: result.source_location,
+      updated: result.updated,
+      installed_count: installed.length,
+      installed,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
+router.post("/install/zip", async (req, res) => {
+  try {
+    const fileName = String(req.body?.file_name || "").trim();
+    const zipBase64 = req.body?.zip_base64;
+    const result = await installSkillsFromZipArchive(fileName, zipBase64);
+
+    deleteSkillsBySource(req.uid, result.source_type, result.source_location);
+    const installed = result.skills.map((skill) =>
+      createSkill(
+        req.uid,
+        skill.name,
+        skill.description,
+        skill.prompt,
+        skill.examples,
+        skill.tools,
+        {
+          source_type: result.source_type,
+          source_location: result.source_location,
+          source_item_path: skill.source_item_path,
+          source_refreshed_at: new Date().toISOString(),
+        }
+      )
+    );
+
+    return res.json({
+      source_type: result.source_type,
+      source_location: result.source_location,
+      updated: false,
+      installed_count: installed.length,
+      installed,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -182,7 +263,8 @@ router.post("/", (req, res) => {
       return res.status(400).json({ error: validation.errors.join("; ") });
     }
 
-    const { name, description, prompt, examples, tools } = validation.normalized;
+    const { name, description, prompt, examples, tools } =
+      validation.normalized;
     const skill = createSkill(
       req.uid,
       name,

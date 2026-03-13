@@ -285,6 +285,30 @@ export async function generateSkillDraft(data: API.SkillGenerationRequest) {
   });
 }
 
+export async function installSkillFromGitRepository(repoUrl: string) {
+  return request<API.SkillInstallResult>("/api/skills/install/git", {
+    method: "POST",
+    data: {
+      repo_url: repoUrl,
+    },
+    timeout: 60000,
+  });
+}
+
+export async function installSkillFromZipArchive(
+  fileName: string,
+  zipBase64: string
+) {
+  return request<API.SkillInstallResult>("/api/skills/install/zip", {
+    method: "POST",
+    data: {
+      file_name: fileName,
+      zip_base64: zipBase64,
+    },
+    timeout: 60000,
+  });
+}
+
 export async function updateSkill(id: number, data: Partial<API.Skill>) {
   return request(`/api/skills/${id}`, {
     method: "PUT",

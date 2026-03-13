@@ -1,4 +1,5 @@
 import {
+  DesktopOutlined,
   BarChartOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -14,23 +15,26 @@ import {
   ApiOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { Button } from "antd";
+import { Button, Dropdown } from "antd";
 import React from "react";
+import { Theme, ThemeMode } from "@/utils/theme";
 import "./Sidebar.css";
 
 export interface SidebarProps {
   moduleExpanded: boolean;
   setModuleExpanded: (expanded: boolean) => void;
-  theme: "light" | "dark";
-  setTheme: (theme: "light" | "dark") => void;
+  themeMode: ThemeMode;
+  resolvedTheme: Theme;
+  setThemeMode: (themeMode: ThemeMode) => void;
   activePath: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   moduleExpanded,
   setModuleExpanded,
-  theme,
-  setTheme,
+  themeMode,
+  resolvedTheme,
+  setThemeMode,
   activePath,
 }) => {
   const navigate = useNavigate();
@@ -69,6 +73,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: "定时调度",
     },
   ];
+
+  const themeLabel =
+    themeMode === "system"
+      ? "跟随系统"
+      : resolvedTheme === "dark"
+      ? "深色模式"
+      : "浅色模式";
+  const themeIcon =
+    themeMode === "system" ? (
+      <DesktopOutlined />
+    ) : resolvedTheme === "dark" ? (
+      <SunOutlined />
+    ) : (
+      <MoonOutlined />
+    );
 
   return (
     <aside
@@ -128,16 +147,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="cw-sider-bottom">
-        <Button
-          type="text"
-          icon={theme === "dark" ? <SunOutlined /> : <MoonOutlined />}
-          className="cw-sider-btn"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        <Dropdown
+          trigger={["click"]}
+          menu={{
+            selectable: true,
+            selectedKeys: [themeMode],
+            items: [
+              { key: "system", icon: <DesktopOutlined />, label: "跟随系统" },
+              { key: "light", icon: <MoonOutlined />, label: "浅色模式" },
+              { key: "dark", icon: <SunOutlined />, label: "深色模式" },
+            ],
+            onClick: ({ key }) => setThemeMode(key as ThemeMode),
+          }}
         >
-          {moduleExpanded && (
-            <span>{theme === "dark" ? "浅色模式" : "深色模式"}</span>
-          )}
-        </Button>
+          <Button type="text" icon={themeIcon} className="cw-sider-btn">
+            {moduleExpanded && <span>{themeLabel}</span>}
+          </Button>
+        </Dropdown>
       </div>
     </aside>
   );

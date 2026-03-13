@@ -145,6 +145,10 @@ db.exec(`
     prompt TEXT NOT NULL,
     examples TEXT, -- JSON 数组: [{"thought": "...", "action": "..."}]
     tools TEXT,    -- JSON 数组 of strings (MCP tool names)
+    source_type TEXT,
+    source_location TEXT,
+    source_item_path TEXT,
+    source_refreshed_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE
@@ -250,6 +254,7 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_mcp_servers_uid ON mcp_servers(uid);
   CREATE INDEX IF NOT EXISTS idx_skills_uid ON skills(uid);
+  CREATE INDEX IF NOT EXISTS idx_skills_source_lookup ON skills(uid, source_type, source_location);
   CREATE INDEX IF NOT EXISTS idx_agent_tasks_uid ON agent_tasks(uid);
   CREATE INDEX IF NOT EXISTS idx_cron_jobs_uid ON cron_jobs(uid);
   CREATE INDEX IF NOT EXISTS idx_cron_jobs_task_id ON cron_jobs(task_id);
@@ -277,6 +282,19 @@ try {
   ).run();
 } catch (e) {
   /* column already exists */
+}
+
+for (const statement of [
+  "ALTER TABLE skills ADD COLUMN source_type TEXT",
+  "ALTER TABLE skills ADD COLUMN source_location TEXT",
+  "ALTER TABLE skills ADD COLUMN source_item_path TEXT",
+  "ALTER TABLE skills ADD COLUMN source_refreshed_at DATETIME",
+]) {
+  try {
+    db.prepare(statement).run();
+  } catch (e) {
+    /* column already exists */
+  }
 }
 
 // 运行时迁移：加密现有的已存储 API Keys
@@ -330,7 +348,6 @@ try {
   /* column already exists */
 }
 
-
 export function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
 }
@@ -365,10 +382,11 @@ export function getUserByUid(uid) {
   return db.prepare("SELECT * FROM users WHERE uid = ?").get(uid);
 }
 
-
 export function getAppSetting(uid, key, fallbackValue = "") {
   const row = db
-    .prepare("SELECT setting_value FROM app_settings WHERE uid = ? AND setting_key = ?")
+    .prepare(
+      "SELECT setting_value FROM app_settings WHERE uid = ? AND setting_key = ?"
+    )
     .get(uid, key);
 
   return row?.setting_value ?? fallbackValue;
@@ -394,7 +412,11 @@ export function setAppSetting(uid, key, value) {
 export function getOrCreateLocalUser() {
   const existing = getUserByUsername("local");
   if (existing) {
-    return { uid: existing.uid, username: existing.username, role: existing.role };
+    return {
+      uid: existing.uid,
+      username: existing.username,
+      role: existing.role,
+    };
   }
 
   const created = createUser("local", crypto.randomBytes(24).toString("hex"));
@@ -563,11 +585,7 @@ export function updateConversationToolNames(id, uid, toolNames) {
     `
     UPDATE conversations SET tool_names = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
   `
-  ).run(
-    Array.isArray(toolNames) ? JSON.stringify(toolNames) : null,
-    id,
-    uid
-  );
+  ).run(Array.isArray(toolNames) ? JSON.stringify(toolNames) : null, id, uid);
 }
 
 export function deleteConversation(id, uid) {
@@ -600,10 +618,9 @@ export function clearAllHistory(uid) {
 
 export function getConversation(id, uid) {
   return normalizeConversationRow(
-    db.prepare("SELECT * FROM conversations WHERE id = ? AND uid = ?").get(
-      id,
-      uid
-    )
+    db
+      .prepare("SELECT * FROM conversations WHERE id = ? AND uid = ?")
+      .get(id, uid)
   );
 }
 
@@ -1260,13 +1277,31 @@ export function createSkill(
   description,
   prompt,
   examples = [],
-  tools = []
+  tools = [],
+  source = {}
 ) {
+  const {
+    source_type = null,
+    source_location = null,
+    source_item_path = null,
+    source_refreshed_at = null,
+  } = source || {};
   const result = db
     .prepare(
       `
-    INSERT INTO skills (uid, name, description, prompt, examples, tools)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO skills (
+      uid,
+      name,
+      description,
+      prompt,
+      examples,
+      tools,
+      source_type,
+      source_location,
+      source_item_path,
+      source_refreshed_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `
     )
     .run(
@@ -1275,7 +1310,11 @@ export function createSkill(
       description,
       prompt,
       JSON.stringify(examples),
-      JSON.stringify(tools)
+      JSON.stringify(tools),
+      source_type,
+      source_location,
+      source_item_path,
+      source_refreshed_at
     );
 
   return {
@@ -1286,6 +1325,10 @@ export function createSkill(
     prompt,
     examples,
     tools,
+    source_type,
+    source_location,
+    source_item_path,
+    source_refreshed_at,
   };
 }
 
@@ -1309,6 +1352,12 @@ export function updateSkill(id, uid, updates) {
 
 export function deleteSkill(id, uid) {
   db.prepare("DELETE FROM skills WHERE id = ? AND uid = ?").run(id, uid);
+}
+
+export function deleteSkillsBySource(uid, sourceType, sourceLocation) {
+  db.prepare(
+    "DELETE FROM skills WHERE uid = ? AND source_type = ? AND source_location = ?"
+  ).run(uid, sourceType, sourceLocation);
 }
 
 // ============ Agent Tasks 管理 ============
@@ -1528,9 +1577,9 @@ export function updateTaskRun(id, uid, updates) {
   if (fields.length === 0) return;
   values.push(id, uid);
 
-  db.prepare(`UPDATE task_runs SET ${fields.join(", ")} WHERE id = ? AND uid = ?`).run(
-    ...values
-  );
+  db.prepare(
+    `UPDATE task_runs SET ${fields.join(", ")} WHERE id = ? AND uid = ?`
+  ).run(...values);
 }
 
 export function addTaskRunEvent(
@@ -1640,7 +1689,6 @@ export function deleteCronJob(id, uid) {
   db.prepare("DELETE FROM cron_jobs WHERE id = ? AND uid = ?").run(id, uid);
 }
 
-
 export function listChannels(uid) {
   return db
     .prepare("SELECT * FROM channels WHERE uid = ? ORDER BY created_at DESC")
@@ -1695,7 +1743,11 @@ export function updateChannel(id, uid, updates) {
   const fields = [];
   const values = [];
   for (const [key, value] of Object.entries(updates)) {
-    if (["name", "platform", "webhook_url", "bot_token", "is_enabled"].includes(key)) {
+    if (
+      ["name", "platform", "webhook_url", "bot_token", "is_enabled"].includes(
+        key
+      )
+    ) {
       fields.push(`${key} = ?`);
       values.push(value);
     }
@@ -1709,9 +1761,9 @@ export function updateChannel(id, uid, updates) {
   fields.push("updated_at = CURRENT_TIMESTAMP");
   values.push(id, uid);
 
-  db.prepare(`UPDATE channels SET ${fields.join(", ")} WHERE id = ? AND uid = ?`).run(
-    ...values
-  );
+  db.prepare(
+    `UPDATE channels SET ${fields.join(", ")} WHERE id = ? AND uid = ?`
+  ).run(...values);
 }
 
 export function deleteChannel(id, uid) {

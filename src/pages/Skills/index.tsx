@@ -1,13 +1,17 @@
 import { Sidebar } from "@/components/Sidebar";
+import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
   createSkill,
   deleteSkill,
   generateSkillDraft,
   getMcpTools,
   getSkills,
+  installSkillFromGitRepository,
+  installSkillFromZipArchive,
   updateSkill,
 } from "@/services/api";
 import {
+  InboxOutlined,
   PlusOutlined,
   RobotOutlined,
   ThunderboltOutlined,
@@ -30,15 +34,35 @@ import {
   Space,
   Tag,
   Typography,
+  Upload,
+  Input,
 } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useEffect, useState } from "react";
 import "../Dashboard/index.css";
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+  });
 
 export default () => {
   const { currentUser, isLoggedIn } = useAppStore();
   const [messageApi, messageContextHolder] = message.useMessage();
-  const [moduleExpanded, setModuleExpanded] = useState(true);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const {
+    moduleExpanded,
+    setModuleExpanded,
+    themeMode,
+    resolvedTheme,
+    setThemeMode,
+    isDark,
+  } = useShellPreferences();
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<API.Skill[]>([]);
   const [availableTools, setAvailableTools] = useState<string[]>([]);
@@ -46,8 +70,10 @@ export default () => {
     null
   );
   const [generatorOpen, setGeneratorOpen] = useState(false);
-
-  const isDark = theme === "dark";
+  const [gitRepoUrl, setGitRepoUrl] = useState("");
+  const [installingGit, setInstallingGit] = useState(false);
+  const [zipFileList, setZipFileList] = useState<UploadFile[]>([]);
+  const [installingZip, setInstallingZip] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -85,6 +111,54 @@ export default () => {
       }
     : {};
 
+  const selectedZipFile = zipFileList[0]?.originFileObj;
+
+  const handleInstallGit = async () => {
+    if (!gitRepoUrl.trim()) {
+      messageApi.error("请输入 Git 仓库地址");
+      return;
+    }
+
+    setInstallingGit(true);
+    try {
+      const result = await installSkillFromGitRepository(gitRepoUrl.trim());
+      messageApi.success(
+        result.updated
+          ? `已更新并同步 ${result.installed_count} 个 Skill`
+          : `已安装 ${result.installed_count} 个 Skill`
+      );
+      setGitRepoUrl("");
+      await loadData();
+    } catch (error: any) {
+      messageApi.error(error?.message || "Git Skill 安装失败");
+    } finally {
+      setInstallingGit(false);
+    }
+  };
+
+  const handleInstallZip = async () => {
+    if (!selectedZipFile) {
+      messageApi.error("请先选择一个 zip 包");
+      return;
+    }
+
+    setInstallingZip(true);
+    try {
+      const zipBase64 = await fileToBase64(selectedZipFile);
+      const result = await installSkillFromZipArchive(
+        selectedZipFile.name,
+        zipBase64
+      );
+      messageApi.success(`已导入 ${result.installed_count} 个 Skill`);
+      setZipFileList([]);
+      await loadData();
+    } catch (error: any) {
+      messageApi.error(error?.message || "ZIP Skill 安装失败");
+    } finally {
+      setInstallingZip(false);
+    }
+  };
+
   return (
     <ConfigProvider
       wave={{ disabled: true }}
@@ -100,8 +174,9 @@ export default () => {
         <Sidebar
           moduleExpanded={moduleExpanded}
           setModuleExpanded={setModuleExpanded}
-          theme={theme}
-          setTheme={setTheme}
+          themeMode={themeMode}
+          resolvedTheme={resolvedTheme}
+          setThemeMode={setThemeMode}
           activePath="/skills"
         />
 
@@ -117,6 +192,107 @@ export default () => {
           </section>
 
           <section className="cw-dashboard-main">
+            <Card className="cw-module-card" style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  marginBottom: 16,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Space>
+                  <ThunderboltOutlined
+                    style={{ fontSize: 20, color: "#f59e0b" }}
+                  />
+                  <h3 style={{ margin: 0 }}>安装 Skill 包</h3>
+                </Space>
+                <Typography.Text type="secondary">
+                  支持 Git 仓库安装/更新，以及 ZIP 拖拽导入。后端会校验
+                  `SKILL.md` 格式，不合法会拒绝安装。
+                </Typography.Text>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                  gap: 16,
+                }}
+              >
+                <Card size="small" title="Git 仓库">
+                  <Space
+                    direction="vertical"
+                    size={12}
+                    style={{ width: "100%" }}
+                  >
+                    <Typography.Text type="secondary">
+                      输入 Skill
+                      仓库地址。再次输入同一地址时会强制拉取最新内容并覆盖同步。
+                    </Typography.Text>
+                    <Input
+                      value={gitRepoUrl}
+                      onChange={(event) => setGitRepoUrl(event.target.value)}
+                      placeholder="https://github.com/owner/repo 或 git@github.com:owner/repo.git"
+                    />
+                    <Button
+                      type="primary"
+                      loading={installingGit}
+                      onClick={handleInstallGit}
+                    >
+                      安装 / 更新仓库 Skill
+                    </Button>
+                  </Space>
+                </Card>
+
+                <Card size="small" title="ZIP 包">
+                  <Space
+                    direction="vertical"
+                    size={12}
+                    style={{ width: "100%" }}
+                  >
+                    <Upload.Dragger
+                      accept=".zip"
+                      maxCount={1}
+                      multiple={false}
+                      fileList={zipFileList}
+                      beforeUpload={(file) => {
+                        if (!file.name.toLowerCase().endsWith(".zip")) {
+                          messageApi.error("仅支持上传 zip 包");
+                          return Upload.LIST_IGNORE;
+                        }
+                        setZipFileList([file]);
+                        return false;
+                      }}
+                      onRemove={() => {
+                        setZipFileList([]);
+                        return true;
+                      }}
+                    >
+                      <p className="ant-upload-drag-icon">
+                        <InboxOutlined />
+                      </p>
+                      <p className="ant-upload-text">
+                        拖拽 zip 到这里，或点击选择文件
+                      </p>
+                      <p className="ant-upload-hint">
+                        服务端会解压并检查是否包含合法的 `SKILL.md`
+                      </p>
+                    </Upload.Dragger>
+                    <Button
+                      type="primary"
+                      loading={installingZip}
+                      disabled={!selectedZipFile}
+                      onClick={handleInstallZip}
+                    >
+                      导入 ZIP Skill
+                    </Button>
+                  </Space>
+                </Card>
+              </div>
+            </Card>
+
             <Card className="cw-module-card">
               <div
                 style={{
@@ -163,6 +339,22 @@ export default () => {
                         <Typography.Text>
                           {row.description || "-"}
                         </Typography.Text>
+                        <Space wrap>
+                          {row.source_type ? (
+                            <Tag
+                              color={
+                                row.source_type === "git" ? "green" : "gold"
+                              }
+                            >
+                              {row.source_type === "git" ? "Git" : "ZIP"}
+                            </Tag>
+                          ) : (
+                            <Tag>手工</Tag>
+                          )}
+                          {row.source_location ? (
+                            <Tag>{row.source_location}</Tag>
+                          ) : null}
+                        </Space>
                         {row.tools?.length ? (
                           <Space wrap>
                             {row.tools.map((tool) => (

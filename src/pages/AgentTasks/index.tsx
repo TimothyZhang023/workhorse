@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/Sidebar";
+import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
   createSkill,
   createAgentTask,
@@ -108,8 +109,14 @@ export default () => {
   const { currentUser, isLoggedIn } = useAppStore();
   const navigate = useNavigate();
   const [messageApi, messageContextHolder] = message.useMessage();
-  const [moduleExpanded, setModuleExpanded] = useState(true);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const {
+    moduleExpanded,
+    setModuleExpanded,
+    themeMode,
+    resolvedTheme,
+    setThemeMode,
+    isDark,
+  } = useShellPreferences();
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<API.AgentTask[]>([]);
   const [editingTask, setEditingTask] = useState<Partial<API.AgentTask> | null>(
@@ -143,8 +150,6 @@ export default () => {
   const [marketDraftingName, setMarketDraftingName] = useState<string | null>(
     null
   );
-
-  const isDark = theme === "dark";
 
   const loadData = async () => {
     setLoading(true);
@@ -343,8 +348,9 @@ export default () => {
         <Sidebar
           moduleExpanded={moduleExpanded}
           setModuleExpanded={setModuleExpanded}
-          theme={theme}
-          setTheme={setTheme}
+          themeMode={themeMode}
+          resolvedTheme={resolvedTheme}
+          setThemeMode={setThemeMode}
           activePath="/agent-tasks"
         />
 

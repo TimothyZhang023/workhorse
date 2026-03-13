@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/Sidebar";
+import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
   createCronJob,
   deleteCronJob,
@@ -80,8 +81,14 @@ export default () => {
   const { currentUser, isLoggedIn } = useAppStore();
   const navigate = useNavigate();
   const [messageApi, messageContextHolder] = message.useMessage();
-  const [moduleExpanded, setModuleExpanded] = useState(true);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const {
+    moduleExpanded,
+    setModuleExpanded,
+    themeMode,
+    resolvedTheme,
+    setThemeMode,
+    isDark,
+  } = useShellPreferences();
   const [loading, setLoading] = useState(false);
   const [jobs, setJobs] = useState<API.CronJob[]>([]);
   const [tasks, setTasks] = useState<API.AgentTask[]>([]);
@@ -94,8 +101,6 @@ export default () => {
   const [historyCronJobId, setHistoryCronJobId] = useState<number | undefined>(
     undefined
   );
-
-  const isDark = theme === "dark";
 
   const loadData = async (silent = false) => {
     if (!silent) {
@@ -180,8 +185,9 @@ export default () => {
         <Sidebar
           moduleExpanded={moduleExpanded}
           setModuleExpanded={setModuleExpanded}
-          theme={theme}
-          setTheme={setTheme}
+          themeMode={themeMode}
+          resolvedTheme={resolvedTheme}
+          setThemeMode={setThemeMode}
           activePath="/cron-jobs"
         />
 

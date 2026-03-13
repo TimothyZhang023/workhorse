@@ -2,6 +2,7 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { ModelCompareModal } from "@/components/ModelCompareModal";
 import { Sidebar } from "@/components/Sidebar";
 import { SystemPromptModal } from "@/components/SystemPromptModal";
+import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
   createConversation,
   deleteConversation,
@@ -58,8 +59,6 @@ const { Sider, Content } = Layout;
 const { TextArea } = Input;
 
 const STORAGE_KEYS = {
-  theme: "cw-theme",
-  legacyTheme: "timo-theme",
   temperature: "cw.temperature",
   legacyTemperature: "timo.temperature",
   topP: "cw.top_p",
@@ -68,17 +67,6 @@ const STORAGE_KEYS = {
   legacyMaxTokens: "timo.max_tokens",
   selectedModelPrefix: "cw.selected_model.",
   legacySelectedModelPrefix: "timo.selected_model.",
-};
-
-// 从 localStorage 获取/保存主题
-const getStoredTheme = (): "light" | "dark" => {
-  const saved =
-    localStorage.getItem(STORAGE_KEYS.theme) ||
-    localStorage.getItem(STORAGE_KEYS.legacyTheme);
-  if (saved === "dark" || saved === "light") return saved;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
 };
 
 const getStoredNumber = (
@@ -101,13 +89,6 @@ const getStoredString = (key: string, legacyKey?: string): string => {
     localStorage.getItem(key) ||
     (legacyKey ? localStorage.getItem(legacyKey) || "" : "")
   );
-};
-
-const getStoredBoolean = (key: string, fallback: boolean): boolean => {
-  const value = localStorage.getItem(key);
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return fallback;
 };
 
 const getModelStorageKey = (endpointId: number | null) =>
@@ -211,17 +192,20 @@ export default () => {
   const [searchParams] = useSearchParams();
   const requestedConversationId = searchParams.get("conversationId");
   const [messageApi, messageContextHolder] = antdMessage.useMessage();
+  const {
+    moduleExpanded,
+    setModuleExpanded,
+    themeMode,
+    resolvedTheme,
+    setThemeMode,
+    isDark,
+  } = useShellPreferences();
 
   // UI 状态
-  const [theme, setTheme] = useState<"light" | "dark">(getStoredTheme);
-  const [moduleExpanded, setModuleExpanded] = useState<boolean>(() =>
-    getStoredBoolean("cw.module.expanded", true)
-  );
   const [moduleDrawerVisible, setModuleDrawerVisible] = useState(false);
   const [conversationDrawerVisible, setConversationDrawerVisible] =
     useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const isDark = theme === "dark";
 
   // 对话状态
   const [conversations, setConversations] = useState<API.Conversation[]>([]);
@@ -314,15 +298,6 @@ export default () => {
   }, []);
 
   // 主题持久化
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(STORAGE_KEYS.theme, theme);
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem("cw.module.expanded", String(moduleExpanded));
-  }, [moduleExpanded]);
-
   // 生成参数持久化
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.temperature, String(temperature));
@@ -1335,8 +1310,9 @@ export default () => {
     <Sidebar
       moduleExpanded={moduleExpanded}
       setModuleExpanded={setModuleExpanded}
-      theme={theme}
-      setTheme={setTheme}
+      themeMode={themeMode}
+      resolvedTheme={resolvedTheme}
+      setThemeMode={setThemeMode}
       activePath="/chat"
     />
   );

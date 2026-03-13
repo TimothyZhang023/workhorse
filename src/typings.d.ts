@@ -142,8 +142,20 @@ declare namespace API {
     prompt: string;
     examples?: any[];
     tools?: string[];
+    source_type?: "git" | "zip" | null;
+    source_location?: string | null;
+    source_item_path?: string | null;
+    source_refreshed_at?: string | null;
     created_at?: string;
     updated_at?: string;
+  };
+
+  type SkillInstallResult = {
+    source_type: "git" | "zip";
+    source_location: string;
+    updated: boolean;
+    installed_count: number;
+    installed: Skill[];
   };
 
   type SkillGenerationRequest = {

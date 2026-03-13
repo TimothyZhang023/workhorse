@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/Sidebar";
+import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
   ApiOutlined,
   MessageOutlined,
@@ -19,15 +20,8 @@ import {
   Spin,
   theme as antdTheme,
 } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import "./index.css";
-
-const getStoredBool = (key: string, fallback: boolean): boolean => {
-  const value = localStorage.getItem(key);
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return fallback;
-};
 
 type SystemOverviewData = {
   runtime: {
@@ -50,28 +44,16 @@ type SystemOverviewData = {
 export default () => {
   const { currentUser, isLoggedIn } = useAppStore();
   const navigate = useNavigate();
-  const [moduleExpanded, setModuleExpanded] = useState<boolean>(() =>
-    getStoredBool("cw.module.expanded", true)
-  );
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const saved =
-      localStorage.getItem("cw-theme") || localStorage.getItem("timo-theme");
-    if (saved === "dark" || saved === "light") return saved;
-    return "light";
-  });
+  const {
+    moduleExpanded,
+    setModuleExpanded,
+    themeMode,
+    resolvedTheme,
+    setThemeMode,
+    isDark,
+  } = useShellPreferences();
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overview, setOverview] = useState<SystemOverviewData | null>(null);
-
-  const themeMode = useMemo<"light" | "dark">(() => theme, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem("cw.module.expanded", String(moduleExpanded));
-  }, [moduleExpanded]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("cw-theme", theme);
-  }, [theme]);
 
   const loadOverview = async () => {
     setOverviewLoading(true);
@@ -92,7 +74,6 @@ export default () => {
 
   if (!isLoggedIn) return null;
 
-  const isDark = themeMode === "dark";
   const counts = overview?.counts;
   const runtime = overview?.runtime;
 
@@ -110,8 +91,9 @@ export default () => {
         <Sidebar
           moduleExpanded={moduleExpanded}
           setModuleExpanded={setModuleExpanded}
-          theme={theme}
-          setTheme={setTheme}
+          themeMode={themeMode}
+          resolvedTheme={resolvedTheme}
+          setThemeMode={setThemeMode}
           activePath="/dashboard"
         />
 
