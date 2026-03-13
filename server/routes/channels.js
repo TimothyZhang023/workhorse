@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.js";
+
 import {
   createChannel,
   deleteChannel,
@@ -8,7 +8,7 @@ import {
 } from "../models/database.js";
 
 const router = Router();
-router.use(authMiddleware);
+
 
 const CHANNEL_EXTENSION_CATALOG = {
   dingtalk: {

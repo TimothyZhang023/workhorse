@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.js";
+
 import { runAgentTask } from "../models/agentEngine.js";
 import {
   createAgentTask,
@@ -13,7 +13,7 @@ import {
 import { generateAgentTaskBlueprint } from "../utils/agentTaskGenerator.js";
 
 const router = Router();
-router.use(authMiddleware);
+
 
 router.get("/", (req, res) => {
   try {

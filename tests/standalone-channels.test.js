@@ -10,12 +10,7 @@ describe("channels endpoints", () => {
     const { createApp } = await import("../server/app.js");
     app = createApp();
 
-    const registerRes = await request(app)
-      .post("/api/auth/register")
-      .send({ username: `ca${Date.now().toString().slice(-6)}`, password: "password123" })
-      .expect(200);
-
-    authToken = registerRes.body.token;
+    authToken = "local-mode-token";
   });
 
   it("installs an IM extension and lists channels", async () => {

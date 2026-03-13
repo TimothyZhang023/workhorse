@@ -10,12 +10,7 @@ describe("system settings route", () => {
     const { createApp } = await import("../server/app.js");
     app = createApp();
 
-    const registerRes = await request(app)
-      .post("/api/auth/register")
-      .send({ username: `ss${Date.now().toString().slice(-6)}`, password: "password123" })
-      .expect(200);
-
-    authToken = registerRes.body.token;
+    authToken = "local-mode-token";
   });
 
   it("gets and updates global system markdown", async () => {

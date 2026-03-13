@@ -8,12 +8,7 @@ describe("conversation tool settings", () => {
     const { createApp } = await import("../server/app.js");
     app = createApp();
 
-    const registerRes = await request(app)
-      .post("/api/auth/register")
-      .send({ username: "tool_chat_user", password: "password123" })
-      .expect(200);
-
-    authToken = registerRes.body.token;
+    authToken = "local-mode-token";
   });
 
   it("persists per-conversation tool selection", async () => {

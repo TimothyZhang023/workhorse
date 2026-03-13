@@ -6,9 +6,9 @@
 
 相关文档：
 
-- [产品演进说明](/Users/zts1993/work/work/docs/cw_evolution_spec.md)
-- [项目分析文档](/Users/zts1993/work/work/docs/project.md)
-- [升级设计说明](/Users/zts1993/work/work/docs/cw_upgrade_spec.md)
+- [产品演进说明](docs/cw_evolution_spec.md)
+- [项目分析文档](docs/project.md)
+- [升级设计说明](docs/cw_upgrade_spec.md)
 
 ## 项目定位
 
@@ -410,7 +410,7 @@ Compose 默认会挂载命名卷：
 
 ### 自定义端口
 
-如需修改外部访问端口，调整 [docker-compose.yml](/Users/zts1993/work/work/docker-compose.yml) 中的 `ports` 配置即可。
+如需修改外部访问端口，调整 [docker-compose.yml](docker-compose.yml) 中的 `ports` 配置即可。
 
 ## 测试
 

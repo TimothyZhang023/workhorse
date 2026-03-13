@@ -1,5 +1,3 @@
-import { AccountModal } from "@/components/AccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Sidebar } from "@/components/Sidebar";
 import {
   createCronJob,
@@ -22,7 +20,8 @@ import {
   ProFormText,
   ProList,
 } from "@ant-design/pro-components";
-import { history, useModel } from "@umijs/max";
+import { useNavigate } from "react-router-dom";
+import { useAppStore } from "@/stores/useAppStore";
 import {
   theme as antdTheme,
   Button,
@@ -78,12 +77,11 @@ const formatDuration = (startedAt?: string, finishedAt?: string) => {
 };
 
 export default () => {
-  const { currentUser, isLoggedIn } = useModel("global");
+  const { currentUser, isLoggedIn } = useAppStore();
+  const navigate = useNavigate();
   const [messageApi, messageContextHolder] = message.useMessage();
   const [moduleExpanded, setModuleExpanded] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [showAccount, setShowAccount] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [jobs, setJobs] = useState<API.CronJob[]>([]);
   const [tasks, setTasks] = useState<API.AgentTask[]>([]);
@@ -185,8 +183,6 @@ export default () => {
           theme={theme}
           setTheme={setTheme}
           activePath="/cron-jobs"
-          setShowAccount={setShowAccount}
-          setShowSettings={setShowSettings}
         />
 
         <main className="cw-dashboard-main-wrap">
@@ -219,7 +215,9 @@ export default () => {
                 <Space>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {lastRefreshedAt
-                      ? `最近刷新 ${new Date(lastRefreshedAt).toLocaleTimeString()}`
+                      ? `最近刷新 ${new Date(
+                          lastRefreshedAt
+                        ).toLocaleTimeString()}`
                       : "尚未刷新"}
                   </Typography.Text>
                   <Button
@@ -366,7 +364,10 @@ export default () => {
                       value: job.id,
                     }))}
                   />
-                  <Button onClick={() => loadHistory()} loading={historyLoading}>
+                  <Button
+                    onClick={() => loadHistory()}
+                    loading={historyLoading}
+                  >
                     刷新历史
                   </Button>
                 </Space>
@@ -388,11 +389,13 @@ export default () => {
                     },
                     {
                       title: "调度计划",
-                      render: (_, row) => row.cron_job_name || `Job ${row.cron_job_id}`,
+                      render: (_, row) =>
+                        row.cron_job_name || `Job ${row.cron_job_id}`,
                     },
                     {
                       title: "任务",
-                      render: (_, row) => row.task_name || `Task ${row.task_id}`,
+                      render: (_, row) =>
+                        row.task_name || `Task ${row.task_id}`,
                     },
                     {
                       title: "状态",
@@ -411,7 +414,10 @@ export default () => {
                           ellipsis={{ rows: 2, expandable: false }}
                           style={{ marginBottom: 0, maxWidth: 360 }}
                         >
-                          {row.final_response || row.error_message || row.initial_message || "-"}
+                          {row.final_response ||
+                            row.error_message ||
+                            row.initial_message ||
+                            "-"}
                         </Typography.Paragraph>
                       ),
                     },
@@ -422,7 +428,7 @@ export default () => {
                           <Button
                             type="link"
                             onClick={() =>
-                              history.push(
+                              navigate(
                                 `/chat?conversationId=${encodeURIComponent(
                                   String(row.conversation_id)
                                 )}`
@@ -492,13 +498,6 @@ export default () => {
             unCheckedChildren="禁用"
           />
         </ModalForm>
-
-        <AccountModal
-          open={showAccount}
-          onClose={() => setShowAccount(false)}
-          isDark={isDark}
-        />
-        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
       </div>
     </ConfigProvider>
   );

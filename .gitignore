@@ -12,10 +12,22 @@ yarn-error.log*
 
 # Build outputs
 dist/
+dist-server/
+dist-server.cjs
 build/
 .cache/
 src/.umi/
 src/.umi-production/
+
+# Sidecar and SEA artifacts
+sea-config.json
+sea-prep.blob
+src-tauri/sidecar*
+src-tauri/target/
+
+# Logs
+*.log
+run.log
 
 # User-specific / IDE configurations
 .vscode/

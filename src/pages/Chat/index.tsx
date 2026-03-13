@@ -1,7 +1,5 @@
-import { AccountModal } from "@/components/AccountModal";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { ModelCompareModal } from "@/components/ModelCompareModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Sidebar } from "@/components/Sidebar";
 import { SystemPromptModal } from "@/components/SystemPromptModal";
 import {
@@ -33,7 +31,9 @@ import {
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { history, useIntl, useModel, useSearchParams } from "@umijs/max";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAppStore } from "@/stores/useAppStore";
+import { createAuthHeaders, resolveApiUrl } from "@/services/request";
 import {
   Avatar,
   Button,
@@ -206,8 +206,8 @@ const getResponseErrorMessage = async (response: Response) => {
 };
 
 export default () => {
-  const { currentUser, logout, isLoggedIn } = useModel("global");
-  const intl = useIntl();
+  const { currentUser, isLoggedIn } = useAppStore();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedConversationId = searchParams.get("conversationId");
   const [messageApi, messageContextHolder] = antdMessage.useMessage();
@@ -273,7 +273,6 @@ export default () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 设置弹窗
-  const [showSettings, setShowSettings] = useState(false);
 
   // System Prompt
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -282,9 +281,6 @@ export default () => {
 
   // 模型对比
   const [showCompare, setShowCompare] = useState(false);
-
-  // 用量统计 / API Keys
-  const [showAccount, setShowAccount] = useState(false);
 
   // 对话重命名状态
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -358,10 +354,7 @@ export default () => {
 
   // 登录检查 & 初始化
   useEffect(() => {
-    if (!isLoggedIn) {
-      history.push("/login");
-      return;
-    }
+    if (!isLoggedIn) return;
     loadInitData();
   }, [isLoggedIn]);
 
@@ -426,11 +419,11 @@ export default () => {
     try {
       const [convs, availableModels, endpoints, availableMcpTools] =
         await Promise.all([
-        getConversations(),
-        getAvailableModels(),
-        getEndpoints(),
-        getMcpTools(),
-      ]);
+          getConversations(),
+          getAvailableModels(),
+          getEndpoints(),
+          getMcpTools(),
+        ]);
       const defaultEndpoint =
         endpoints.find((endpoint) => !!endpoint.is_default) || null;
       const nextDefaultEndpointId = defaultEndpoint?.id ?? null;
@@ -787,14 +780,18 @@ export default () => {
 
   const conversationUsesAllTools = currentConv?.tool_names == null;
   const selectedConversationToolNames = Array.isArray(currentConv?.tool_names)
-    ? currentConv.tool_names.filter((toolName) => availableToolMap.has(toolName))
+    ? currentConv.tool_names.filter((toolName) =>
+        availableToolMap.has(toolName)
+      )
     : [];
 
   const toolSelectOptions = availableToolNames.map((toolName) => {
     const tool = availableToolMap.get(toolName);
     return {
       value: toolName,
-      searchText: `${toolName} ${tool?.function?.description || ""}`.toLowerCase(),
+      searchText: `${toolName} ${
+        tool?.function?.description || ""
+      }`.toLowerCase(),
       label: (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span>{toolName}</span>
@@ -823,12 +820,7 @@ export default () => {
 
     try {
       setSavingConversationTools(true);
-      await updateConversation(
-        currentConvId,
-        undefined,
-        undefined,
-        toolNames
-      );
+      await updateConversation(currentConvId, undefined, undefined, toolNames);
       setConversations((prev) =>
         prev.map((conversation) =>
           String(conversation.id) === String(currentConvId)
@@ -891,10 +883,11 @@ export default () => {
 
     try {
       await createAssistantPlaceholder();
-      const token = localStorage.getItem("token");
-      const url = isRegenerate
-        ? `/api/conversations/${convId}/regenerate`
-        : `/api/conversations/${convId}/chat`;
+      const url = resolveApiUrl(
+        isRegenerate
+          ? `/api/conversations/${convId}/regenerate`
+          : `/api/conversations/${convId}/chat`
+      );
 
       let body: any = { model: selectedModel, ...generationConfig };
       if (!isRegenerate && userMsg) {
@@ -917,7 +910,7 @@ export default () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...createAuthHeaders(),
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -1135,14 +1128,15 @@ export default () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      const url = `/api/conversations/${currentConvId}/messages/${msgId}`;
+      const url = resolveApiUrl(
+        `/api/conversations/${currentConvId}/messages/${msgId}`
+      );
 
       const response = await fetch(url, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...createAuthHeaders(),
         },
         body: JSON.stringify({
           content,
@@ -1344,8 +1338,6 @@ export default () => {
       theme={theme}
       setTheme={setTheme}
       activePath="/chat"
-      setShowAccount={setShowAccount}
-      setShowSettings={setShowSettings}
     />
   );
 
@@ -1361,7 +1353,7 @@ export default () => {
           icon={<PlusOutlined />}
           size="small"
           onClick={handleCreateChat}
-          title={intl.formatMessage({ id: "chat.new_chat" }) + " (Ctrl+N)"}
+          title={"新对话 (Ctrl+N)"}
         >
           新建
         </Button>
@@ -1546,7 +1538,8 @@ export default () => {
                         />
                       </div>
                       <div className="conversation-tool-config-hint">
-                        开启“全部”时，当前会话可使用所有已启用 MCP 工具；关闭后只开放下面勾选的工具。
+                        开启“全部”时，当前会话可使用所有已启用 MCP
+                        工具；关闭后只开放下面勾选的工具。
                       </div>
                       <Select
                         mode="multiple"
@@ -1592,9 +1585,7 @@ export default () => {
                         color: !conversationUsesAllTools
                           ? "#0f766e"
                           : undefined,
-                        fontWeight: !conversationUsesAllTools
-                          ? 600
-                          : undefined,
+                        fontWeight: !conversationUsesAllTools ? 600 : undefined,
                       }}
                     >
                       {conversationToolButtonText}
@@ -1706,7 +1697,9 @@ export default () => {
                           </div>
                         ) : msg.role === "tool" ? (
                           <div
-                            className={`tool-message-card ${getToolMessageStatus(msg)}`}
+                            className={`tool-message-card ${getToolMessageStatus(
+                              msg
+                            )}`}
                           >
                             <div className="tool-message-header">
                               <span className="tool-message-name">
@@ -2007,20 +2000,6 @@ export default () => {
           </div>
         </main>
 
-        <SettingsModal
-          open={showSettings}
-          onOpenChange={(v) => {
-            setShowSettings(v);
-            if (!v) loadInitData();
-          }}
-          onHistoryCleared={() => {
-            setConversations([]);
-            setCurrentConvId(null);
-            setMessages([]);
-            setSearchQuery("");
-          }}
-          onModelsChanged={loadInitData}
-        />
         <SystemPromptModal
           open={showSystemPrompt}
           onClose={() => setShowSystemPrompt(false)}
@@ -2033,11 +2012,6 @@ export default () => {
           onClose={() => setShowCompare(false)}
           models={models}
           conversationId={currentConvId}
-          isDark={isDark}
-        />
-        <AccountModal
-          open={showAccount}
-          onClose={() => setShowAccount(false)}
           isDark={isDark}
         />
       </div>

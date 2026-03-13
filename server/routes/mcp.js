@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.js";
+
 import {
   createMcpServer,
   deleteMcpServer,
@@ -23,7 +23,7 @@ import {
 import { generateMcpDraft } from "../utils/mcpGenerator.js";
 
 const router = Router();
-router.use(authMiddleware);
+
 
 const QUICKSTART_BUNDLES = {
   starter: ["memory", "sequential-thinking"],

@@ -1,12 +1,13 @@
-import { AccountModal } from "@/components/AccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Sidebar } from "@/components/Sidebar";
 import {
-  BarChartOutlined,
+  ApiOutlined,
   MessageOutlined,
   ReloadOutlined,
+  ScheduleOutlined,
 } from "@ant-design/icons";
-import { history, request, useModel } from "@umijs/max";
+import { useNavigate } from "react-router-dom";
+import { useAppStore } from "@/stores/useAppStore";
+import { request } from "@/services/request";
 import {
   Avatar,
   Button,
@@ -28,28 +29,27 @@ const getStoredBool = (key: string, fallback: boolean): boolean => {
   return fallback;
 };
 
-type UsageSummaryData = {
-  totals: {
-    total_tokens: number;
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_requests: number;
-    models_used: number;
-    active_days: number;
+type SystemOverviewData = {
+  runtime: {
+    node: string;
+    platform: string;
+    uptime_seconds: number;
   };
-  byModel: Array<{ model: string; total_tokens: number; requests: number }>;
-  daily: Array<{
-    date: string;
-    model: string;
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-    requests: number;
-  }>;
+  counts: {
+    tasks: number;
+    skills: number;
+    channels: number;
+    channels_enabled: number;
+    cron_jobs: number;
+    mcp_servers: number;
+    mcp_enabled: number;
+  };
+  recommendations: string[];
 };
 
 export default () => {
-  const { currentUser, isLoggedIn, logout } = useModel("global");
+  const { currentUser, isLoggedIn } = useAppStore();
+  const navigate = useNavigate();
   const [moduleExpanded, setModuleExpanded] = useState<boolean>(() =>
     getStoredBool("cw.module.expanded", true)
   );
@@ -59,50 +59,42 @@ export default () => {
     if (saved === "dark" || saved === "light") return saved;
     return "light";
   });
-  const [showAccount, setShowAccount] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [usageDays, setUsageDays] = useState<number>(30);
-  const [usageLoading, setUsageLoading] = useState(false);
-  const [usage, setUsage] = useState<UsageSummaryData | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overview, setOverview] = useState<SystemOverviewData | null>(null);
 
-  const themeMode = useMemo<"light" | "dark">(() => {
-    return theme;
-  }, [theme]);
-
-  useEffect(() => {
-    if (!isLoggedIn) history.replace("/login");
-  }, [isLoggedIn]);
+  const themeMode = useMemo<"light" | "dark">(() => theme, [theme]);
 
   useEffect(() => {
     localStorage.setItem("cw.module.expanded", String(moduleExpanded));
   }, [moduleExpanded]);
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("cw-theme", theme);
   }, [theme]);
+
+  const loadOverview = async () => {
+    setOverviewLoading(true);
+    try {
+      const data = await request<SystemOverviewData>("/api/system/overview");
+      setOverview(data);
+    } catch (error) {
+      setOverview(null);
+    } finally {
+      setOverviewLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isLoggedIn) return;
-    loadUsage();
-  }, [isLoggedIn, usageDays]);
+    loadOverview();
+  }, [isLoggedIn]);
 
   if (!isLoggedIn) return null;
 
   const isDark = themeMode === "dark";
-  const totals = usage?.totals;
-
-  const loadUsage = async () => {
-    setUsageLoading(true);
-    try {
-      const data = await request<UsageSummaryData>(
-        `/api/account/summary?days=${usageDays}`
-      );
-      setUsage(data);
-    } catch (error) {
-      setUsage(null);
-    } finally {
-      setUsageLoading(false);
-    }
-  };
+  const counts = overview?.counts;
+  const runtime = overview?.runtime;
 
   return (
     <ConfigProvider
@@ -121,8 +113,6 @@ export default () => {
           theme={theme}
           setTheme={setTheme}
           activePath="/dashboard"
-          setShowAccount={setShowAccount}
-          setShowSettings={setShowSettings}
         />
 
         <main className="cw-dashboard-main-wrap">
@@ -131,8 +121,8 @@ export default () => {
               <div className="cw-dashboard-eyebrow">Dashboard</div>
               <h1>欢迎回来，{currentUser?.username || "CW 用户"}</h1>
               <p>
-                cowhouse 是你的个人助理 Agent
-                工作台，当前已启用对话模块、统一模型接入和用量统计。
+                cowhouse 是你的个人助理 Agent 工作台，当前聚合了对话、工具、
+                任务与调度能力。
               </p>
             </div>
             <div className="cw-user-card">
@@ -141,7 +131,7 @@ export default () => {
               </Avatar>
               <div>
                 <div className="cw-user-name">{currentUser?.username}</div>
-                <div className="cw-user-desc">当前登录账号</div>
+                <div className="cw-user-desc">当前本地账号</div>
               </div>
             </div>
           </section>
@@ -152,105 +142,122 @@ export default () => {
                 <Card className="cw-module-card">
                   <div className="cw-usage-header">
                     <div>
-                      <h3>用量统计</h3>
-                      <p>最近 {usageDays} 天</p>
+                      <h3>系统概览</h3>
+                      <p>当前本地工作台运行状态</p>
                     </div>
                     <div className="cw-usage-actions">
                       <Button
                         size="small"
-                        type={usageDays === 7 ? "primary" : "default"}
-                        onClick={() => setUsageDays(7)}
-                      >
-                        7天
-                      </Button>
-                      <Button
-                        size="small"
-                        type={usageDays === 30 ? "primary" : "default"}
-                        onClick={() => setUsageDays(30)}
-                      >
-                        30天
-                      </Button>
-                      <Button
-                        size="small"
                         icon={<ReloadOutlined />}
-                        onClick={loadUsage}
-                        loading={usageLoading}
+                        onClick={loadOverview}
+                        loading={overviewLoading}
                       />
                     </div>
                   </div>
-                  {usageLoading ? (
+                  {overviewLoading ? (
                     <div className="cw-usage-loading">
                       <Spin size="small" />
                     </div>
-                  ) : !totals ? (
+                  ) : !counts ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description="暂无统计数据"
+                      description="暂无系统数据"
                     />
                   ) : (
-                    <div className="cw-usage-grid">
-                      <div className="cw-usage-item">
-                        <div className="cw-usage-label">总请求数</div>
-                        <div className="cw-usage-value">
-                          {totals.total_requests?.toLocaleString() ?? "0"}
+                    <>
+                      <div className="cw-usage-grid">
+                        <div className="cw-usage-item">
+                          <div className="cw-usage-label">任务数</div>
+                          <div className="cw-usage-value">
+                            {counts.tasks?.toLocaleString() ?? "0"}
+                          </div>
+                        </div>
+                        <div className="cw-usage-item">
+                          <div className="cw-usage-label">技能数</div>
+                          <div className="cw-usage-value">
+                            {counts.skills?.toLocaleString() ?? "0"}
+                          </div>
+                        </div>
+                        <div className="cw-usage-item">
+                          <div className="cw-usage-label">MCP 服务</div>
+                          <div className="cw-usage-value">
+                            {counts.mcp_servers ?? 0}
+                          </div>
+                        </div>
+                        <div className="cw-usage-item">
+                          <div className="cw-usage-label">Cron 任务</div>
+                          <div className="cw-usage-value">
+                            {counts.cron_jobs ?? 0}
+                          </div>
                         </div>
                       </div>
-                      <div className="cw-usage-item">
-                        <div className="cw-usage-label">总 Token</div>
-                        <div className="cw-usage-value">
-                          {totals.total_tokens?.toLocaleString() ?? "0"}
+                      <div
+                        style={{
+                          marginTop: 16,
+                          color: isDark ? "#cbd5e1" : "#475569",
+                        }}
+                      >
+                        <div>
+                          运行环境：Node {runtime?.node || "-"} /{" "}
+                          {runtime?.platform || "-"}
                         </div>
-                      </div>
-                      <div className="cw-usage-item">
-                        <div className="cw-usage-label">使用模型数</div>
-                        <div className="cw-usage-value">
-                          {totals.models_used ?? 0}
+                        <div>
+                          已运行：
+                          {runtime
+                            ? `${Math.floor(runtime.uptime_seconds / 60)} 分钟`
+                            : "-"}
                         </div>
+                        {(overview?.recommendations || []).length > 0 && (
+                          <div style={{ marginTop: 12 }}>
+                            {(overview?.recommendations || []).map((item) => (
+                              <div key={item}>{item}</div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="cw-usage-item">
-                        <div className="cw-usage-label">活跃天数</div>
-                        <div className="cw-usage-value">
-                          {totals.active_days ?? 0}
-                        </div>
-                      </div>
-                    </div>
+                    </>
                   )}
                 </Card>
               </Col>
 
-              <Col xs={24} md={12}>
+              <Col xs={24} md={8}>
                 <Card
                   className="cw-module-card"
                   hoverable
-                  onClick={() => history.push("/chat")}
+                  onClick={() => navigate("/chat")}
                 >
                   <MessageOutlined className="cw-module-icon" />
                   <h3>对话</h3>
-                  <p>
-                    多模型流式对话、会话管理、System Prompt 和模型切换都在这里。
-                  </p>
+                  <p>多模型流式对话、会话管理和 System Prompt 配置入口。</p>
                 </Card>
               </Col>
 
-              <Col xs={24} md={12}>
-                <Card className="cw-module-card">
-                  <BarChartOutlined className="cw-module-icon" />
-                  <h3>更多模块</h3>
-                  <p>
-                    后续扩展知识库、任务流和工具编排等能力，统一收敛在 CW
-                    工作台。
-                  </p>
+              <Col xs={24} md={8}>
+                <Card
+                  className="cw-module-card"
+                  hoverable
+                  onClick={() => navigate("/mcp")}
+                >
+                  <ApiOutlined className="cw-module-icon" />
+                  <h3>MCP 管理</h3>
+                  <p>查看已接入的工具服务，并继续扩展 Agent 能力边界。</p>
+                </Card>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <Card
+                  className="cw-module-card"
+                  hoverable
+                  onClick={() => navigate("/cron-jobs")}
+                >
+                  <ScheduleOutlined className="cw-module-icon" />
+                  <h3>调度中心</h3>
+                  <p>把任务变成周期执行的自动化工作流，并跟踪运行状态。</p>
                 </Card>
               </Col>
             </Row>
           </section>
         </main>
-        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
-        <AccountModal
-          open={showAccount}
-          onClose={() => setShowAccount(false)}
-          isDark={theme === "dark"}
-        />
       </div>
     </ConfigProvider>
   );

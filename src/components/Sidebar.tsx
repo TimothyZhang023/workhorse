@@ -13,7 +13,7 @@ import {
   ThunderboltOutlined,
   ApiOutlined,
 } from "@ant-design/icons";
-import { history, useModel } from "@umijs/max";
+import { useNavigate } from "react-router-dom";
 import { Button } from "antd";
 import React from "react";
 import "./Sidebar.css";
@@ -24,8 +24,6 @@ export interface SidebarProps {
   theme: "light" | "dark";
   setTheme: (theme: "light" | "dark") => void;
   activePath: string;
-  setShowAccount: (show: boolean) => void;
-  setShowSettings: (show: boolean) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,10 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   theme,
   setTheme,
   activePath,
-  setShowAccount,
-  setShowSettings,
 }) => {
-  const { logout } = useModel("global");
+  const navigate = useNavigate();
 
   const navItems = [
     {
@@ -123,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`cw-sider-btn ${
                 isActive ? "cw-sider-btn-active" : ""
               }`}
-              onClick={() => history.push(item.path!)}
+              onClick={() => navigate(item.path!)}
             >
               {moduleExpanded && <span>{item.label}</span>}
             </Button>
@@ -141,30 +137,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {moduleExpanded && (
             <span>{theme === "dark" ? "浅色模式" : "深色模式"}</span>
           )}
-        </Button>
-        <Button
-          type="text"
-          icon={<BarChartOutlined />}
-          className="cw-sider-btn"
-          onClick={() => setShowAccount(true)}
-        >
-          {moduleExpanded && <span>账户</span>}
-        </Button>
-        <Button
-          type="text"
-          icon={<SettingOutlined />}
-          className="cw-sider-btn"
-          onClick={() => setShowSettings(true)}
-        >
-          {moduleExpanded && <span>设置</span>}
-        </Button>
-        <Button
-          type="text"
-          icon={<LogoutOutlined />}
-          className="cw-sider-btn cw-sider-btn-danger"
-          onClick={logout}
-        >
-          {moduleExpanded && <span>退出登录</span>}
         </Button>
       </div>
     </aside>

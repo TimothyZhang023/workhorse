@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.js";
+
 import { syncCronJobs } from "../models/cronRunner.js";
 import {
   createCronJob,
@@ -11,7 +11,7 @@ import {
 } from "../models/database.js";
 
 const router = Router();
-router.use(authMiddleware);
+
 
 router.get("/", (req, res) => {
   try {

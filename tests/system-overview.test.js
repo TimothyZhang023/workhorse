@@ -10,12 +10,7 @@ describe("system overview route", () => {
     const { createApp } = await import("../server/app.js");
     app = createApp();
 
-    const registerRes = await request(app)
-      .post("/api/auth/register")
-      .send({ username: `so${Date.now().toString().slice(-6)}`, password: "password123" })
-      .expect(200);
-
-    authToken = registerRes.body.token;
+    authToken = "local-mode-token";
   });
 
   it("returns runtime and counts", async () => {
@@ -27,5 +22,25 @@ describe("system overview route", () => {
     expect(res.body.runtime.node).toContain("v");
     expect(typeof res.body.counts.skills).toBe("number");
     expect(Array.isArray(res.body.recommendations)).toBe(true);
+  });
+
+  it("clears stored history from the new system endpoint", async () => {
+    const createRes = await request(app)
+      .post("/api/conversations")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({ title: "cleanup target" })
+      .expect(200);
+
+    expect(createRes.body.id).toBeTruthy();
+
+    const res = await request(app)
+      .delete("/api/system/history")
+      .set("Authorization", `Bearer ${authToken}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(typeof res.body.deleted_conversations).toBe("number");
+    expect(typeof res.body.deleted_messages).toBe("number");
+    expect(typeof res.body.deleted_usage_logs).toBe("number");
   });
 });

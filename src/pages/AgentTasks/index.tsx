@@ -1,5 +1,3 @@
-import { AccountModal } from "@/components/AccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Sidebar } from "@/components/Sidebar";
 import {
   createSkill,
@@ -34,7 +32,8 @@ import {
   ProFormTextArea,
   ProList,
 } from "@ant-design/pro-components";
-import { history, useModel } from "@umijs/max";
+import { useNavigate } from "react-router-dom";
+import { useAppStore } from "@/stores/useAppStore";
 import {
   Alert,
   theme as antdTheme,
@@ -106,12 +105,11 @@ const formatDuration = (startedAt?: string, finishedAt?: string) => {
 };
 
 export default () => {
-  const { currentUser, isLoggedIn } = useModel("global");
+  const { currentUser, isLoggedIn } = useAppStore();
+  const navigate = useNavigate();
   const [messageApi, messageContextHolder] = message.useMessage();
   const [moduleExpanded, setModuleExpanded] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [showAccount, setShowAccount] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<API.AgentTask[]>([]);
   const [editingTask, setEditingTask] = useState<Partial<API.AgentTask> | null>(
@@ -132,15 +130,19 @@ export default () => {
   const [taskRuns, setTaskRuns] = useState<API.TaskRun[]>([]);
   const [runsLoading, setRunsLoading] = useState(false);
   const [selectedRun, setSelectedRun] = useState<API.TaskRun | null>(null);
-  const [selectedRunEvents, setSelectedRunEvents] = useState<API.TaskRunEvent[]>(
-    []
-  );
+  const [selectedRunEvents, setSelectedRunEvents] = useState<
+    API.TaskRunEvent[]
+  >([]);
   const [runEventsLoading, setRunEventsLoading] = useState(false);
   const [importingTemplateId, setImportingTemplateId] = useState<string | null>(
     null
   );
-  const [creatingSkillName, setCreatingSkillName] = useState<string | null>(null);
-  const [marketDraftingName, setMarketDraftingName] = useState<string | null>(null);
+  const [creatingSkillName, setCreatingSkillName] = useState<string | null>(
+    null
+  );
+  const [marketDraftingName, setMarketDraftingName] = useState<string | null>(
+    null
+  );
 
   const isDark = theme === "dark";
 
@@ -273,7 +275,7 @@ export default () => {
   };
 
   const openConversation = (conversationId: string) => {
-    history.push(`/chat?conversationId=${encodeURIComponent(conversationId)}`);
+    navigate(`/chat?conversationId=${encodeURIComponent(conversationId)}`);
   };
 
   const openRunTimeline = async (run: API.TaskRun) => {
@@ -344,8 +346,6 @@ export default () => {
           theme={theme}
           setTheme={setTheme}
           activePath="/agent-tasks"
-          setShowAccount={setShowAccount}
-          setShowSettings={setShowSettings}
         />
 
         <main className="cw-dashboard-main-wrap">
@@ -406,7 +406,9 @@ export default () => {
                         <div>{row.description}</div>
                         <Space>
                           {row.skill_ids?.map((sid) => {
-                            const s = (Array.isArray(skills) ? skills : []).find((sk) => sk.id === sid);
+                            const s = (
+                              Array.isArray(skills) ? skills : []
+                            ).find((sk) => sk.id === sid);
                             return (
                               <Tag key={sid} color="orange">
                                 {s?.name || `Skill ${sid}`}
@@ -479,7 +481,9 @@ export default () => {
                   <Alert
                     showIcon
                     type="info"
-                    message={generationResult.analysis.summary || "已完成需求分析"}
+                    message={
+                      generationResult.analysis.summary || "已完成需求分析"
+                    }
                     description={
                       generationResult.task
                         ? `已自动创建任务「${generationResult.task.name}」`
@@ -569,7 +573,9 @@ export default () => {
 
                   {generationResult.recommended_mcp_templates?.length ? (
                     <div>
-                      <Typography.Text strong>推荐导入的默认 MCP</Typography.Text>
+                      <Typography.Text strong>
+                        推荐导入的默认 MCP
+                      </Typography.Text>
                       <ProList<API.DefaultMcpTemplate>
                         rowKey="id"
                         style={{ marginTop: 12 }}
@@ -612,7 +618,9 @@ export default () => {
 
                   {generationResult.market_mcp_recommendations?.length ? (
                     <div>
-                      <Typography.Text strong>市场 MCP 检索结果</Typography.Text>
+                      <Typography.Text strong>
+                        市场 MCP 检索结果
+                      </Typography.Text>
                       <ProList<API.AgentTaskGenerationMarketMcp>
                         rowKey={(row) => `${row.name}-${row.transport}`}
                         style={{ marginTop: 12 }}
@@ -720,7 +728,9 @@ export default () => {
                         ? "red"
                         : "blue",
                     dot:
-                      run.status === "running" ? <ClockCircleOutlined /> : undefined,
+                      run.status === "running" ? (
+                        <ClockCircleOutlined />
+                      ) : undefined,
                     children: (
                       <Space
                         direction="vertical"
@@ -752,7 +762,10 @@ export default () => {
                           </Typography.Text>
                         )}
                         <Space wrap>
-                          <Button type="link" onClick={() => openRunTimeline(run)}>
+                          <Button
+                            type="link"
+                            onClick={() => openRunTimeline(run)}
+                          >
                             查看时间线
                           </Button>
                           {run.conversation_id && (
@@ -811,7 +824,10 @@ export default () => {
             name="model_id"
             label="指定模型"
             placeholder="留空即使用默认模型"
-            options={(Array.isArray(availableModels) ? availableModels : []).map((m) => ({
+            options={(Array.isArray(availableModels)
+              ? availableModels
+              : []
+            ).map((m) => ({
               label: m.display_name || m.model_id,
               value: m.model_id,
             }))}
@@ -821,7 +837,10 @@ export default () => {
             name="skill_ids"
             label="关联技能"
             mode="multiple"
-            options={(Array.isArray(skills) ? skills : []).map((s) => ({ label: s.name, value: s.id }))}
+            options={(Array.isArray(skills) ? skills : []).map((s) => ({
+              label: s.name,
+              value: s.id,
+            }))}
           />
 
           <ProFormSelect
@@ -829,10 +848,12 @@ export default () => {
             label="启用工具"
             mode="multiple"
             placeholder="从 MCP 服务器中选择要启用的具体工具"
-            options={(Array.isArray(availableTools) ? availableTools : []).map((t) => ({
-              label: t?.function?.name || 'Unknown Tool',
-              value: t?.function?.name || 'unknown',
-            }))}
+            options={(Array.isArray(availableTools) ? availableTools : []).map(
+              (t) => ({
+                label: t?.function?.name || "Unknown Tool",
+                value: t?.function?.name || "unknown",
+              })
+            )}
             fieldProps={{
               mode: "multiple", // 改回 multiple，也可以保留 tags 但已有选项
             }}
@@ -900,7 +921,9 @@ export default () => {
         </ModalForm>
 
         <Modal
-          title={runModalTask ? `Run & Debug · ${runModalTask.name}` : "Run & Debug"}
+          title={
+            runModalTask ? `Run & Debug · ${runModalTask.name}` : "Run & Debug"
+          }
           open={!!runModalTask}
           onCancel={closeRunModal}
           onOk={handleRunTask}
@@ -976,7 +999,9 @@ export default () => {
                         <Button
                           type="link"
                           style={{ paddingInline: 0 }}
-                          onClick={() => openConversation(runResult.conversationId)}
+                          onClick={() =>
+                            openConversation(runResult.conversationId)
+                          }
                         >
                           前往会话
                         </Button>
@@ -1011,16 +1036,12 @@ export default () => {
           )}
         </Modal>
 
-        <AccountModal
-          open={showAccount}
-          onClose={() => setShowAccount(false)}
-          isDark={isDark}
-        />
-        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
         <Drawer
           title={
             selectedRun
-              ? `运行时间线 · ${selectedRun.task_name || `Task ${selectedRun.task_id}`}`
+              ? `运行时间线 · ${
+                  selectedRun.task_name || `Task ${selectedRun.task_id}`
+                }`
               : "运行时间线"
           }
           width={560}
@@ -1040,7 +1061,11 @@ export default () => {
                     </Typography.Text>
                   </Space>
                   <Typography.Text type="secondary">
-                    耗时 {formatDuration(selectedRun.started_at, selectedRun.finished_at)}
+                    耗时{" "}
+                    {formatDuration(
+                      selectedRun.started_at,
+                      selectedRun.finished_at
+                    )}
                   </Typography.Text>
                   {selectedRun.final_response && (
                     <Typography.Paragraph style={{ marginBottom: 0 }}>
@@ -1092,7 +1117,9 @@ export default () => {
                         style={{ width: "100%" }}
                       >
                         <Space wrap>
-                          <Typography.Text strong>{event.title}</Typography.Text>
+                          <Typography.Text strong>
+                            {event.title}
+                          </Typography.Text>
                           <Typography.Text type="secondary">
                             {formatDateTime(event.created_at)}
                           </Typography.Text>

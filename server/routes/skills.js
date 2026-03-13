@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.js";
+
 import {
   createSkill,
   deleteSkill,
@@ -14,7 +14,7 @@ import {
 import { generateSkillDraft } from "../utils/skillGenerator.js";
 
 const router = Router();
-router.use(authMiddleware);
+
 
 function normalizeTools(tools) {
   if (!Array.isArray(tools)) {

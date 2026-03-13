@@ -1,4 +1,5 @@
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { createAuthHeaders, resolveApiUrl } from "@/services/request";
 import {
   CopyOutlined,
   StopOutlined,
@@ -62,23 +63,25 @@ export const ModelCompareModal = ({
     await Promise.all(
       selectedModels.map(async (modelId, idx) => {
         try {
-          const token = localStorage.getItem("token");
           const convId = conversationId;
           if (!convId) return;
 
-          const response = await fetch(`/api/conversations/${convId}/chat`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              message: prompt,
-              model: modelId,
-              _compare: true,
-            }),
-            signal: abortRefs.current[idx].signal,
-          });
+          const response = await fetch(
+            resolveApiUrl(`/api/conversations/${convId}/chat`),
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...createAuthHeaders(),
+              },
+              body: JSON.stringify({
+                message: prompt,
+                model: modelId,
+                _compare: true,
+              }),
+              signal: abortRefs.current[idx].signal,
+            }
+          );
 
           if (!response.ok) throw new Error("Network error");
           const reader = response.body?.getReader();

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import OpenAI from "openai";
-import { authMiddleware } from "../middleware/auth.js";
+
 import db, {
   addMessage,
   createConversation,
@@ -21,7 +21,7 @@ import { executeMcpTool, getAllAvailableTools } from "../models/mcpManager.js";
 import { logger } from "../utils/logger.js";
 
 const router = Router();
-router.use(authMiddleware);
+
 const titleSummaryInFlight = new Set();
 
 export function normalizeMessageForClient(message) {

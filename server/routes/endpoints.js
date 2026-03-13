@@ -1,6 +1,6 @@
 import { Router } from "express";
 import OpenAI from "openai";
-import { authMiddleware } from "../middleware/auth.js";
+
 import {
   addModel,
   createEndpointGroup,
@@ -171,7 +171,7 @@ router.get("/preset-models", (req, res) => {
   res.json(PRESET_MODELS);
 });
 
-router.use(authMiddleware);
+
 
 // 获取前端可用的模型列表 (必须放在 /:id 之前)
 router.get("/available/models", (req, res) => {

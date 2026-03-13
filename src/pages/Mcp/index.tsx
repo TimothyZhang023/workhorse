@@ -1,5 +1,3 @@
-import { AccountModal } from "@/components/AccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Sidebar } from "@/components/Sidebar";
 import {
   createMcpServer,
@@ -13,11 +11,7 @@ import {
   testMcpServerConnection,
   updateMcpServer,
 } from "@/services/api";
-import {
-  PlusOutlined,
-  ApiOutlined,
-  RobotOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, ApiOutlined, RobotOutlined } from "@ant-design/icons";
 import {
   ModalForm,
   ProFormRadio,
@@ -26,7 +20,7 @@ import {
   ProFormTextArea,
   ProList,
 } from "@ant-design/pro-components";
-import { useModel } from "@umijs/max";
+import { useAppStore } from "@/stores/useAppStore";
 import {
   theme as antdTheme,
   Button,
@@ -76,21 +70,20 @@ const parseOptionalJsonText = (
 };
 
 export default () => {
-  const { currentUser, isLoggedIn } = useModel("global");
+  const { currentUser, isLoggedIn } = useAppStore();
   const [messageApi, messageContextHolder] = message.useMessage();
   const [moduleExpanded, setModuleExpanded] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [showAccount, setShowAccount] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [servers, setServers] = useState<API.McpServer[]>([]);
-  const [defaultTemplates, setDefaultTemplates] = useState<API.DefaultMcpTemplate[]>([]);
+  const [defaultTemplates, setDefaultTemplates] = useState<
+    API.DefaultMcpTemplate[]
+  >([]);
   const [marketQuery, setMarketQuery] = useState("");
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketServers, setMarketServers] = useState<API.MarketMcpServer[]>([]);
-  const [editingServer, setEditingServer] = useState<
-    Partial<API.McpServer> | null
-  >(null);
+  const [editingServer, setEditingServer] =
+    useState<Partial<API.McpServer> | null>(null);
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [marketImportingName, setMarketImportingName] = useState<string | null>(
     null
@@ -303,8 +296,6 @@ export default () => {
           theme={theme}
           setTheme={setTheme}
           activePath="/mcp"
-          setShowAccount={setShowAccount}
-          setShowSettings={setShowSettings}
         />
 
         <main className="cw-dashboard-main-wrap">
@@ -312,7 +303,10 @@ export default () => {
             <div>
               <div className="cw-dashboard-eyebrow">Tools</div>
               <h1>MCP 管理</h1>
-              <p>接入 Model Context Protocol (MCP)，扩展 Agent 的原生工具调用能力与外部系统集成。</p>
+              <p>
+                接入 Model Context Protocol (MCP)，扩展 Agent
+                的原生工具调用能力与外部系统集成。
+              </p>
             </div>
           </section>
 
@@ -372,7 +366,11 @@ export default () => {
                   description: {
                     render: (_, row) => {
                       if (row.type === "stdio") {
-                        return <div>命令: {row.command} {row.args?.join(" ") || ""}</div>;
+                        return (
+                          <div>
+                            命令: {row.command} {row.args?.join(" ") || ""}
+                          </div>
+                        );
                       }
                       return <div>URL: {row.url}</div>;
                     },
@@ -387,7 +385,9 @@ export default () => {
                       </a>,
                       <a
                         key="toggle"
-                        onClick={() => handleToggleEnable(row, row.is_enabled === 0)}
+                        onClick={() =>
+                          handleToggleEnable(row, row.is_enabled === 0)
+                        }
                       >
                         {row.is_enabled === 1 ? "禁用" : "启用"}
                       </a>,
@@ -454,11 +454,16 @@ export default () => {
                         <Typography.Text>{row.description}</Typography.Text>
                         <Typography.Text type="secondary">
                           {row.type === "stdio"
-                            ? `命令: ${row.command} ${(row.args || []).join(" ")}`
+                            ? `命令: ${row.command} ${(row.args || []).join(
+                                " "
+                              )}`
                             : `URL: ${row.url || "-"}`}
                         </Typography.Text>
                         {row.source_url ? (
-                          <Typography.Link href={row.source_url} target="_blank">
+                          <Typography.Link
+                            href={row.source_url}
+                            target="_blank"
+                          >
                             查看来源
                           </Typography.Link>
                         ) : null}
@@ -503,7 +508,10 @@ export default () => {
                     placeholder="搜索市场 MCP，例如 github / postgres / browser / slack"
                     onPressEnter={() => handleSearchMarket()}
                   />
-                  <Button loading={marketLoading} onClick={() => handleSearchMarket()}>
+                  <Button
+                    loading={marketLoading}
+                    onClick={() => handleSearchMarket()}
+                  >
                     搜索
                   </Button>
                 </Space.Compact>
@@ -525,14 +533,18 @@ export default () => {
                         {row.package_identifier ? (
                           <Tag color="cyan">stdio package</Tag>
                         ) : null}
-                        {row.remote_url ? <Tag color="purple">remote</Tag> : null}
+                        {row.remote_url ? (
+                          <Tag color="purple">remote</Tag>
+                        ) : null}
                       </Space>
                     ),
                   },
                   description: {
                     render: (_, row) => (
                       <Space direction="vertical" style={{ width: "100%" }}>
-                        <Typography.Text>{row.description || "-"}</Typography.Text>
+                        <Typography.Text>
+                          {row.description || "-"}
+                        </Typography.Text>
                         {row.package_identifier ? (
                           <Typography.Text type="secondary">
                             Package: {row.package_identifier}
@@ -544,7 +556,10 @@ export default () => {
                           </Typography.Text>
                         ) : null}
                         {row.repository_url ? (
-                          <Typography.Link href={row.repository_url} target="_blank">
+                          <Typography.Link
+                            href={row.repository_url}
+                            target="_blank"
+                          >
                             查看仓库
                           </Typography.Link>
                         ) : null}
@@ -557,7 +572,9 @@ export default () => {
                         key="draft"
                         type="link"
                         loading={marketImportingName === row.name}
-                        onClick={() => handleGenerateFromMarket(row.name, false)}
+                        onClick={() =>
+                          handleGenerateFromMarket(row.name, false)
+                        }
                       >
                         生成接入草稿
                       </Button>,
@@ -586,8 +603,14 @@ export default () => {
           onFinish={async (values) => {
             try {
               const formValues = { ...values };
-              if (formValues.type === "stdio" && typeof formValues.args === "string") {
-                formValues.args = formValues.args.trim().split(/\s+/).filter(Boolean);
+              if (
+                formValues.type === "stdio" &&
+                typeof formValues.args === "string"
+              ) {
+                formValues.args = formValues.args
+                  .trim()
+                  .split(/\s+/)
+                  .filter(Boolean);
               }
               if (formValues.type === "stdio" && !formValues.command) {
                 messageApi.error("本地命令行必须填写可执行命令");
@@ -775,13 +798,6 @@ export default () => {
             unCheckedChildren="仅生成草稿"
           />
         </ModalForm>
-
-        <AccountModal
-          open={showAccount}
-          onClose={() => setShowAccount(false)}
-          isDark={isDark}
-        />
-        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
       </div>
     </ConfigProvider>
   );

@@ -1,4 +1,11 @@
 import Database from "better-sqlite3";
+import { createRequire } from "module";
+
+const getRequire = () => {
+  if (typeof require !== "undefined") return require;
+  if (typeof import.meta !== "undefined" && import.meta.url) return createRequire(import.meta.url);
+  return global.require;
+};
 
 function waitForPromise(promise) {
   const lock = new Int32Array(new SharedArrayBuffer(4));
@@ -35,7 +42,8 @@ function createSqliteClient(dbPath) {
 function createMysqlClient() {
   let mysql;
   try {
-    mysql = waitForPromise(import("mysql2/promise"));
+    const req = getRequire();
+    mysql = req("mysql2/promise");
   } catch (error) {
     throw new Error(
       `DB_CLIENT=mysql 需要依赖 mysql2，请先安装。原始错误: ${error.message}`

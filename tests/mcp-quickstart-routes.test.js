@@ -10,12 +10,7 @@ describe("mcp quickstart routes", () => {
     const { createApp } = await import("../server/app.js");
     app = createApp();
 
-    const registerRes = await request(app)
-      .post("/api/auth/register")
-      .send({ username: `mq${Date.now().toString().slice(-6)}`, password: "password123" })
-      .expect(200);
-
-    authToken = registerRes.body.token;
+    authToken = "local-mode-token";
   });
 
   it("lists quickstart bundles and installs starter", async () => {

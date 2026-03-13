@@ -5,11 +5,7 @@ import { fileURLToPath } from "url";
 import { decrypt, encrypt } from "../utils/crypto.js";
 import { createDatabaseClient } from "./dbClient.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// 确保数据目录存在
-const dataDir = join(__dirname, "../../data");
+const dataDir = join(process.cwd(), "data");
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }

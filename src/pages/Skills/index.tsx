@@ -1,5 +1,3 @@
-import { AccountModal } from "@/components/AccountModal";
-import { SettingsModal } from "@/components/SettingsModal";
 import { Sidebar } from "@/components/Sidebar";
 import {
   createSkill,
@@ -22,7 +20,7 @@ import {
   ProFormTextArea,
   ProList,
 } from "@ant-design/pro-components";
-import { useModel } from "@umijs/max";
+import { useAppStore } from "@/stores/useAppStore";
 import {
   theme as antdTheme,
   Button,
@@ -37,12 +35,10 @@ import { useEffect, useState } from "react";
 import "../Dashboard/index.css";
 
 export default () => {
-  const { currentUser, isLoggedIn } = useModel("global");
+  const { currentUser, isLoggedIn } = useAppStore();
   const [messageApi, messageContextHolder] = message.useMessage();
   const [moduleExpanded, setModuleExpanded] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [showAccount, setShowAccount] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<API.Skill[]>([]);
   const [availableTools, setAvailableTools] = useState<string[]>([]);
@@ -107,8 +103,6 @@ export default () => {
           theme={theme}
           setTheme={setTheme}
           activePath="/skills"
-          setShowAccount={setShowAccount}
-          setShowSettings={setShowSettings}
         />
 
         <main className="cw-dashboard-main-wrap">
@@ -166,7 +160,9 @@ export default () => {
                   description: {
                     render: (_, row) => (
                       <Space direction="vertical" style={{ width: "100%" }}>
-                        <Typography.Text>{row.description || "-"}</Typography.Text>
+                        <Typography.Text>
+                          {row.description || "-"}
+                        </Typography.Text>
                         {row.tools?.length ? (
                           <Space wrap>
                             {row.tools.map((tool) => (
@@ -310,13 +306,6 @@ export default () => {
             unCheckedChildren="仅生成草稿"
           />
         </ModalForm>
-
-        <AccountModal
-          open={showAccount}
-          onClose={() => setShowAccount(false)}
-          isDark={isDark}
-        />
-        <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
       </div>
     </ConfigProvider>
   );

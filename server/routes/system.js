@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.js";
+
 import {
+  clearAllHistory,
   getAppSetting,
   listAgentTasks,
   listChannels,
@@ -11,7 +12,6 @@ import {
 } from "../models/database.js";
 
 const router = Router();
-router.use(authMiddleware);
 
 const GLOBAL_SYSTEM_PROMPT_MD_KEY = "global_system_prompt_markdown";
 
@@ -34,11 +34,22 @@ router.put("/settings/global-system-prompt", (req, res) => {
   try {
     const markdown = String(req.body?.markdown ?? "");
     if (markdown.length > 20000) {
-      return res.status(400).json({ error: "markdown too long (max 20000 chars)" });
+      return res
+        .status(400)
+        .json({ error: "markdown too long (max 20000 chars)" });
     }
 
     const saved = setAppSetting(req.uid, GLOBAL_SYSTEM_PROMPT_MD_KEY, markdown);
     return res.json({ success: true, ...saved });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete("/history", (req, res) => {
+  try {
+    const result = clearAllHistory(req.uid);
+    return res.json({ success: true, ...result });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -55,7 +66,9 @@ router.get("/overview", async (req, res) => {
     ]);
 
     const enabledMcpCount = mcpServers.filter((item) => item.is_enabled).length;
-    const enabledChannelCount = channels.filter((item) => item.is_enabled).length;
+    const enabledChannelCount = channels.filter(
+      (item) => item.is_enabled
+    ).length;
 
     return res.json({
       runtime: {

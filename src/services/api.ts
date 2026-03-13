@@ -1,4 +1,4 @@
-import { request } from "@umijs/max";
+import { request } from "./request";
 
 // Auth
 export async function login(body: API.LoginParams) {
@@ -259,7 +259,7 @@ export async function clearAllHistory() {
     deleted_conversations: number;
     deleted_messages: number;
     deleted_usage_logs: number;
-  }>("/api/account/history", {
+  }>("/api/system/history", {
     method: "DELETE",
   });
 }
@@ -336,14 +336,15 @@ export async function deleteAgentTask(id: number) {
 }
 
 export async function runAgentTask(id: number, message?: string) {
-  return request<{ conversationId: string; finalResponse: string; runId: number }>(
-    `/api/agent-tasks/${id}/run`,
-    {
-      method: "POST",
-      data: { message },
-      timeout: 60000,
-    }
-  );
+  return request<{
+    conversationId: string;
+    finalResponse: string;
+    runId: number;
+  }>(`/api/agent-tasks/${id}/run`, {
+    method: "POST",
+    data: { message },
+    timeout: 60000,
+  });
 }
 
 export async function getTaskRuns(taskId?: number, limit = 20) {
