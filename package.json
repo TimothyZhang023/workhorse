@@ -8,6 +8,7 @@
     "dev:gateway": "PORT=12621 node server.js",
     "dev": "npm run stop && concurrently --kill-others --handle-input -n \"gateway,facade\" -c \"blue,green\" \"npm run dev:gateway\" \"npm run dev:facade\"",
     "dev:tauri": "npm run stop && tauri dev",
+    "tauri": "tauri",
     "stop": "node scripts/killport.mjs 12620 12621",
     "restart": "npm run stop && npm run dev",
     "build": "npm run build:facade",
