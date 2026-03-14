@@ -20,6 +20,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -32,8 +34,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
-      - name: install frontend dependencies
-        run: npm install
+      - name: install project dependencies
+        run: npm ci
 
       - name: build sidecar
         run: node scripts/build-sidecar.mjs

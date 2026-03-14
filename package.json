@@ -10,6 +10,8 @@
     "dev:tauri": "npm run stop && tauri dev",
     "stop": "node scripts/killport.mjs 12620 12621",
     "restart": "npm run stop && npm run dev",
+    "build": "npm run build:facade",
+    "build:frontend": "npm run build:facade",
     "build:facade": "vite build",
     "build:sidecar": "node scripts/build-sidecar.mjs",
     "build:dmg": "node scripts/build-dmg.mjs",
