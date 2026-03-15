@@ -187,7 +187,12 @@ fn build_backend_sidecar(
     );
   }
 
-  if let Ok(home_dir) = app.path().home_dir() {
+  if let Some(dir) = workhorse_data_dir {
+    command = command.env(
+      "WORKHORSE_WORKSPACE_ROOT",
+      dir.to_string_lossy().to_string(),
+    );
+  } else if let Ok(home_dir) = app.path().home_dir() {
     command = command.env(
       "WORKHORSE_WORKSPACE_ROOT",
       home_dir.to_string_lossy().to_string(),

@@ -75,30 +75,6 @@ describe("Database Models - Endpoint Groups", () => {
   });
 });
 
-describe("Database Models - API Keys", () => {
-  it("handles API keys lifecycle", () => {
-    const user = createUser(`user_${Date.now()}_api`, "password123");
-
-    const newKey = createApiKey(user.uid, "My test key");
-    expect(newKey.key.startsWith("cw-")).toBe(true);
-
-    const keys = listApiKeys(user.uid);
-    expect(keys).toHaveLength(1);
-    expect(keys[0].name).toBe("My test key");
-    expect(keys[0].is_active).toBe(1);
-
-    const verifiedUid = verifyApiKey(newKey.key);
-    expect(verifiedUid).toBe(user.uid);
-
-    revokeApiKey(keys[0].id, user.uid);
-
-    const keysAfterRevoke = listApiKeys(user.uid);
-    expect(keysAfterRevoke[0].is_active).toBe(0);
-
-    const failVerify = verifyApiKey(newKey.key);
-    expect(failVerify).toBeNull();
-  });
-});
 
 describe("Database Models - Channels", () => {
   it("creates, updates and deletes channels", () => {

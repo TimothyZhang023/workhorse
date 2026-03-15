@@ -3,6 +3,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import os from "node:os";
 import { getMcpServer, listMcpServers } from "./database.js";
 import { getShellEnv } from "../utils/shellEnv.js";
 
@@ -72,7 +73,9 @@ function truncateShellOutput(value, maxLength = BUILTIN_SHELL_MAX_OUTPUT_CHARS) 
 
 function resolveShellWorkingDirectory(inputCwd) {
   const workspaceRoot =
-    process.env.WORKHORSE_WORKSPACE_ROOT || process.cwd();
+    process.env.WORKHORSE_WORKSPACE_ROOT ||
+    process.env.WORKHORSE_DATA_DIR ||
+    path.join(os.homedir(), ".workhorse");
   const rawCwd = String(inputCwd || "").trim();
 
   if (!rawCwd) {

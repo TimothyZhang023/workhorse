@@ -102,28 +102,6 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS api_keys (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid TEXT NOT NULL,
-    name TEXT NOT NULL,
-    key_hash TEXT UNIQUE NOT NULL,
-    key_prefix TEXT NOT NULL,
-    is_active INTEGER DEFAULT 1,
-    last_used_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS webhooks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid TEXT NOT NULL,
-    name TEXT NOT NULL,
-    url TEXT NOT NULL,
-    secret TEXT,
-    events TEXT DEFAULT '[]', -- JSON 数组：['user.registration', 'chat.usage_threshold']
-    is_active INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
   CREATE INDEX IF NOT EXISTS idx_conversations_uid ON conversations(uid);
   CREATE INDEX IF NOT EXISTS idx_messages_uid ON messages(uid);
   CREATE INDEX IF NOT EXISTS idx_endpoint_groups_uid ON endpoint_groups(uid);
@@ -131,8 +109,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
   CREATE INDEX IF NOT EXISTS idx_usage_logs_uid ON usage_logs(uid);
   CREATE INDEX IF NOT EXISTS idx_usage_logs_created ON usage_logs(created_at);
-  CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
-  CREATE INDEX IF NOT EXISTS idx_webhooks_uid ON webhooks(uid);
 
   CREATE TABLE IF NOT EXISTS mcp_servers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -499,7 +475,6 @@ export function adminDeleteUser(uid) {
   db.prepare("DELETE FROM messages WHERE uid = ?").run(uid);
   db.prepare("DELETE FROM conversations WHERE uid = ?").run(uid);
   db.prepare("DELETE FROM endpoint_groups WHERE uid = ?").run(uid);
-  db.prepare("DELETE FROM api_keys WHERE uid = ?").run(uid);
   db.prepare("DELETE FROM usage_logs WHERE uid = ?").run(uid);
   db.prepare("DELETE FROM users WHERE uid = ?").run(uid);
 }

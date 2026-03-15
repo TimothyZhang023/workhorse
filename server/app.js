@@ -19,7 +19,7 @@ import channelsRoutes from "./routes/channels.js";
 import channelWebhooksRoutes from "./routes/channelWebhooks.js";
 import endpointRoutes from "./routes/endpoints.js";
 import mcpRoutes from "./routes/mcp.js";
-import proxyRoutes from "./routes/proxy.js";
+// import proxyRoutes from "./routes/proxy.js";
 import skillsRoutes from "./routes/skills.js";
 import systemRoutes from "./routes/system.js";
 
@@ -62,8 +62,7 @@ export function createApp() {
   app.use("/api/channel-webhooks", channelWebhooksRoutes);
   app.use("/api/system", systemRoutes);
 
-  // OpenAI 兼容代理 (/v1)
-  app.use("/v1", apiLimiter, proxyRoutes);
+  // app.use("/v1", apiLimiter, proxyRoutes); // Removed outward API support
 
   app.use((err, req, res, next) => {
     console.error("Test Error Handler Caught Exception:", err.stack || err);

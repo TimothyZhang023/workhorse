@@ -29,7 +29,8 @@ describe("built-in shell tool", () => {
     expect(text).toContain("Command: printf 'hello-shell'");
     expect(text).toContain("STDOUT:");
     expect(text).toContain("hello-shell");
-    expect(text).toContain(`CWD: ${process.cwd()}`);
+    const expectedCwd = process.env.WORKHORSE_DATA_DIR || process.cwd();
+    expect(text).toContain(`CWD: ${expectedCwd}`);
   });
 
   it("aborts shell execution via abort signal", async () => {

@@ -18,15 +18,15 @@
 
 ## 关键特性
 
--   **全能对话**：流式输出、Markdown 渲染、代码高亮、数学公式 (LaTeX)、图片预览与重采样。
+-   **全能对话**：流式输出、现代 Markdown 渲染、代码高亮、数学公式 (LaTeX)、图片预览与重采样。
+-   **全新视觉 (v2.0+)**：深度优化 Dashboard，采用 **Glassmorphism (玻璃拟态)** 设计风格，极致的视觉密度。
 -   **端点聚合**：支持 OpenAI Compatible、OpenAI、Gemini、OpenRouter 等多种主流模型网关。
+-   **MCP 生态**：内置 **MCP Marketplace**，支持对话式发现并安装 Stdio/SSE 工具，内置 `shell_execute` 安全执行沙箱。
 -   **Agent 引擎**：ReAct 循环驱动，支持多步推理、工具决策、长上下文压缩与 Token 预算管理。
--   **MCP 生态**：支持 Stdio 与 SSE 两种 transport，内置 `shell_execute` 安全执行沙箱。
 -   **自动化任务**：
     -   **Agent Tasks**：预设场景化 Prompt 与工具组合，一键运行。
     -   **Cron Jobs**：强大的定时调度系统，支持任务运行历史回溯。
 -   **频道集成**：内置钉钉 (DingTalk) 等 Webhook 支持，可通过命令触发本地任务。
--   **API 代理**：内置 `/v1/*` 兼容接口，可作为其他 AI 工具（如 Cursor/Cline）的网关。
 
 ## 技术架构
 
@@ -41,7 +41,7 @@ graph TD
         Gateway -- Auth/Router --> App[Express App]
         App -- Agent Logic --> Engine[Agent Engine]
         Engine -- Plugin --> MCP[MCP Manager]
-        Engine -- Storage --> DB[(SQLite / MySQL)]
+        Engine -- Storage --> DB[(SQLite)]
         Engine -- Scheduler --> Cron[Cron Runner]
         
         MCP -- Stdio/SSE --> MCPServers[External MCP Servers]
@@ -105,47 +105,23 @@ npm run build:tauri
 
 Workhorse 自带完整的可视化配置界面，但也支持通过环境变量进行高级微调：
 
+### 核心配置
+
 | 变量 | 默认值 | 说明 |
 | :--- | :--- | :--- |
 | `PORT` | `12621` | 本地后端 API 端口 |
-| `DB_CLIENT` | `sqlite` | 建议使用 `sqlite`，也支持 `mysql` |
-| `DB_PATH` | `~/.workhorse/chat.db` | 数据库存放位置 |
-| `WORKHORSE_WORKSPACE_ROOT` | (Current Dir) | Shell 工具默认的工作根目录 |
+| `DB_PATH` | `~/.workhorse/chat.db` | SQLite 数据库存放路径 |
+| `WORKHORSE_WORKSPACE_ROOT` | `~/.workhorse` | Shell 工具默认的工作根目录 |
+| `GLOBAL_SYSTEM_PROMPT_MD` | 空 | 全局系统提示词默认值 |
 
-## 开发者文档
+### 其他变量
 
-更多深入信息请参考 `docs/` 目录：
-
--   [项目设计全景](docs/project.md)
--   [技术架构深探](docs/architecture.md)
--   [Agent 任务规格说明](docs/agent_task_spec.md)
--   [产品演进历程](docs/evolution.md)
-
-## 开源协议
-
-MIT License.
-_SYSTEM_PROMPT_MD` | 空     | 全局系统提示词默认值  |
-
-### 数据库
-
-| 变量          | 默认值         | 说明                    |
-| ------------- | -------------- | ----------------------- |
-| `DB_CLIENT`   | `sqlite`       | 支持 `sqlite` / `mysql` |
-| `DB_PATH`     | `~/.workhorse/chat.db` | SQLite 文件路径         |
-| `DB_HOST`     | `127.0.0.1`    | MySQL 主机              |
-| `DB_PORT`     | `3306`         | MySQL 端口              |
-| `DB_USER`     | `root`         | MySQL 用户              |
-| `DB_PASSWORD` | 空             | MySQL 密码              |
-| `DB_NAME`     | `gemini_chat`  | MySQL 库名              |
-
-### 前端
-
-| 变量                | 默认值 | 说明                                 |
-| ------------------- | ------ | ------------------------------------ |
-| `VITE_API_BASE_URL` | 空     | 仅在需要覆盖桌面端默认后端地址时使用 |
+| 变量 | 默认值 | 说明 |
+| :--- | :--- | :--- |
+| `VITE_API_BASE_URL` | 空 | 覆盖桌面端默认后端地址 (仅开发环境使用) |
 
 ## 当前约束
 
-- 当前实现默认是单机桌面模式，鉴权上下文会注入本地用户 `local`
-- `src-tauri/sidecar/` 需要存在可执行 sidecar，Tauri 打包时会一并带入
-- 生产桌面版前端请求默认走 `http://127.0.0.1:12621`
+- **单机模式**：当前实现默认是单机桌面模式，所有请求自动注入本地用户 `local`。
+- **Sidecar 依赖**：打包时需确保 `src-tauri/sidecar/` 存在预编译的 sidecar 二进制。
+- **网络访问**：生产桌面版前端请求默认走 `http://127.0.0.1:12621`。

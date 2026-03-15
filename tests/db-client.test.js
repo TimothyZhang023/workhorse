@@ -20,18 +20,4 @@ describe("dbClient", () => {
     }
   });
 
-  it("throws on unsupported db client", () => {
-    const old = process.env.DB_CLIENT;
-    process.env.DB_CLIENT = "oracle";
-
-    expect(() => createDatabaseClient({ dbPath: ":memory:" })).toThrow(
-      /不支持的 DB_CLIENT/
-    );
-
-    if (old !== undefined) {
-      process.env.DB_CLIENT = old;
-    } else {
-      delete process.env.DB_CLIENT;
-    }
-  });
 });

@@ -76,7 +76,6 @@ server/
    │    ├── endpoints.js       # 模型端点配置
    │    ├── channels.js        # 频道集成（钉钉等）
    │    ├── channelWebhooks.js # Webhook回调处理
-   │    ├── proxy.js           # OpenAI兼容代理
    │    └── system.js          # 系统配置
    ├── models/
    │    ├── database.js        # 数据访问对象与Schema初始化
