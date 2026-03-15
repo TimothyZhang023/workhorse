@@ -6,6 +6,11 @@ import {
   listChannels,
   updateChannel,
 } from "../models/database.js";
+import {
+  getChannelListenerState,
+  refreshSingleChannelListener,
+  syncChannelListenersForUid,
+} from "../models/channelRunner.js";
 
 const router = Router();
 
@@ -73,6 +78,7 @@ router.post("/extensions/:platform/install", (req, res) => {
       },
       is_enabled: req.body?.is_enabled ?? 1,
     });
+    refreshSingleChannelListener(req.uid, channel.id);
 
     res.json({
       extension: template,
@@ -85,7 +91,12 @@ router.post("/extensions/:platform/install", (req, res) => {
 
 router.get("/", (req, res) => {
   try {
-    res.json(listChannels(req.uid));
+    res.json(
+      listChannels(req.uid).map((channel) => ({
+        ...channel,
+        listener_state: getChannelListenerState(req.uid, channel.id),
+      }))
+    );
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -107,6 +118,7 @@ router.post("/", (req, res) => {
       metadata,
       is_enabled,
     });
+    refreshSingleChannelListener(req.uid, channel.id);
 
     res.json(channel);
   } catch (error) {
@@ -116,7 +128,9 @@ router.post("/", (req, res) => {
 
 router.put("/:id", (req, res) => {
   try {
-    updateChannel(Number(req.params.id), req.uid, req.body || {});
+    const channelId = Number(req.params.id);
+    updateChannel(channelId, req.uid, req.body || {});
+    refreshSingleChannelListener(req.uid, channelId);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -125,7 +139,9 @@ router.put("/:id", (req, res) => {
 
 router.delete("/:id", (req, res) => {
   try {
-    deleteChannel(Number(req.params.id), req.uid);
+    const channelId = Number(req.params.id);
+    deleteChannel(channelId, req.uid);
+    syncChannelListenersForUid(req.uid);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });

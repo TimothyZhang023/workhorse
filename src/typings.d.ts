@@ -35,6 +35,14 @@ declare namespace API {
     bot_token?: string | null;
     metadata?: Record<string, any> | null;
     is_enabled: number;
+    listener_state?: {
+      active: boolean;
+      platform: string;
+      channelId: number;
+      status: string;
+      lastError?: string;
+      updatedAt?: string;
+    } | null;
     created_at?: string;
     updated_at?: string;
   };

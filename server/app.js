@@ -8,6 +8,7 @@ import { logger } from "./utils/logger.js";
 
 import { syncCronJobs } from "./models/cronRunner.js";
 import { listAllCronJobs } from "./models/database.js";
+import { bootstrapChannelListeners } from "./models/channelRunner.js";
 // import accountRoutes from "./routes/account.js"; -- User deleted these for standalone mode
 // import adminRoutes from "./routes/admin.js";
 import agentTasksRoutes from "./routes/agentTasks.js";
@@ -32,8 +33,13 @@ export function createApp() {
   app.use(cookieParser());
   app.use(express.json({ limit: "20mb" })); // 支持 base64 图片上传
 
-  app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
+  app.get("/health", async (req, res) => {
+    try {
+      const { getUpdateStatus } = await import("./services/updateChecker.js");
+      res.json({ status: "ok", update: getUpdateStatus() });
+    } catch {
+      res.json({ status: "ok" });
+    }
   });
 
   const apiLimiter = rateLimit({
@@ -71,7 +77,7 @@ export function startServer(port = 12621) {
   const app = createApp();
   const server = http.createServer(app);
 
-  server.listen(port, "127.0.0.1", () => {
+  server.listen(port, "127.0.0.1", async () => {
     console.log(`Server running at http://127.0.0.1:${port}`);
 
     try {
@@ -79,6 +85,21 @@ export function startServer(port = 12621) {
       console.log("[Scheduler] Initialized all cron jobs");
     } catch (e) {
       console.error("[Scheduler] Failed to initialize cron jobs:", e.message);
+    }
+
+    try {
+      bootstrapChannelListeners();
+      console.log("[Channels] Initialized channel listeners");
+    } catch (e) {
+      console.error("[Channels] Failed to initialize channel listeners:", e.message);
+    }
+
+    try {
+      const { startUpdateChecker } = await import("./services/updateChecker.js");
+      startUpdateChecker();
+      console.log("[Update] Background update checker started");
+    } catch (e) {
+      console.error("[Update] Failed to start update checker:", e.message);
     }
   });
 

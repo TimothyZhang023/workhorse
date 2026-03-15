@@ -137,8 +137,11 @@ router.delete("/history", (req, res) => {
   }
 });
 
+import { getUpdateStatus } from "../services/updateChecker.js";
+
 router.get("/overview", async (req, res) => {
   try {
+    const update = getUpdateStatus();
     const [tasks, skills, channels, cronJobs, mcpServers, commandChecks, networkChecks] =
       await Promise.all([
       Promise.resolve(listAgentTasks(req.uid)),
@@ -213,6 +216,7 @@ router.get("/overview", async (req, res) => {
           ? "静态上下文已接近压缩阈值，建议收敛 Skills 或工具 schema。"
           : "当前静态上下文预算健康，可继续扩展任务记忆。",
       ],
+      update,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

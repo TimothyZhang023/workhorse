@@ -3,7 +3,10 @@ import { createRequire } from "module";
 
 const getRequire = () => {
   if (typeof require !== "undefined") return require;
-  if (typeof import.meta !== "undefined" && import.meta.url) return createRequire(import.meta.url);
+  try {
+    const metaUrl = new Function("return import.meta.url")();
+    if (metaUrl) return createRequire(metaUrl);
+  } catch {}
   return global.require;
 };
 

@@ -14,6 +14,7 @@
 ## 2. 深度架构设计
 
 ### 2.1 系统层次
+
 1. **Presentation (Tauri Shell + React)**
    - 采用 Ant Design 5 打造专业、沉稳的 UI 指令中心。
    - 通过 HTTP 通信与底层的 Node Sidecar 交互，未来可扩展至 IPC。
@@ -43,6 +44,7 @@ We use **SQLite** with **better-sqlite3** for synchronous, high-performance loca
 ## 3. 核心逻辑详解
 
 ### 3.1 Agent 执行生命周期
+
 1. **初始化**：加载 Task 配置，混合全局系统提示词 (Global System Prompt)。
 2. **推理 (Reasoning)**：调用 LLM 获取思考过程或 Action 请求。
 3. **工具执行 (Tooling)**：
@@ -55,6 +57,7 @@ We use **SQLite** with **better-sqlite3** for synchronous, high-performance loca
 5. **归档**：将结果持久化，并发送 Webhook 通知（如钉钉）。
 
 ### 3.2 安全与隐私
+
 - **敏感词过滤**：本地配置的敏感信息过滤。
 - **API Key 加密**：关键配置在存储前通过 `crypto` 模块进行可逆加密。
 - **本地审计**：所有 AI 的操作（尤其是 Shell 命令）均有完整的 Input/Output 记录。
@@ -63,23 +66,60 @@ We use **SQLite** with **better-sqlite3** for synchronous, high-performance loca
 
 ```text
 server/
-  ├── app.js         # 应用初始化与中间件配置
-  ├── routes/        # 业务逻辑接口（按领域切分：conversations, mcp, tasks...）
-  ├── models/
-  │    ├── database.js     # 数据访问对象与 Schema 初始化
-  │    ├── agentEngine.js  # Agent 执行逻辑与 ReAct 循环
-  │    └── mcpManager.js   # MCP 连接池与工具分发
-  └── utils/
-       ├── contextBudget.js  # Token 计算与窗口管理
-       └── modelSelection.js # 自动根据 Endpoint 可用性寻找最佳模型
+   ├── app.js         # 应用初始化与中间件配置
+   ├── routes/        # 业务逻辑接口（按领域切分）
+   │    ├── conversations.js   # 对话管理与消息处理
+   │    ├── agentTasks.js      # Agent任务编排与执行
+   │    ├── cronJobs.js        # 定时任务调度管理
+   │    ├── mcp.js             # MCP服务器管理
+   │    ├── skills.js          # 技能定义与管理
+   │    ├── endpoints.js       # 模型端点配置
+   │    ├── channels.js        # 频道集成（钉钉等）
+   │    ├── channelWebhooks.js # Webhook回调处理
+   │    ├── proxy.js           # OpenAI兼容代理
+   │    └── system.js          # 系统配置
+   ├── models/
+   │    ├── database.js        # 数据访问对象与Schema初始化
+   │    ├── agentEngine.js     # Agent执行逻辑与ReAct循环
+   │    ├── mcpManager.js      # MCP连接池与工具分发
+   │    ├── cronRunner.js     # 定时任务执行器
+   │    ├── channelRuntime.js # 频道运行时
+   │    └── dbClient.js        # 数据库客户端封装
+   └── utils/
+        ├── contextBudget.js   # Token计算与窗口管理
+        ├── modelSelection.js  # 自动根据Endpoint可用性寻找最佳模型
+        ├── agentPromptBuilder.js # Agent提示词构建
+        ├── mcpGenerator.js    # MCP服务器代码生成
+        ├── skillGenerator.js  # Skill自动生成
+        ├── crypto.js          # 加密解密工具
+
+src/
+   ├── pages/
+   │    ├── Chat/             # 对话页面（流式响应、Markdown渲染）
+   │    ├── Dashboard/        # 系统概览与统计
+   │    ├── AgentTasks/       # Agent任务管理
+   │    ├── CronJobs/         # 定时任务配置
+   │    ├── Mcp/              # MCP服务器市场与管理
+   │    ├── Skills/           # 技能市场与管理
+   │    ├── Endpoints/        # 模型端点配置
+   │    └── SystemSettings/  # 系统设置
+   ├── services/
+   │    ├── api.ts            # API请求封装
+   │    └── request.ts        # HTTP请求工具
+   ├── stores/
+   │    └── useAppStore.tsx   # React状态管理
+   └── utils/
+        └── theme.ts          # 主题配置
 ```
 
 ## 5. 当前限制与挑战
+
 - **并发性**：SQLite 在极高并发写入（如数百个 Cron Jobs 同时运行）时可能面临锁定，目前通过单机队列缓解。
 - **Sidecar 体重**：由于集成了 Node 运行时，安装包体积较传统桌面应用偏大。
 - **冷启动**：MCP Server 启动耗时依赖于具体工具（如 Docker 型工具耗时较长）。
 
 ## 6. 后续演进建议
+
 1. **多模态增强**：进一步优化对本地文件（PDF, CSV, Image）的深度 RAG。
 2. **分布式 MCP**：支持连接局域网内其他设备提供的 MCP 接口。
 3. **可扩展前端插件**：允许用户自定义 UI 插件来展示特定的工具运行结果（如生成图表）。

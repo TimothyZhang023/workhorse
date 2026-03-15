@@ -31,6 +31,23 @@ const outputPath = path.join(outputDir, `${productName}_${version}_${archLabel}.
 await fsp.mkdir(outputDir, { recursive: true });
 await fsp.rm(outputPath, { force: true });
 
+import os from "node:os";
+
+const stagingDir = path.join(os.tmpdir(), `workhorse-dmg-${Date.now()}`);
+await fsp.mkdir(stagingDir, { recursive: true });
+
+// Copy app to staging
+console.log(`Staging app to ${stagingDir}...`);
+await new Promise((resolve, reject) => {
+  const cp = spawn("cp", ["-R", appPath, stagingDir], { stdio: "inherit" });
+  cp.on("error", reject);
+  cp.on("close", (code) => (code === 0 ? resolve() : reject(new Error("cp failed"))));
+});
+
+// Create Applications symlink
+console.log("Creating Applications symlink...");
+await fsp.symlink("/Applications", path.join(stagingDir, "Applications"));
+
 await new Promise((resolve, reject) => {
   const child = spawn(
     "hdiutil",
@@ -39,7 +56,7 @@ await new Promise((resolve, reject) => {
       "-volname",
       productName,
       "-srcfolder",
-      appPath,
+      stagingDir,
       "-ov",
       "-format",
       "UDZO",
@@ -52,7 +69,9 @@ await new Promise((resolve, reject) => {
   );
 
   child.on("error", reject);
-  child.on("close", (code) => {
+  child.on("close", async (code) => {
+    // Cleanup staging
+    await fsp.rm(stagingDir, { recursive: true, force: true });
     if (code === 0) {
       resolve();
       return;

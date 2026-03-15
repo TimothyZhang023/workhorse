@@ -121,6 +121,7 @@ type WorkspaceAgent = {
   platform?: string;
   channelId?: number;
   description: string;
+  listenerState?: API.Channel["listener_state"];
 };
 
 type ChannelCreateFormValues = {
@@ -165,6 +166,17 @@ const CHANNEL_AGENT_ADAPTERS: Record<
   },
 };
 
+const getListenerStatusText = (state?: API.Channel["listener_state"] | null) => {
+  if (!state) return "未启动";
+  if (state.status === "stream_active") return "监听中";
+  if (state.status === "polling") return "轮询中";
+  if (state.status === "webhook_active") return "Webhook 已注册";
+  if (state.status === "reconnecting") return "重连中";
+  if (state.status === "error") return state.lastError || "监听异常";
+  if (state.status === "stopped") return "已停止";
+  return "启动中";
+};
+
 const splitIncomingStreamContent = (text: string): string[] => {
   const raw = String(text || "");
   if (!raw) return [];
@@ -203,6 +215,39 @@ const getResponseErrorMessage = async (response: Response) => {
   } catch (error) {
     return `请求失败 (${response.status})`;
   }
+};
+
+const getLatestDebugIssue = (
+  events: ChatDebugEvent[]
+): ChatDebugEvent | null => {
+  const candidates = [...events].reverse();
+  return (
+    candidates.find(
+      (event) =>
+        event?.error ||
+        event?.notice ||
+        event?.phase === "execution_aborted" ||
+        event?.phase === "attempt_failed" ||
+        event?.phase === "all_attempts_failed"
+    ) || null
+  );
+};
+
+const formatDebugIssueText = (event: ChatDebugEvent | null): string => {
+  if (!event) return "";
+
+  const primary =
+    event.error ||
+    event.notice ||
+    (event.phase === "execution_aborted" && "执行已中断") ||
+    "";
+  const details = [
+    event.abort_reason ? `abort_reason=${event.abort_reason}` : "",
+    event.upstream_error ? `upstream_error=${event.upstream_error}` : "",
+    event.phase ? `phase=${event.phase}` : "",
+  ].filter(Boolean);
+
+  return [primary, details.join(" | ")].filter(Boolean).join("\n");
 };
 
 const readConversationAgentMap = (): Record<string, string> => {
@@ -361,6 +406,7 @@ export default () => {
         name: channel.name,
         platform: channel.platform,
         channelId: channel.id,
+        listenerState: channel.listener_state,
         description: `${CHANNEL_AGENT_ADAPTERS[channel.platform!]?.label || channel.platform} 渠道机器人`,
       }));
     return [main, ...channelAgents];
@@ -1491,7 +1537,7 @@ export default () => {
                 <span>
                   {agent.kind === "main"
                     ? "内置工作台"
-                    : CHANNEL_AGENT_ADAPTERS[agent.platform || ""]?.connectionLabel}
+                    : getListenerStatusText(agent.listenerState)}
                 </span>
               </div>
             </div>
@@ -1542,6 +1588,8 @@ export default () => {
           渠道绑定: {activeAgent.platform} ·{" "}
           {CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.connectionLabel}
           {" · "}
+          {getListenerStatusText(activeAgent.listenerState)}
+          {" · "}
           <a
             href={
               extensionByPlatform.get(activeAgent.platform || "")?.metadata?.docs ||
@@ -1567,6 +1615,9 @@ export default () => {
           </div>
           <div className="agent-item-desc">
             {CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.description}
+            {activeAgent.listenerState?.lastError
+              ? ` 当前状态: ${activeAgent.listenerState.lastError}`
+              : ""}
           </div>
         </div>
       )}
@@ -1658,6 +1709,7 @@ export default () => {
   const lastAssistantIdx = [...visibleMessages]
     .map((m) => m.role)
     .lastIndexOf("assistant");
+  const latestDebugIssue = getLatestDebugIssue(currentDebugEvents);
 
   return (
     <ConfigProvider
@@ -1921,6 +1973,22 @@ export default () => {
                                   >
                                     ⚠️
                                     这条回复未完成（可能因刷新或上游中断），请点击重新生成。
+                                    {idx === lastAssistantIdx && latestDebugIssue && (
+                                      <pre
+                                        style={{
+                                          marginTop: 10,
+                                          whiteSpace: "pre-wrap",
+                                          wordBreak: "break-word",
+                                          padding: 10,
+                                          borderRadius: 10,
+                                          background: "rgba(148, 163, 184, 0.12)",
+                                          color: "var(--text-secondary)",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        {formatDebugIssueText(latestDebugIssue)}
+                                      </pre>
+                                    )}
                                   </div>
                                 )}
                               </>

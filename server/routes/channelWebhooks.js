@@ -9,7 +9,7 @@ import { runConversationMessage } from "./conversations.js";
 
 const router = Router();
 
-function buildDingtalkText(content) {
+export function buildDingtalkText(content) {
   return {
     msgtype: "text",
     text: {
@@ -18,7 +18,7 @@ function buildDingtalkText(content) {
   };
 }
 
-function buildTelegramDelivery(chatId, text) {
+export function buildTelegramDelivery(chatId, text) {
   return {
     ok: true,
     method: "sendMessage",
@@ -49,12 +49,20 @@ function ensureTextMessage(text) {
   return normalized;
 }
 
-function getOrCreateChannelConversation(uid, channel, participantKey, titleHint) {
-  const binding = getChannelSessionBinding(uid, channel.id, participantKey);
-  if (binding?.conversationId) {
-    return String(binding.conversationId);
+function parseChannelCommand(messageText) {
+  const normalized = String(messageText || "").trim();
+  if (!normalized.startsWith("/")) {
+    return { command: "", payload: normalized };
   }
 
+  const [commandToken, ...rest] = normalized.split(/\s+/);
+  return {
+    command: commandToken.toLowerCase(),
+    payload: rest.join(" ").trim(),
+  };
+}
+
+function createChannelConversation(uid, channel, participantKey, titleHint) {
   const conversation = createConversation(
     uid,
     `${channel.name} · ${titleHint || participantKey}`,
@@ -65,7 +73,68 @@ function getOrCreateChannelConversation(uid, channel, participantKey, titleHint)
   return String(conversation.id);
 }
 
-async function handleIncomingChannelMessage({
+function getOrCreateChannelConversation(uid, channel, participantKey, titleHint) {
+  const binding = getChannelSessionBinding(uid, channel.id, participantKey);
+  if (binding?.conversationId) {
+    setChannelSessionBinding(uid, channel.id, participantKey, binding.conversationId);
+    return String(binding.conversationId);
+  }
+
+  return createChannelConversation(uid, channel, participantKey, titleHint);
+}
+
+export async function sendDingtalkSessionMessage(sessionWebhook, text) {
+  const targetUrl = String(sessionWebhook || "").trim();
+  if (!targetUrl) {
+    throw new Error("缺少钉钉 sessionWebhook，无法回传消息。");
+  }
+
+  const response = await fetch(targetUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(buildDingtalkText(text)),
+  });
+
+  if (!response.ok) {
+    throw new Error(`钉钉消息回传失败 (${response.status})`);
+  }
+
+  return response.json().catch(() => ({ ok: true }));
+}
+
+export async function sendTelegramTextMessage(botToken, chatId, text) {
+  const token = String(botToken || "").trim();
+  if (!token) {
+    throw new Error("缺少 Telegram Bot Token，无法回传消息。");
+  }
+
+  const targetChatId = String(chatId || "").trim();
+  if (!targetChatId) {
+    throw new Error("缺少 Telegram chat_id，无法回传消息。");
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: targetChatId,
+      text,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.ok === false) {
+    throw new Error(data?.description || `Telegram 消息回传失败 (${response.status})`);
+  }
+
+  return data;
+}
+
+export async function handleIncomingChannelMessage({
   uid,
   channel,
   platform,
@@ -75,28 +144,62 @@ async function handleIncomingChannelMessage({
   replyTarget,
   rawPayload,
 }) {
+  const parsedCommand = parseChannelCommand(messageText);
   const inboundLogPath = appendChannelEvent(uid, channel.id, {
     direction: "inbound",
     platform,
     participant_key: participantKey,
     participant_label: participantLabel,
     message_text: messageText,
+    command: parsedCommand.command || null,
     payload: rawPayload,
   });
 
-  const conversationId = getOrCreateChannelConversation(
+  let conversationId = getOrCreateChannelConversation(
     uid,
     channel,
     participantKey,
     participantLabel
   );
 
+  if (parsedCommand.command === "/new") {
+    conversationId = createChannelConversation(
+      uid,
+      channel,
+      participantKey,
+      participantLabel
+    );
+    if (!parsedCommand.payload) {
+      const outboundText = `已创建新会话 #${conversationId}，请继续发送消息。`;
+      const outboundLogPath = appendChannelEvent(uid, channel.id, {
+        direction: "outbound",
+        platform,
+        participant_key: participantKey,
+        participant_label: participantLabel,
+        conversation_id: conversationId,
+        assistant_message_id: null,
+        message_text: outboundText,
+        delivery_target: replyTarget,
+      });
+
+      return {
+        conversationId,
+        assistantMessageId: null,
+        finalResponse: outboundText,
+        inboundLogPath,
+        outboundLogPath,
+      };
+    }
+  }
+
   const runResult = await runConversationMessage({
     uid,
     conversationId,
-    message: messageText,
+    message: parsedCommand.payload || messageText,
     source: `${platform}_channel`,
   });
+
+  setChannelSessionBinding(uid, channel.id, participantKey, runResult.conversationId);
 
   const outboundText = runResult.finalResponse || "Agent 未生成可返回内容。";
   const outboundLogPath = appendChannelEvent(uid, channel.id, {
@@ -119,6 +222,67 @@ async function handleIncomingChannelMessage({
   };
 }
 
+export function normalizeDingtalkInboundPayload(body = {}) {
+  const incomingText = ensureTextMessage(
+    body?.text?.content || body?.content || body?.msg || body?.message
+  );
+  const participantKey = String(
+    body?.senderStaffId ||
+      body?.senderId ||
+      body?.conversationId ||
+      body?.chatId ||
+      "anonymous"
+  );
+  const participantLabel = String(
+    body?.senderNick || body?.senderStaffId || body?.senderId || participantKey
+  );
+
+  return {
+    participantKey,
+    participantLabel,
+    messageText: incomingText,
+    replyTarget: {
+      conversationId: body?.conversationId || null,
+      sessionWebhook: body?.sessionWebhook || null,
+    },
+    rawPayload: body,
+  };
+}
+
+export function normalizeTelegramInboundPayload(body = {}) {
+  const incomingText = ensureTextMessage(
+    body?.message?.text ||
+      body?.edited_message?.text ||
+      body?.text ||
+      body?.message
+  );
+  const chatId =
+    body?.message?.chat?.id || body?.edited_message?.chat?.id || body?.chat_id;
+  const senderId =
+    body?.message?.from?.id ||
+    body?.edited_message?.from?.id ||
+    body?.from?.id ||
+    chatId ||
+    "anonymous";
+  const participantKey = String(senderId);
+  const participantLabel = String(
+    body?.message?.from?.username ||
+      body?.edited_message?.from?.username ||
+      body?.message?.from?.first_name ||
+      participantKey
+  );
+
+  return {
+    participantKey,
+    participantLabel,
+    messageText: incomingText,
+    replyTarget: {
+      chatId,
+    },
+    rawPayload: body,
+  };
+}
+
 router.post("/dingtalk/:channelId", async (req, res) => {
   try {
     const channelId = Number(req.params.channelId);
@@ -129,36 +293,13 @@ router.post("/dingtalk/:channelId", async (req, res) => {
     const uid = String(req.query.uid || req.body?.uid || "local");
     const channel = getChannelById(channelId, uid);
     ensureEnabledChannel(channel, "dingtalk");
-
-    const incomingText = ensureTextMessage(
-      req.body?.text?.content || req.body?.content || req.body?.msg || req.body?.message
-    );
-    const participantKey = String(
-      req.body?.senderStaffId ||
-        req.body?.senderId ||
-        req.body?.conversationId ||
-        req.body?.chatId ||
-        "anonymous"
-    );
-    const participantLabel = String(
-      req.body?.senderNick ||
-        req.body?.senderStaffId ||
-        req.body?.senderId ||
-        participantKey
-    );
+    const normalizedPayload = normalizeDingtalkInboundPayload(req.body);
 
     const result = await handleIncomingChannelMessage({
       uid,
       channel,
       platform: "dingtalk",
-      participantKey,
-      participantLabel,
-      messageText: incomingText,
-      replyTarget: {
-        conversationId: req.body?.conversationId || null,
-        sessionWebhook: req.body?.sessionWebhook || null,
-      },
-      rawPayload: req.body,
+      ...normalizedPayload,
     });
 
     return res.json(
@@ -185,45 +326,28 @@ router.post("/telegram/:channelId", async (req, res) => {
     const uid = String(req.query.uid || req.body?.uid || "local");
     const channel = getChannelById(channelId, uid);
     ensureEnabledChannel(channel, "telegram");
-
-    const incomingText = ensureTextMessage(
-      req.body?.message?.text ||
-        req.body?.edited_message?.text ||
-        req.body?.text ||
-        req.body?.message
-    );
-    const chatId =
-      req.body?.message?.chat?.id ||
-      req.body?.edited_message?.chat?.id ||
-      req.body?.chat_id;
-    const senderId =
-      req.body?.message?.from?.id ||
-      req.body?.edited_message?.from?.id ||
-      req.body?.from?.id ||
-      chatId ||
-      "anonymous";
-    const participantKey = String(senderId);
-    const participantLabel = String(
-      req.body?.message?.from?.username ||
-        req.body?.edited_message?.from?.username ||
-        req.body?.message?.from?.first_name ||
-        participantKey
-    );
+    const expectedSecret = String(channel.metadata?.secret_token || "").trim();
+    const providedSecret = String(
+      req.headers["x-telegram-bot-api-secret-token"] || ""
+    ).trim();
+    if (expectedSecret && expectedSecret !== providedSecret) {
+      return res.status(401).json({ ok: false, error: "telegram secret token 校验失败" });
+    }
+    const normalizedPayload = normalizeTelegramInboundPayload(req.body);
 
     const result = await handleIncomingChannelMessage({
       uid,
       channel,
       platform: "telegram",
-      participantKey,
-      participantLabel,
-      messageText: incomingText,
-      replyTarget: {
-        chatId,
-      },
-      rawPayload: req.body,
+      ...normalizedPayload,
     });
 
-    return res.json(buildTelegramDelivery(chatId, result.finalResponse));
+    return res.json(
+      buildTelegramDelivery(
+        normalizedPayload.replyTarget.chatId,
+        result.finalResponse
+      )
+    );
   } catch (error) {
     return res.status(500).json({
       ok: false,

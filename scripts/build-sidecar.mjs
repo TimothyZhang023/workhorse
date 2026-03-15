@@ -1,49 +1,22 @@
-import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import process from "node:process";
+import { build } from "esbuild";
 
 const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
 const runtimeDir = path.join(repoRoot, "src-tauri", "sidecar-runtime");
 const serverEntrySource = path.join(repoRoot, "server.js");
-const serverSourceDir = path.join(repoRoot, "server");
 const isWindows = process.platform === "win32";
 const runtimeNodeFileName = isWindows ? "node.exe" : "node";
+const bundleFileName = "server.cjs";
 const runtimeNodeSourceCandidates = [
   process.env.WORKHORSE_NODE_BIN,
   path.join(repoRoot, "src-tauri", "sidecar-node", runtimeNodeFileName),
   path.join(repoRoot, "src-tauri", "sidecar-node", "node"),
   process.execPath,
 ].filter(Boolean);
-
-const runtimeDependencyNames = [
-  "@modelcontextprotocol/sdk",
-  "better-sqlite3",
-  "cookie-parser",
-  "cors",
-  "cron-parser",
-  "dotenv",
-  "express",
-  "express-rate-limit",
-  "http-proxy-middleware",
-  "jsonwebtoken",
-  "node-cron",
-  "openai",
-  "pino",
-  "pino-http",
-  "pino-pretty",
-  "pptxgenjs",
-];
-
-function resolveExistingPath(candidates) {
-  for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
+const runtimeDependencyNames = ["better-sqlite3", "pino", "pino-http", "pino-pretty"];
 
 async function runCommand(command, args, options = {}) {
   await new Promise((resolve, reject) => {
@@ -63,31 +36,42 @@ async function runCommand(command, args, options = {}) {
   });
 }
 
-async function copyDirectory(sourceDir, targetDir) {
-  await fsp.mkdir(targetDir, { recursive: true });
-  const entries = await fsp.readdir(sourceDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const sourcePath = path.join(sourceDir, entry.name);
-    const targetPath = path.join(targetDir, entry.name);
-
-    if (entry.isDirectory()) {
-      await copyDirectory(sourcePath, targetPath);
-      continue;
-    }
-
-    await fsp.copyFile(sourcePath, targetPath);
+async function pathExists(targetPath) {
+  try {
+    await fsp.access(targetPath);
+    return true;
+  } catch {
+    return false;
   }
 }
 
-async function main() {
-  const runtimeNodeSource = resolveExistingPath(runtimeNodeSourceCandidates);
-  if (!runtimeNodeSource) {
-    throw new Error(
-      `Missing Node runtime. Checked: ${runtimeNodeSourceCandidates.join(", ")}`
-    );
+async function findBinary(command) {
+  const pathEntries = (process.env.PATH || "").split(path.delimiter).filter(Boolean);
+  const suffixes = isWindows ? ["", ".exe", ".cmd", ".bat"] : [""];
+
+  for (const entry of pathEntries) {
+    for (const suffix of suffixes) {
+      const candidate = path.join(entry, `${command}${suffix}`);
+      if (await pathExists(candidate)) {
+        return candidate;
+      }
+    }
   }
 
+  return null;
+}
+
+async function resolveExistingPath(candidates) {
+  for (const candidate of candidates) {
+    if (candidate && (await pathExists(candidate))) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function resolveNpmCliPath() {
   const npmRootOutput = [];
   await new Promise((resolve, reject) => {
     const child = spawn("npm", ["root", "-g"], {
@@ -109,21 +93,69 @@ async function main() {
   });
 
   const npmGlobalRoot = npmRootOutput.join("").trim();
-  const npmCliPath = resolveExistingPath([
+  const npmCliPath = await resolveExistingPath([
     path.join(npmGlobalRoot, "npm", "bin", "npm-cli.js"),
     "/usr/local/lib/node_modules/npm/bin/npm-cli.js",
     "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
   ]);
-  const nodeGypPath = resolveExistingPath([
+
+  const nodeGypPath = await resolveExistingPath([
     path.join(npmGlobalRoot, "npm", "node_modules", "node-gyp", "bin", "node-gyp.js"),
     "/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
     "/opt/homebrew/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
   ]);
 
+  return { npmCliPath, nodeGypPath };
+}
+
+async function stripBinary(binaryPath) {
+  if (isWindows || !(await pathExists(binaryPath))) {
+    return;
+  }
+
+  const stripCommand = await findBinary("strip");
+  if (!stripCommand) {
+    return;
+  }
+
+  try {
+    await runCommand(stripCommand, ["-x", binaryPath]);
+  } catch (error) {
+    console.warn(`strip skipped for ${binaryPath}: ${error.message}`);
+  }
+}
+
+async function pruneRuntimeFiles() {
+  const betterSqliteDir = path.join(runtimeDir, "node_modules", "better-sqlite3");
+  const removablePaths = [
+    path.join(runtimeDir, ".package-lock.json"),
+    path.join(runtimeDir, "package-lock.json"),
+    path.join(runtimeDir, "npm-shrinkwrap.json"),
+    path.join(runtimeDir, `${bundleFileName}.map`),
+    path.join(runtimeDir, "node_modules", ".package-lock.json"),
+    path.join(betterSqliteDir, "deps"),
+    path.join(betterSqliteDir, "src"),
+  ];
+
+  await Promise.all(
+    removablePaths.map((targetPath) =>
+      fsp.rm(targetPath, { recursive: true, force: true })
+    )
+  );
+}
+
+async function main() {
+  const runtimeNodeSource = await resolveExistingPath(runtimeNodeSourceCandidates);
+  if (!runtimeNodeSource) {
+    throw new Error(
+      `Missing Node runtime. Checked: ${runtimeNodeSourceCandidates.join(", ")}`
+    );
+  }
+
+  const { npmCliPath, nodeGypPath } = await resolveNpmCliPath();
   if (!npmCliPath) {
     throw new Error("Unable to locate npm-cli.js for sidecar runtime build");
   }
-
   if (!nodeGypPath) {
     throw new Error("Unable to locate node-gyp.js for sidecar runtime build");
   }
@@ -145,13 +177,22 @@ async function main() {
 
   const runtimeNodePath = path.join(runtimeDir, runtimeNodeFileName);
   await fsp.copyFile(runtimeNodeSource, runtimeNodePath);
-  await fsp.copyFile(serverEntrySource, path.join(runtimeDir, "server.js"));
-  await copyDirectory(serverSourceDir, path.join(runtimeDir, "server"));
+
+  await build({
+    entryPoints: [serverEntrySource],
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    target: "node20",
+    outfile: path.join(runtimeDir, bundleFileName),
+    external: ["better-sqlite3", "pino", "pino-http", "pino-pretty"],
+    minify: true,
+    sourcemap: false,
+  });
 
   const runtimePackageJson = {
     name: "workhorse-sidecar-runtime",
     private: true,
-    type: "module",
     dependencies: runtimeDependencies,
   };
 
@@ -170,17 +211,19 @@ async function main() {
 setlocal
 if "%PORT%"=="" set PORT=12621
 if "%NODE_ENV%"=="" set NODE_ENV=production
+if "%WORKHORSE_VERSION%"=="" set WORKHORSE_VERSION=${rootPackage.version}
 set DIR=%~dp0
 cd /d "%DIR%"
-"%DIR%${runtimeNodeFileName}" "%DIR%server.js" %*
+"%DIR%${runtimeNodeFileName}" "%DIR%${bundleFileName}" %*
 `
     : `#!/bin/bash
 set -euo pipefail
 DIR="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
 export PORT="\${PORT:-12621}"
 export NODE_ENV="\${NODE_ENV:-production}"
+export WORKHORSE_VERSION="\${WORKHORSE_VERSION:-${rootPackage.version}}"
 cd "$DIR"
-exec "$DIR/${runtimeNodeFileName}" "$DIR/server.js" "$@"
+exec "$DIR/${runtimeNodeFileName}" "$DIR/${bundleFileName}" "$@"
 `;
 
   await fsp.writeFile(launcherPath, wrapperScript, "utf8");
@@ -211,6 +254,12 @@ exec "$DIR/${runtimeNodeFileName}" "$DIR/server.js" "$@"
   await runCommand(runtimeNodeSource, [nodeGypPath, "rebuild", "--release"], {
     cwd: betterSqliteDir,
   });
+
+  const betterSqliteBinary = path.join(betterSqliteDir, "build", "Release", "better_sqlite3.node");
+
+  await pruneRuntimeFiles();
+  await stripBinary(runtimeNodePath);
+  await stripBinary(betterSqliteBinary);
 
   await runCommand(
     runtimeNodeSource,

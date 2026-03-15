@@ -714,6 +714,27 @@ function finalizeSse(res) {
   res.end();
 }
 
+function buildAssistantFailureContent(summary, details = {}) {
+  const normalizedSummary = String(summary || "执行失败")
+    .replace(/^[⚠️❌]\s*/, "")
+    .trim();
+  const lines = [`⚠️ ${normalizedSummary}`];
+  const detailEntries = Object.entries(details).filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    return String(value).trim() !== "";
+  });
+
+  if (detailEntries.length > 0) {
+    lines.push("", "调试信息：", "```text");
+    for (const [key, value] of detailEntries) {
+      lines.push(`${key}: ${String(value)}`);
+    }
+    lines.push("```");
+  }
+
+  return lines.join("\n");
+}
+
 function serializeDebugValue(value, maxLength = 12000) {
   try {
     const serialized =
@@ -785,6 +806,56 @@ function isExecutionAborted(executionContext) {
   return Boolean(executionContext?.signal?.aborted);
 }
 
+function describeExecutionAbort(executionContext, extra = {}) {
+  const reasonCode = String(
+    executionContext?.abortReason ||
+      executionContext?.signal?.reason ||
+      extra.reasonCode ||
+      ""
+  ).trim();
+  const errorDetail = extra.error ? getUpstreamErrorMessage(extra.error) : "";
+
+  let summary = "执行已中断。";
+  if (reasonCode === "manual_stop") {
+    summary = "会话已被手动终止。";
+  } else if (reasonCode === "client_disconnect") {
+    summary = "客户端连接已断开（可能因刷新、跳转或网络中断）。";
+  } else if (reasonCode === "replaced") {
+    summary = "当前执行已被新的请求替换。";
+  } else if (errorDetail && errorDetail !== "Execution aborted") {
+    summary = `上游流式响应异常中断：${errorDetail}`;
+  }
+
+  return {
+    summary,
+    details: {
+      abort_reason: reasonCode || "unknown",
+      phase: extra.phase || "",
+      upstream_error:
+        errorDetail && errorDetail !== "Execution aborted" ? errorDetail : "",
+    },
+  };
+}
+
+function bindClientDisconnectAbort(req, res, executionContext) {
+  if (!req || !executionContext) return () => {};
+
+  const handleClose = () => {
+    if (!res.writableEnded) {
+      executionContext.abort("client_disconnect");
+    }
+  };
+
+  req.once("close", handleClose);
+  return () => {
+    if (typeof req.off === "function") {
+      req.off("close", handleClose);
+    } else if (typeof req.removeListener === "function") {
+      req.removeListener("close", handleClose);
+    }
+  };
+}
+
 async function requestForcedFinalChatResponse({
   client,
   modelId,
@@ -821,16 +892,41 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
     requestedModel: model,
     modelCandidates,
   });
-  const persistAssistantFailure = (aiMsgId, fallbackText) => {
+  const persistAssistantFailure = (aiMsgId, fallbackText, details = null) => {
     if (!aiMsgId) return;
     try {
-      updateMessage(aiMsgId, uid, fallbackText);
+      updateMessage(
+        aiMsgId,
+        uid,
+        details
+          ? buildAssistantFailureContent(fallbackText, details)
+          : String(fallbackText || "")
+      );
     } catch (error) {
       requestLog.warn(
         { err: error, aiMsgId },
         "Failed to persist assistant fallback content"
       );
     }
+  };
+  const emitExecutionAbort = (aiMsgId, phase, error = null) => {
+    const abortInfo = describeExecutionAbort(executionContext, { phase, error });
+    persistAssistantFailure(aiMsgId || opts.aiMsgId, abortInfo.summary, abortInfo.details);
+    emitDebugSse(res, debugEnabled, {
+      phase: "execution_aborted",
+      ...abortInfo.details,
+    });
+    if (!res.writableEnded) {
+      res.write(
+        `data: ${JSON.stringify({
+          error: abortInfo.summary,
+          abort_reason: abortInfo.details.abort_reason,
+          phase,
+          upstream_error: abortInfo.details.upstream_error || undefined,
+        })}\n\n`
+      );
+    }
+    return false;
   };
 
   requestLog.info(
@@ -899,7 +995,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
 
   async function executeTurn(currentMessages, currentAiMsgId) {
     if (isExecutionAborted(executionContext)) {
-      return false;
+      return emitExecutionAbort(currentAiMsgId, "execute_turn_init");
     }
     if (currentLoop >= maxToolLoops) {
       res.write(
@@ -914,16 +1010,16 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
     let lastError = null;
     for (const modelId of modelCandidates) {
       if (isExecutionAborted(executionContext)) {
-        return false;
+        return emitExecutionAbort(currentAiMsgId, "model_loop_start");
       }
       for (const ep of getEndpointCandidatesForModel(uid, modelId)) {
         if (isExecutionAborted(executionContext)) {
-          return false;
+          return emitExecutionAbort(currentAiMsgId, "endpoint_loop_start");
         }
         const baseUrlCandidates = normalizeBaseUrlCandidates(ep.base_url);
         for (const baseURL of baseUrlCandidates) {
           if (isExecutionAborted(executionContext)) {
-            return false;
+            return emitExecutionAbort(currentAiMsgId, "base_url_loop_start");
           }
           let triedWithoutStreamOptions = false;
           try {
@@ -1023,98 +1119,101 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
             const observedDeltaKeys = new Set();
 
             for await (const chunk of stream) {
+              if (res.writableEnded && !isExecutionAborted(executionContext)) {
+                executionContext?.abort("client_disconnect");
+              }
               if (isExecutionAborted(executionContext) || res.writableEnded) {
-                throw new Error("Execution aborted");
+                return emitExecutionAbort(currentAiMsgId, "upstream_stream");
               }
-            chunkCount++;
-            const choice = chunk.choices?.[0] || {};
-            const delta = choice.delta || {};
-            for (const key of Object.keys(delta)) {
-              observedDeltaKeys.add(key);
-            }
-            lastFinishReason = choice.finish_reason || lastFinishReason;
-
-            if (chunk?.error?.message) {
-              throw new Error(chunk.error.message);
-            }
-            emitDebugSse(res, debugEnabled, {
-              phase: "upstream_chunk",
-              model_id: modelId,
-              endpoint_name: ep.name,
-              base_url: baseURL,
-              chunk: serializeDebugValue(chunk),
-            });
-
-            const { answerText, reasoningText } = extractStreamParts(
-              choice,
-              chunk
-            );
-            let emittedText = "";
-            if (reasoningText) {
-              if (!reasoningOpen) {
-                emittedText += "<think>\n";
-                reasoningOpen = true;
+              chunkCount++;
+              const choice = chunk.choices?.[0] || {};
+              const delta = choice.delta || {};
+              for (const key of Object.keys(delta)) {
+                observedDeltaKeys.add(key);
               }
-              emittedText += reasoningText;
-            }
-            if (answerText) {
-              if (reasoningOpen) {
-                emittedText += "\n</think>\n\n";
-                reasoningOpen = false;
-              }
-              emittedText += answerText;
-            }
+              lastFinishReason = choice.finish_reason || lastFinishReason;
 
-            if (emittedText) {
-              if (!firstContentAt) {
-                firstContentAt = Date.now();
-                requestLog.info(
-                  {
-                    endpointName: ep.name,
-                    baseURL,
-                    chunkCount,
-                  },
-                  "Received first upstream content chunk"
-                );
+              if (chunk?.error?.message) {
+                throw new Error(chunk.error.message);
               }
-              fullTextContent += emittedText;
-              emitContentSse(res, emittedText);
-            } else {
-              emptyTextChunkCount++;
-            }
+              emitDebugSse(res, debugEnabled, {
+                phase: "upstream_chunk",
+                model_id: modelId,
+                endpoint_name: ep.name,
+                base_url: baseURL,
+                chunk: serializeDebugValue(chunk),
+              });
 
-            if (delta.tool_calls) {
-              const toolCallDeltas = Array.isArray(delta.tool_calls)
-                ? delta.tool_calls
-                : [delta.tool_calls];
-              for (const tcDelta of toolCallDeltas) {
-                if (!tcDelta) continue;
-                const idx =
-                  Number.isInteger(tcDelta.index) && Number(tcDelta.index) >= 0
-                    ? Number(tcDelta.index)
-                    : toolCalls.length;
-                if (!toolCalls[idx]) {
-                  toolCalls[idx] = {
-                    id: tcDelta.id,
-                    type: "function",
-                    function: {
-                      name: tcDelta.function?.name || "",
-                      arguments: "",
+              const { answerText, reasoningText } = extractStreamParts(
+                choice,
+                chunk
+              );
+              let emittedText = "";
+              if (reasoningText) {
+                if (!reasoningOpen) {
+                  emittedText += "<think>\n";
+                  reasoningOpen = true;
+                }
+                emittedText += reasoningText;
+              }
+              if (answerText) {
+                if (reasoningOpen) {
+                  emittedText += "\n</think>\n\n";
+                  reasoningOpen = false;
+                }
+                emittedText += answerText;
+              }
+
+              if (emittedText) {
+                if (!firstContentAt) {
+                  firstContentAt = Date.now();
+                  requestLog.info(
+                    {
+                      endpointName: ep.name,
+                      baseURL,
+                      chunkCount,
                     },
-                  };
+                    "Received first upstream content chunk"
+                  );
                 }
-                if (tcDelta.function?.arguments) {
-                  toolCalls[idx].function.arguments +=
-                    tcDelta.function.arguments;
+                fullTextContent += emittedText;
+                emitContentSse(res, emittedText);
+              } else {
+                emptyTextChunkCount++;
+              }
+
+              if (delta.tool_calls) {
+                const toolCallDeltas = Array.isArray(delta.tool_calls)
+                  ? delta.tool_calls
+                  : [delta.tool_calls];
+                for (const tcDelta of toolCallDeltas) {
+                  if (!tcDelta) continue;
+                  const idx =
+                    Number.isInteger(tcDelta.index) && Number(tcDelta.index) >= 0
+                      ? Number(tcDelta.index)
+                      : toolCalls.length;
+                  if (!toolCalls[idx]) {
+                    toolCalls[idx] = {
+                      id: tcDelta.id,
+                      type: "function",
+                      function: {
+                        name: tcDelta.function?.name || "",
+                        arguments: "",
+                      },
+                    };
+                  }
+                  if (tcDelta.function?.arguments) {
+                    toolCalls[idx].function.arguments +=
+                      tcDelta.function.arguments;
+                  }
                 }
               }
-            }
 
-            if (chunk.usage) {
-              promptTokens = chunk.usage.prompt_tokens || 0;
-              completionTokens = chunk.usage.completion_tokens || 0;
+              if (chunk.usage) {
+                promptTokens = chunk.usage.prompt_tokens || 0;
+                completionTokens = chunk.usage.completion_tokens || 0;
+              }
             }
-          }
 
             if (reasoningOpen) {
               const closeThinkingTag = "\n</think>\n";
@@ -1214,7 +1313,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
             // Execute Tools
             for (const tc of finalToolCalls) {
               if (isExecutionAborted(executionContext)) {
-                return false;
+                return emitExecutionAbort(currentAiMsgId, "before_tool_execution");
               }
               try {
                 const funcName = tc.function.name;
@@ -1251,7 +1350,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
                     }
                   );
                   if (isExecutionAborted(executionContext)) {
-                    return false;
+                    return emitExecutionAbort(currentAiMsgId, "tool_execution");
                   }
                   resultContent = (mcpRes.content || [])
                     .map((c) => c.text)
@@ -1330,10 +1429,6 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
               return "_HANDLED_INTERNALLY_";
             }
             if (nextContent === false) {
-              persistAssistantFailure(
-                nextAiMsg.id,
-                "⚠️ 回复中断或上游无有效内容，请点击重新生成。"
-              );
               return false;
             }
             if (nextContent !== "_HANDLED_INTERNALLY_") {
@@ -1343,7 +1438,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
             return "_HANDLED_INTERNALLY_";
           } catch (error) {
             if (isExecutionAborted(executionContext)) {
-              return false;
+              return emitExecutionAbort(currentAiMsgId, "endpoint_attempt", error);
             }
             lastError = error;
             requestLog.warn(
@@ -1372,7 +1467,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
         })}\n\n`
       );
       if (isExecutionAborted(executionContext)) {
-        return false;
+        return emitExecutionAbort(currentAiMsgId, "model_fallback");
       }
       emitDebugSse(res, debugEnabled, {
         phase: "model_fallback",
@@ -1382,7 +1477,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
     }
 
     if (isExecutionAborted(executionContext)) {
-      return false;
+      return emitExecutionAbort(currentAiMsgId, "all_attempts_exhausted");
     }
 
     res.write(
@@ -1395,7 +1490,7 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
       error: getUpstreamErrorMessage(lastError),
     });
     persistAssistantFailure(
-      opts.aiMsgId,
+      currentAiMsgId,
       `❌ 错误：所有 API 端点均不可用：${getUpstreamErrorMessage(lastError)}`
     );
     return false;
@@ -1449,11 +1544,11 @@ export async function runConversationMessage({
   debug = false,
   generationConfig = {},
   source = "channel",
-  allowedToolNames = null,
 }) {
   const bufferedRes = createBufferedSseResponse();
   const executionContext = createExecutionContext(uid, conversationId, bufferedRes);
   initSse(bufferedRes);
+  let aiMsg = null;
 
   try {
     const conversation = getConversation(conversationId, uid);
@@ -1475,7 +1570,7 @@ export async function runConversationMessage({
     const history = getMessages(conversationId, uid);
     const systemPrompt = buildConversationSystemPrompt(uid, conversation);
     const messages = buildMessages(history, systemPrompt);
-    const aiMsg = addMessage(conversationId, uid, "assistant", "");
+    aiMsg = addMessage(conversationId, uid, "assistant", "");
 
     const fullContent = await streamWithFallback(
       uid,
@@ -1489,10 +1584,6 @@ export async function runConversationMessage({
         debug,
         generationConfig,
         conversationContextWindow: conversation?.context_window ?? null,
-        allowedToolNames:
-          Array.isArray(allowedToolNames) && allowedToolNames.length > 0
-            ? allowedToolNames
-            : conversation?.tool_names ?? null,
         executionContext,
       }
     );
@@ -1513,17 +1604,34 @@ export async function runConversationMessage({
       summarizeConversationTitle(uid, conversationId, model).catch(() => {});
     }
 
-    const finalAssistantMessage = getMessages(conversationId, uid).find(
-      (item) => Number(item.id) === Number(aiMsg.id)
-    );
+    const finalAssistantMessage = [...getMessages(conversationId, uid)]
+      .reverse()
+      .find(
+        (item) =>
+          item.role === "assistant" &&
+          String(item.content || "").trim() &&
+          !String(item.content || "").startsWith("[TOOL_CALLS]:")
+      );
 
     finalizeSse(bufferedRes);
     return {
       conversationId: String(conversationId),
-      assistantMessageId: aiMsg.id,
+      assistantMessageId: Number(finalAssistantMessage?.id || aiMsg.id),
       finalResponse: String(finalAssistantMessage?.content || fullContent || "").trim(),
       events: bufferedRes.getEvents(),
     };
+  } catch (error) {
+    if (aiMsg?.id) {
+      updateMessage(
+        aiMsg.id,
+        uid,
+        buildAssistantFailureContent("Agent 执行失败。", {
+          phase: "channel_run",
+          error: error.message || "unknown_error",
+        })
+      );
+    }
+    throw error;
   } finally {
     clearExecutionContext(uid, conversationId);
   }
@@ -1539,6 +1647,12 @@ router.post("/:id/chat", async (req, res) => {
   const generationConfig = normalizeGenerationConfig(req.body);
   const requestedModel = String(model || "").trim();
   const executionContext = createExecutionContext(uid, id, res);
+  const detachClientDisconnectAbort = bindClientDisconnectAbort(
+    req,
+    res,
+    executionContext
+  );
+  let aiMsg = null;
 
   initSse(res);
 
@@ -1574,7 +1688,7 @@ router.post("/:id/chat", async (req, res) => {
     const systemPrompt = buildConversationSystemPrompt(uid, conversation);
     const messages = buildMessages(history, systemPrompt);
 
-    const aiMsg = addMessage(id, uid, "assistant", "");
+    aiMsg = addMessage(id, uid, "assistant", "");
 
     const fullContent = await streamWithFallback(
       uid,
@@ -1588,7 +1702,6 @@ router.post("/:id/chat", async (req, res) => {
         debug,
         generationConfig,
         conversationContextWindow: conversation?.context_window ?? null,
-        allowedToolNames: conversation?.tool_names ?? null,
         executionContext,
       }
     );
@@ -1606,11 +1719,22 @@ router.post("/:id/chat", async (req, res) => {
       { err: error, route: "conversations.chat", uid, conversationId: id },
       "Chat request failed before stream completion"
     );
+    if (aiMsg?.id) {
+      updateMessage(
+        aiMsg.id,
+        uid,
+        buildAssistantFailureContent("服务端在流式回复前异常中断。", {
+          phase: "chat_route",
+          error: error.message || "unknown_error",
+        })
+      );
+    }
     if (!res.writableEnded) {
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
       finalizeSse(res);
     }
   } finally {
+    detachClientDisconnectAbort();
     clearExecutionContext(uid, id);
   }
 });
@@ -1680,6 +1804,12 @@ router.post("/:id/regenerate", async (req, res) => {
   const generationConfig = normalizeGenerationConfig(req.body);
   const requestedModel = String(model || "").trim();
   const executionContext = createExecutionContext(uid, id, res);
+  const detachClientDisconnectAbort = bindClientDisconnectAbort(
+    req,
+    res,
+    executionContext
+  );
+  let aiMsg = null;
 
   initSse(res);
 
@@ -1715,7 +1845,7 @@ router.post("/:id/regenerate", async (req, res) => {
     const conversation = getConversation(id, uid);
     const systemPrompt = buildConversationSystemPrompt(uid, conversation);
     const messages = buildMessages(history, systemPrompt);
-    const aiMsg = addMessage(id, uid, "assistant", "");
+    aiMsg = addMessage(id, uid, "assistant", "");
 
     const fullContent = await streamWithFallback(
       uid,
@@ -1729,7 +1859,6 @@ router.post("/:id/regenerate", async (req, res) => {
         debug,
         generationConfig,
         conversationContextWindow: conversation?.context_window ?? null,
-        allowedToolNames: conversation?.tool_names ?? null,
         executionContext,
       }
     );
@@ -1752,11 +1881,22 @@ router.post("/:id/regenerate", async (req, res) => {
       },
       "Regenerate request failed before stream completion"
     );
+    if (aiMsg?.id) {
+      updateMessage(
+        aiMsg.id,
+        uid,
+        buildAssistantFailureContent("重新生成在服务端异常中断。", {
+          phase: "regenerate_route",
+          error: error.message || "unknown_error",
+        })
+      );
+    }
     if (!res.writableEnded) {
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
       finalizeSse(res);
     }
   } finally {
+    detachClientDisconnectAbort();
     clearExecutionContext(uid, id);
   }
 });
@@ -1771,6 +1911,12 @@ router.put("/:id/messages/:msgId", async (req, res) => {
   const generationConfig = normalizeGenerationConfig(req.body);
   const requestedModel = String(model || "").trim();
   const executionContext = createExecutionContext(uid, id, res);
+  const detachClientDisconnectAbort = bindClientDisconnectAbort(
+    req,
+    res,
+    executionContext
+  );
+  let aiMsg = null;
 
   initSse(res);
 
@@ -1816,7 +1962,7 @@ router.put("/:id/messages/:msgId", async (req, res) => {
     const history = getMessages(id, uid);
     const systemPrompt = buildConversationSystemPrompt(uid, conversation);
     const messages = buildMessages(history, systemPrompt);
-    const aiMsg = addMessage(id, uid, "assistant", "");
+    aiMsg = addMessage(id, uid, "assistant", "");
 
     const fullContent = await streamWithFallback(
       uid,
@@ -1830,7 +1976,6 @@ router.put("/:id/messages/:msgId", async (req, res) => {
         debug,
         generationConfig,
         conversationContextWindow: conversation?.context_window ?? null,
-        allowedToolNames: conversation?.tool_names ?? null,
         executionContext,
       }
     );
@@ -1854,11 +1999,22 @@ router.put("/:id/messages/:msgId", async (req, res) => {
       },
       "Edit-and-regenerate request failed before stream completion"
     );
+    if (aiMsg?.id) {
+      updateMessage(
+        aiMsg.id,
+        uid,
+        buildAssistantFailureContent("编辑后重新生成在服务端异常中断。", {
+          phase: "edit_regenerate_route",
+          error: error.message || "unknown_error",
+        })
+      );
+    }
     if (!res.writableEnded) {
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
       finalizeSse(res);
     }
   } finally {
+    detachClientDisconnectAbort();
     clearExecutionContext(uid, id);
   }
 });

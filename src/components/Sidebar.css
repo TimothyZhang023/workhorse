@@ -191,7 +191,7 @@
     opacity: 0.6;
   }
   .cw-dashboard-main-wrap {
-    height: calc(100vh - 70px);
-    padding: 20px;
+    height: calc(100vh - 64px);
+    padding: 16px 12px;
   }
 }

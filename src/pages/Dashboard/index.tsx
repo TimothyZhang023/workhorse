@@ -29,7 +29,7 @@ import {
   Typography,
   theme as antdTheme,
 } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./index.css";
 
 type SystemOverviewData = {
@@ -84,6 +84,28 @@ type SystemOverviewData = {
   recommendations: string[];
 };
 
+type BackendHealthData = {
+  status: string;
+};
+
+type BackendServiceState = "checking" | "healthy" | "degraded" | "restarting";
+
+const HEARTBEAT_INTERVAL_MS = 15000;
+const HEARTBEAT_TIMEOUT_MS = 2500;
+const AUTO_RESTART_THRESHOLD = 2;
+
+async function restartDesktopBackend() {
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("restart_backend");
+}
+
+function canRestartDesktopBackend() {
+  return (
+    typeof window !== "undefined" &&
+    typeof (window as any).__TAURI_INTERNALS__ !== "undefined"
+  );
+}
+
 export default () => {
   const { currentUser, isLoggedIn } = useAppStore();
   const navigate = useNavigate();
@@ -99,6 +121,16 @@ export default () => {
   const [overview, setOverview] = useState<SystemOverviewData | null>(null);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
   const [runsLoading, setRunsLoading] = useState(false);
+  const [backendState, setBackendState] =
+    useState<BackendServiceState>("checking");
+  const [backendMessage, setBackendMessage] = useState("正在检测后端服务");
+  const [backendLastCheckedAt, setBackendLastCheckedAt] = useState<Date | null>(
+    null
+  );
+  const [backendRestartCount, setBackendRestartCount] = useState(0);
+  const [backendFailureCount, setBackendFailureCount] = useState(0);
+  const restartInFlightRef = useRef(false);
+  const failureCountRef = useRef(0);
 
   const loadOverview = async () => {
     setOverviewLoading(true);
@@ -124,10 +156,104 @@ export default () => {
     }
   };
 
+  const verifyBackendHealth = async (forceRestart = false) => {
+    try {
+      const data = await request<BackendHealthData>("/health", {
+        timeout: HEARTBEAT_TIMEOUT_MS,
+      });
+
+      if (data?.status !== "ok") {
+        throw new Error(`health status: ${data?.status || "unknown"}`);
+      }
+
+      setBackendState("healthy");
+      setBackendMessage("后端服务运行正常");
+      failureCountRef.current = 0;
+      setBackendFailureCount(0);
+      setBackendLastCheckedAt(new Date());
+      return true;
+    } catch (error: any) {
+      const nextFailureCount = forceRestart
+        ? AUTO_RESTART_THRESHOLD
+        : failureCountRef.current + 1;
+      failureCountRef.current = nextFailureCount;
+      setBackendState("degraded");
+      setBackendMessage(error?.message || "后端服务不可达");
+      setBackendFailureCount(nextFailureCount);
+      setBackendLastCheckedAt(new Date());
+
+      if (
+        nextFailureCount < AUTO_RESTART_THRESHOLD ||
+        restartInFlightRef.current
+      ) {
+        return false;
+      }
+
+      if (!canRestartDesktopBackend()) {
+        setBackendMessage("当前运行在浏览器模式，无法自动重启桌面端后端");
+        return false;
+      }
+
+      restartInFlightRef.current = true;
+      setBackendState("restarting");
+      setBackendMessage("后端服务异常，正在自动重启");
+
+      try {
+        await restartDesktopBackend();
+        let restored = false;
+
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          try {
+            const recovery = await request<BackendHealthData>("/health", {
+              timeout: HEARTBEAT_TIMEOUT_MS,
+            });
+            if (recovery?.status === "ok") {
+              restored = true;
+              break;
+            }
+          } catch {
+            // Wait for the next retry while the sidecar is starting.
+          }
+        }
+
+        if (!restored) {
+          throw new Error("自动重启后端失败");
+        }
+
+        setBackendState("healthy");
+        setBackendMessage("后端服务已自动恢复");
+        failureCountRef.current = 0;
+        setBackendFailureCount(0);
+        setBackendRestartCount((count) => count + 1);
+        setBackendLastCheckedAt(new Date());
+        loadOverview();
+        loadRecentRuns();
+        return true;
+      } catch (restartError: any) {
+        setBackendState("degraded");
+        setBackendMessage(restartError?.message || "自动重启失败");
+        setBackendLastCheckedAt(new Date());
+        return false;
+      } finally {
+        restartInFlightRef.current = false;
+      }
+    }
+  };
+
   useEffect(() => {
     if (!isLoggedIn) return;
     loadOverview();
     loadRecentRuns();
+    verifyBackendHealth();
+
+    const timer = window.setInterval(() => {
+      verifyBackendHealth();
+    }, HEARTBEAT_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
   }, [isLoggedIn]);
 
   if (!isLoggedIn) return null;
@@ -142,6 +268,20 @@ export default () => {
     skills: "#f59e0b",
     mcp_tools: "#06b6d4",
   };
+  const backendTagColor =
+    backendState === "healthy"
+      ? "success"
+      : backendState === "restarting"
+        ? "processing"
+        : "error";
+  const backendTagLabel =
+    backendState === "healthy"
+      ? "正常"
+      : backendState === "restarting"
+        ? "重启中"
+        : backendState === "checking"
+          ? "检测中"
+          : "异常";
 
   return (
     <ConfigProvider
@@ -244,13 +384,13 @@ export default () => {
 
           <section className="cw-dashboard-main">
             <Row gutter={[24, 24]}>
-              {/* Row 1: Stats & Health */}
-              <Col xs={24} lg={15}>
+              {/* Row 1: Overview, Env Health, Backend Service */}
+              <Col xs={24} lg={12}>
                 <Card className="cw-module-card cw-overview-main-card">
                   <div className="cw-usage-header">
                     <div>
                       <h3>系统概览</h3>
-                      <p>当前工作台运行核心统计</p>
+                      <p>核心运行统计</p>
                     </div>
                     <div className="cw-usage-actions">
                       <Button
@@ -312,7 +452,7 @@ export default () => {
                       <div className="cw-runtime-bar">
                         <div className="cw-runtime-item">
                           <Typography.Text type="secondary">
-                            环境版本
+                            版本
                           </Typography.Text>
                           <Typography.Text strong>
                             Node {runtime?.node || "-"}
@@ -320,7 +460,7 @@ export default () => {
                         </div>
                         <div className="cw-runtime-item">
                           <Typography.Text type="secondary">
-                            运行平台
+                            平台
                           </Typography.Text>
                           <Typography.Text strong>
                             {runtime?.platform || "-"}
@@ -328,27 +468,26 @@ export default () => {
                         </div>
                         <div className="cw-runtime-item">
                           <Typography.Text type="secondary">
-                            持续运行时长
+                            运行时长
                           </Typography.Text>
                           <Typography.Text strong>
                             {runtime
-                              ? `${Math.floor(runtime.uptime_seconds / 60)} 分钟`
+                              ? `${Math.floor(runtime.uptime_seconds / 60)}m`
                               : "-"}
                           </Typography.Text>
                         </div>
                       </div>
-
                     </>
                   )}
                 </Card>
               </Col>
 
-              <Col xs={24} lg={9}>
+              <Col xs={24} lg={6}>
                 <Card className="cw-module-card cw-health-card">
                   <div className="cw-usage-header">
                     <div>
                       <h3>环境检查</h3>
-                      <p>核心运行时与命令状态</p>
+                      <p>运行时与命令</p>
                     </div>
                   </div>
                   {overviewLoading && !overview ? (
@@ -367,16 +506,63 @@ export default () => {
                                 : item.error || "missing"}
                             </div>
                           </div>
-                          <Tag
-                            color={item.installed ? "success" : "error"}
-                            bordered={false}
-                          >
-                            {item.installed ? "正常" : "异常"}
-                          </Tag>
+                          <div className={`cw-status-indicator ${item.installed ? "online" : "offline"}`}></div>
                         </div>
                       ))}
                     </div>
                   )}
+                </Card>
+              </Col>
+
+              <Col xs={24} lg={6}>
+                <Card className="cw-module-card cw-backend-service-card" style={{ padding: '20px' }}>
+                  <div className="cw-usage-header" style={{ marginBottom: 12 }}>
+                    <div>
+                      <h3 style={{ fontSize: 18 }}>服务巡检</h3>
+                      <p style={{ fontSize: 12 }}>状态实时监控</p>
+                    </div>
+                    <Button
+                      size="small"
+                      icon={<ReloadOutlined />}
+                      loading={backendState === "restarting"}
+                      onClick={() => verifyBackendHealth(true)}
+                      type="text"
+                    />
+                  </div>
+
+                  <div className="cw-health-grid">
+                    <div className="cw-health-row compact">
+                      <div className="cw-health-info">
+                        <div className="cw-health-name" style={{ fontSize: 13 }}>后端服务</div>
+                        <div className="cw-health-ver">{backendTagLabel}</div>
+                      </div>
+                      <div className={`cw-status-indicator ${backendState === 'healthy' ? 'online' : 'offline'}`}></div>
+                    </div>
+                    
+                    <div className="cw-health-row compact">
+                      <div className="cw-health-info">
+                        <div className="cw-health-name" style={{ fontSize: 13 }}>自动重启</div>
+                        <div className="cw-health-ver">{backendRestartCount} 次</div>
+                      </div>
+                      <Tag color={backendRestartCount > 0 ? "warning" : "default"} style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
+                        CNT
+                      </Tag>
+                    </div>
+
+                    <div className="cw-health-row compact">
+                      <div className="cw-health-info">
+                        <div className="cw-health-name" style={{ fontSize: 13 }}>连续失败</div>
+                        <div className="cw-health-ver">{backendFailureCount} 次</div>
+                      </div>
+                    </div>
+
+                    <div className="cw-health-row compact">
+                      <div className="cw-health-info">
+                        <div className="cw-health-name" style={{ fontSize: 13 }}>最近检测</div>
+                        <div className="cw-health-ver">{backendLastCheckedAt ? backendLastCheckedAt.toLocaleTimeString() : '-'}</div>
+                      </div>
+                    </div>
+                  </div>
                 </Card>
               </Col>
 
@@ -538,12 +724,12 @@ export default () => {
               </Col>
 
               {/* Row 3: Activity & Quick Links */}
-              <Col xs={24} lg={16}>
+              <Col xs={24} lg={18}>
                 <Card className="cw-module-card cw-activity-large-card">
                   <div className="cw-usage-header">
                     <div>
                       <h3>最近活动记录</h3>
-                      <p>追踪 Agent 执行轨迹与结果</p>
+                      <p>追踪 Agent 执行轨迹</p>
                     </div>
                     <Button
                       type="link"
@@ -571,7 +757,7 @@ export default () => {
                             ></span>
                           </div>
                           <div className="cw-run-info">
-                            <div className="cw-run-title">
+                            <div className="cw-run-title" style={{ fontSize: 13 }}>
                               {run.task_name || `Runnable #${run.task_id}`}
                             </div>
                             <div className="cw-run-time">
@@ -579,6 +765,7 @@ export default () => {
                             </div>
                           </div>
                           <Tag
+                            style={{ fontSize: 10, padding: '0 4px' }}
                             color={
                               run.status === "success"
                                 ? "success"
@@ -588,9 +775,9 @@ export default () => {
                             }
                           >
                             {run.status === "success"
-                              ? "已完成"
+                              ? "完成"
                               : run.status === "running"
-                                ? "运行中"
+                                ? "运行"
                                 : "失败"}
                           </Tag>
                         </div>
@@ -600,35 +787,38 @@ export default () => {
                 </Card>
               </Col>
 
-              <Col xs={24} lg={8}>
-                <Card className="cw-module-card">
+              <Col xs={24} lg={6}>
+                <Card className="cw-module-card cw-quick-links-card">
                   <div className="cw-usage-header">
                     <div>
                       <h3>快速跳转</h3>
-                      <p>常用功能入口</p>
+                      <p>常用功能</p>
                     </div>
                   </div>
                   <div className="cw-quick-links">
                     <div
                       className="cw-quick-link-item"
+                      style={{ padding: '14px 18px', borderRadius: '14px' }}
                       onClick={() => navigate("/agency")}
                     >
-                      <MessageOutlined />
-                      <span>对话助手</span>
+                      <MessageOutlined style={{ fontSize: 16 }} />
+                      <span style={{ fontSize: 13 }}>对话助手</span>
                     </div>
                     <div
                       className="cw-quick-link-item"
+                      style={{ padding: '14px 18px', borderRadius: '14px' }}
                       onClick={() => navigate("/mcp")}
                     >
-                      <ApiOutlined />
-                      <span>MCP 管理</span>
+                      <ApiOutlined style={{ fontSize: 16 }} />
+                      <span style={{ fontSize: 13 }}>MCP 管理</span>
                     </div>
                     <div
                       className="cw-quick-link-item"
+                      style={{ padding: '14px 18px', borderRadius: '14px' }}
                       onClick={() => navigate("/cron-jobs")}
                     >
-                      <ScheduleOutlined />
-                      <span>调度中心</span>
+                      <ScheduleOutlined style={{ fontSize: 16 }} />
+                      <span style={{ fontSize: 13 }}>调度中心</span>
                     </div>
                   </div>
                 </Card>

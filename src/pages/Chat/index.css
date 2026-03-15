@@ -1342,6 +1342,38 @@
   .messages-area {
     padding: 12px 12px;
   }
+
+  .message-row {
+    margin-bottom: 12px;
+  }
+
+  .message-bubble {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  .md-content p {
+    margin-bottom: 0.6em;
+  }
+
+  .md-content h1,
+  .md-content h2,
+  .md-content h3,
+  .md-content h4 {
+    margin: 1em 0 0.4em;
+  }
+
+  .input-area {
+    padding: 8px 12px 12px;
+  }
+
+  .input-container {
+    padding: 6px 6px 6px 14px;
+  }
+
+  .chat-input {
+    font-size: 14px;
+  }
 }
 
 .generation-item {

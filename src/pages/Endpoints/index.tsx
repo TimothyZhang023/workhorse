@@ -17,6 +17,10 @@ import {
 } from "@/services/api";
 import {
   ApiOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
@@ -37,6 +41,7 @@ import {
   Popconfirm,
   Space,
   Tag,
+  Tooltip,
   Typography,
   message,
   theme as antdTheme,
@@ -426,31 +431,53 @@ export default () => {
                     },
                   },
                   actions: {
-                    render: (_, row) => [
-                      <a key="sync" onClick={() => handleSyncModels(row.id)}>
-                        {syncingId === row.id ? <SyncOutlined spin /> : "同步模型"}
-                      </a>,
-                      <a
-                        key="models"
-                        onClick={async () => {
-                          setSelectedEndpoint(row);
-                          setSelectedModelIds([]);
-                          await loadModelsForEndpoint(row.id);
-                        }}
-                      >
-                        管理模型
-                      </a>,
-                      <a key="edit" onClick={() => setEditingEndpoint(row)}>
-                        编辑
-                      </a>,
-                      <Popconfirm
-                        key="delete"
-                        title="确定删除此端点吗？"
-                        onConfirm={() => handleDelete(row.id)}
-                      >
-                        <a style={{ color: "red" }}>删除</a>
-                      </Popconfirm>,
-                    ],
+                    render: (_, row) => (
+                      <div className="cw-row-icon-actions">
+                        <Tooltip title="同步模型">
+                          <Button 
+                            type="text" 
+                            size="small" 
+                            icon={<SyncOutlined spin={syncingId === row.id} />} 
+                            onClick={() => handleSyncModels(row.id)} 
+                          />
+                        </Tooltip>
+                        <Tooltip title="管理模型">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<ApiOutlined />}
+                            onClick={async () => {
+                              setSelectedEndpoint(row);
+                              setSelectedModelIds([]);
+                              await loadModelsForEndpoint(row.id);
+                            }}
+                          />
+                        </Tooltip>
+                        <Tooltip title="编辑">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => setEditingEndpoint(row)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="删除">
+                          <Popconfirm
+                            title="确定删除此端点吗？"
+                            onConfirm={() => handleDelete(row.id)}
+                            okText="确定"
+                            cancelText="取消"
+                          >
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                            />
+                          </Popconfirm>
+                        </Tooltip>
+                      </div>
+                    ),
                   },
                 }}
               />
@@ -635,31 +662,44 @@ export default () => {
                     ),
                   },
                   actions: {
-                    render: (_, row) => [
-                      <a
-                        key="toggle"
-                        onClick={() =>
-                          handleToggleModel(row, Number(row.is_enabled) !== 1)
-                        }
-                      >
-                        {Number(row.is_enabled) === 1 ? "禁用" : "启用"}
-                      </a>,
-                      <a key="edit" onClick={() => setEditingModel(row)}>
-                        编辑
-                      </a>,
-                      <Popconfirm
-                        key="delete"
-                        title="确定删除这个模型吗？"
-                        onConfirm={async () => {
-                          await deleteModelFromEndpoint(Number(row.id));
-                          await loadModelsForEndpoint(selectedEndpoint.id);
-                          setAvailableModels(await getAvailableModels());
-                          messageApi.success("已删除");
-                        }}
-                      >
-                        <a style={{ color: "red" }}>删除</a>
-                      </Popconfirm>,
-                    ],
+                    render: (_, row) => (
+                      <div className="cw-row-icon-actions">
+                        <Tooltip title={Number(row.is_enabled) === 1 ? "禁用" : "启用"}>
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={Number(row.is_enabled) === 1 ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                            onClick={() => handleToggleModel(row, Number(row.is_enabled) !== 1)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="编辑">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => setEditingModel(row)}
+                          />
+                        </Tooltip>
+                        <Tooltip title="删除">
+                          <Popconfirm
+                            title="确定删除这个模型吗？"
+                            onConfirm={async () => {
+                              await deleteModelFromEndpoint(Number(row.id));
+                              if (selectedEndpoint) await loadModelsForEndpoint(selectedEndpoint.id);
+                              setAvailableModels(await getAvailableModels());
+                              messageApi.success("已删除");
+                            }}
+                          >
+                            <Button
+                              type="text"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                            />
+                          </Popconfirm>
+                        </Tooltip>
+                      </div>
+                    ),
                   },
                 }}
               />

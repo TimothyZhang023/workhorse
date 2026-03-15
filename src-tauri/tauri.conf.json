@@ -36,6 +36,27 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "dmg": {
+        "background": "icons/dmg-background.png",
+        "windowPosition": {
+          "x": 400,
+          "y": 400
+        },
+        "windowSize": {
+          "width": 540,
+          "height": 380
+        },
+        "appPosition": {
+          "x": 130,
+          "y": 150
+        },
+        "applicationFolderPosition": {
+          "x": 410,
+          "y": 150
+        }
+      }
+    }
   }
 }

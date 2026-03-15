@@ -44,3 +44,22 @@ body {
     transition: none !important;
   }
 }
+
+/* Global density optimizations for small screens */
+@media (max-width: 768px) {
+  .ant-card-body {
+    padding: 12px !important;
+  }
+  
+  .ant-space {
+    gap: 8px !important;
+  }
+
+  .ant-pro-list-row {
+    padding: 8px 0 !important;
+  }
+
+  h1, h2, h3, h4 {
+    margin-bottom: 0.5em !important;
+  }
+}
