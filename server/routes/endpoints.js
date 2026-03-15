@@ -277,17 +277,19 @@ router.post("/", (req, res) => {
   try {
     const { name, provider, base_url, api_key, is_default, use_preset_models } =
       req.body;
+    const normalizedName = String(name || "").trim();
+    const normalizedApiKey = String(api_key || "").trim();
     const normalizedProvider = normalizeProvider(provider);
     const resolvedBaseUrl = resolveBaseUrl(normalizedProvider, base_url);
-    if (!name || !resolvedBaseUrl || !api_key) {
+    if (!normalizedName || !resolvedBaseUrl || !normalizedApiKey) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     const group = createEndpointGroup(
       req.uid,
-      name,
+      normalizedName,
       normalizedProvider,
       resolvedBaseUrl,
-      api_key,
+      normalizedApiKey,
       is_default,
       use_preset_models
     );
@@ -302,18 +304,21 @@ router.put("/:id", (req, res) => {
   try {
     const { id } = req.params;
     const { name, provider, base_url, api_key, use_preset_models } = req.body;
+    const normalizedName = String(name || "").trim();
+    const normalizedApiKey =
+      api_key === undefined || api_key === null ? undefined : String(api_key).trim();
     const normalizedProvider = normalizeProvider(provider);
     const resolvedBaseUrl = resolveBaseUrl(normalizedProvider, base_url);
-    if (!name || !resolvedBaseUrl) {
+    if (!normalizedName || !resolvedBaseUrl) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     updateEndpointGroup(
       id,
       req.uid,
-      name,
+      normalizedName,
       normalizedProvider,
       resolvedBaseUrl,
-      api_key,
+      normalizedApiKey,
       use_preset_models
     );
     res.json({ success: true });

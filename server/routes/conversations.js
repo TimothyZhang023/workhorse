@@ -840,18 +840,36 @@ function describeExecutionAbort(executionContext, extra = {}) {
 function bindClientDisconnectAbort(req, res, executionContext) {
   if (!req || !executionContext) return () => {};
 
-  const handleClose = () => {
-    if (!res.writableEnded) {
+  let responseFinished = false;
+  const markFinished = () => {
+    responseFinished = true;
+  };
+
+  const abortIfClientDisconnected = () => {
+    if (!responseFinished && !res.writableEnded) {
       executionContext.abort("client_disconnect");
     }
   };
 
-  req.once("close", handleClose);
+  // `req.close` can fire after request body is read even when the client is fine.
+  // Use `req.aborted` + `res.close` to detect real client disconnects.
+  req.once("aborted", abortIfClientDisconnected);
+  res.once("close", abortIfClientDisconnected);
+  res.once("finish", markFinished);
+
   return () => {
     if (typeof req.off === "function") {
-      req.off("close", handleClose);
+      req.off("aborted", abortIfClientDisconnected);
     } else if (typeof req.removeListener === "function") {
-      req.removeListener("close", handleClose);
+      req.removeListener("aborted", abortIfClientDisconnected);
+    }
+
+    if (typeof res.off === "function") {
+      res.off("close", abortIfClientDisconnected);
+      res.off("finish", markFinished);
+    } else if (typeof res.removeListener === "function") {
+      res.removeListener("close", abortIfClientDisconnected);
+      res.removeListener("finish", markFinished);
     }
   };
 }
