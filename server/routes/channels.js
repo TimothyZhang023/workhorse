@@ -15,7 +15,10 @@ const CHANNEL_EXTENSION_CATALOG = {
     platform: "dingtalk",
     name: "DingTalk Bot",
     metadata: {
-      docs: "https://open.dingtalk.com/document/robots/custom-robot-access",
+      docs: "https://open-dingtalk.github.io/developerpedia/docs/learn/bot/stream/bot-stream-overview/",
+      connection_modes: ["stream"],
+      default_connection_mode: "stream",
+      required_credentials: ["client_id", "client_secret"],
       supported_events: ["task.run.completed", "task.run.failed"],
     },
   },
@@ -32,6 +35,9 @@ const CHANNEL_EXTENSION_CATALOG = {
     name: "Telegram Bot",
     metadata: {
       docs: "https://core.telegram.org/bots/api",
+      connection_modes: ["polling", "webhook"],
+      default_connection_mode: "polling",
+      required_credentials: ["bot_token"],
       supported_events: ["task.run.completed", "task.run.failed", "agent.alert"],
     },
   },

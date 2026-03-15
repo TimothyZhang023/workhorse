@@ -36,7 +36,7 @@ export async function getConversations() {
 
 export async function createConversation(
   title: string,
-  options?: { context_window?: number | null }
+  options?: { context_window?: number | null; channel_id?: number | null }
 ) {
   return request<API.Conversation>("/api/conversations", {
     method: "POST",
@@ -44,6 +44,9 @@ export async function createConversation(
       title,
       ...(options?.context_window !== undefined && {
         context_window: options.context_window,
+      }),
+      ...(options?.channel_id !== undefined && {
+        channel_id: options.channel_id,
       }),
     },
   });
@@ -118,6 +121,26 @@ export async function stopConversationExecution(conversationId: string) {
       method: "POST",
     }
   );
+}
+
+// Channels
+export async function getChannels() {
+  return request<API.Channel[]>("/api/channels", {
+    method: "GET",
+  });
+}
+
+export async function getChannelExtensions() {
+  return request<API.ChannelExtension[]>("/api/channels/extensions", {
+    method: "GET",
+  });
+}
+
+export async function createChannel(data: Partial<API.Channel>) {
+  return request<API.Channel>("/api/channels", {
+    method: "POST",
+    data,
+  });
 }
 
 // Chat stream is handled differently due to SSE, but we can have a helper if needed.
@@ -337,6 +360,25 @@ export async function clearAllHistory() {
   }>("/api/system/history", {
     method: "DELETE",
   });
+}
+
+export async function getGlobalSystemPromptSetting() {
+  return request<API.GlobalSystemPromptSetting>(
+    "/api/system/settings/global-system-prompt",
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function updateGlobalSystemPromptSetting(markdown: string) {
+  return request<{ success: boolean; key: string; value: string }>(
+    "/api/system/settings/global-system-prompt",
+    {
+      method: "PUT",
+      data: { markdown },
+    }
+  );
 }
 
 // Skills

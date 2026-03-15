@@ -21,9 +21,33 @@ declare namespace API {
     id: string;
     title: string;
     system_prompt?: string;
+    channel_id?: number | null;
     context_window?: number | null;
     tool_names?: string[] | null;
     created_at?: string;
+  };
+
+  type Channel = {
+    id: number;
+    name: string;
+    platform: string;
+    webhook_url?: string | null;
+    bot_token?: string | null;
+    metadata?: Record<string, any> | null;
+    is_enabled: number;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  type ChannelExtension = {
+    platform: string;
+    name: string;
+    metadata?: Record<string, any>;
+  };
+
+  type GlobalSystemPromptSetting = {
+    key: string;
+    markdown: string;
   };
 
   type Message = {

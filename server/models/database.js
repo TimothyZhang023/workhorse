@@ -39,6 +39,7 @@ db.exec(`
     uid TEXT NOT NULL,
     title TEXT NOT NULL,
     system_prompt TEXT DEFAULT '',
+    channel_id INTEGER,
     context_window INTEGER,
     tool_names TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -283,6 +284,12 @@ try {
   db.prepare(
     "ALTER TABLE conversations ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL"
   ).run();
+} catch (e) {
+  /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE conversations ADD COLUMN channel_id INTEGER").run();
 } catch (e) {
   /* column already exists */
 }
@@ -589,6 +596,10 @@ function normalizeConversationRow(row) {
 
   return {
     ...row,
+    channel_id:
+      row.channel_id === null || row.channel_id === undefined
+        ? null
+        : Number(row.channel_id),
     context_window:
       Number.isFinite(parsedContextWindow) && parsedContextWindow > 0
         ? Math.round(parsedContextWindow)
@@ -605,6 +616,7 @@ export function getConversations(uid) {
     .prepare(
       `
     SELECT id, title, system_prompt, created_at, updated_at
+         , channel_id
          , context_window
          , tool_names
     FROM conversations
@@ -622,22 +634,29 @@ export function createConversation(uid, title = "新对话", toolNames = null, o
     Number.isFinite(parsedContextWindow) && parsedContextWindow > 0
       ? Math.round(parsedContextWindow)
       : null;
+  const parsedChannelId = Number(options?.channelId);
+  const channelId =
+    Number.isFinite(parsedChannelId) && parsedChannelId > 0
+      ? Math.round(parsedChannelId)
+      : null;
   const result = db
     .prepare(
       `
-    INSERT INTO conversations (uid, title, tool_names, context_window) VALUES (?, ?, ?, ?)
+    INSERT INTO conversations (uid, title, tool_names, context_window, channel_id) VALUES (?, ?, ?, ?, ?)
   `
     )
     .run(
       uid,
       title,
       Array.isArray(toolNames) ? JSON.stringify(toolNames) : null,
-      contextWindow
+      contextWindow,
+      channelId
     );
   return {
     id: result.lastInsertRowid,
     title,
     system_prompt: "",
+    channel_id: channelId,
     context_window: contextWindow,
     tool_names: Array.isArray(toolNames) ? toolNames : null,
   };

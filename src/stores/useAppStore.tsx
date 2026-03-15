@@ -20,7 +20,7 @@ const defaultState: AppState = {
   logout: async () => { },
 };
 
-const AppStoreContext = createContext<AppState>(defaultState);
+export const AppStoreContext = createContext<AppState>(defaultState);
 
 export const AppStoreProvider = ({ children }: { children: ReactNode }) => {
   return (
@@ -34,4 +34,7 @@ export const AppStoreProvider = ({ children }: { children: ReactNode }) => {
  * Drop-in replacement for `useModel('global')` across all pages.
  * Usage: `const { currentUser, isLoggedIn } = useAppStore();`
  */
-export const useAppStore = () => useContext(AppStoreContext);
+export const useAppStore = () => {
+  const context = useContext(AppStoreContext);
+  return context || defaultState;
+};

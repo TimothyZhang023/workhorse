@@ -246,10 +246,36 @@ export default () => {
 
         <main className="cw-dashboard-main-wrap">
           <section className="cw-dashboard-hero">
-            <div>
-              <div className="cw-dashboard-eyebrow">Skills</div>
+            <div className="cw-hero-content">
+              <div className="cw-dashboard-eyebrow">
+                <span className="cw-pulse"></span>
+                Skills Library
+              </div>
               <h1>技能库</h1>
-              <p>Skill 作为全局能力开关管理。任务运行时默认使用当前用户已启用的全部 Skill。</p>
+              <p>
+                Skill 作为全局能力开关管理。任务运行时默认使用当前用户已启用的全部 Skill。
+                扩展 Agent 的专业领域能力，支持 Git 与 ZIP 导入。
+              </p>
+            </div>
+            <div className="cw-user-card" style={{ padding: '24px 32px' }}>
+              <div className="cw-user-avatar-wrap">
+                <div style={{ 
+                  width: 48, 
+                  height: 48, 
+                  background: 'linear-gradient(135deg, #f59e0b, #ef4444)', 
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff'
+                }}>
+                  <ThunderboltOutlined style={{ fontSize: 24 }} />
+                </div>
+              </div>
+              <div>
+                <div className="cw-user-name" style={{ fontSize: 18 }}>{skills.length} 个技能</div>
+                <div className="cw-user-desc">即插即用</div>
+              </div>
             </div>
           </section>
 

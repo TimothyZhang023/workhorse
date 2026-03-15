@@ -185,7 +185,7 @@ export default () => {
                   type="primary"
                   size="large"
                   icon={<MessageOutlined />}
-                  onClick={() => navigate("/chat")}
+                  onClick={() => navigate("/agency")}
                 >
                   对话
                 </Button>
@@ -611,7 +611,7 @@ export default () => {
                   <div className="cw-quick-links">
                     <div
                       className="cw-quick-link-item"
-                      onClick={() => navigate("/chat")}
+                      onClick={() => navigate("/agency")}
                     >
                       <MessageOutlined />
                       <span>对话助手</span>

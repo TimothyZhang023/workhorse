@@ -263,12 +263,36 @@ export default () => {
 
         <main className="cw-dashboard-main-wrap">
           <section className="cw-dashboard-hero">
-            <div>
-              <div className="cw-dashboard-eyebrow">Agent Workflows</div>
+            <div className="cw-hero-content">
+              <div className="cw-dashboard-eyebrow">
+                <span className="cw-pulse"></span>
+                Agent Workflows
+              </div>
               <h1>任务编排</h1>
               <p>
                 任务只保留名称与核心 System Prompt。运行时会实时读取当前全局启用配置。
+                自动化你的日常工作流，赋予 Agent 记忆与技能。
               </p>
+            </div>
+            <div className="cw-user-card" style={{ padding: '24px 32px' }}>
+              <div className="cw-user-avatar-wrap">
+                <div style={{ 
+                  width: 48, 
+                  height: 48, 
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff'
+                }}>
+                  <RobotOutlined style={{ fontSize: 24 }} />
+                </div>
+              </div>
+              <div>
+                <div className="cw-user-name" style={{ fontSize: 18 }}>{tasks.length} 个任务</div>
+                <div className="cw-user-desc">已就绪</div>
+              </div>
             </div>
           </section>
 

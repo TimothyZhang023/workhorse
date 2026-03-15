@@ -360,13 +360,36 @@ export default () => {
 
         <main className="cw-dashboard-main-wrap">
           <section className="cw-dashboard-hero">
-            <div>
-              <div className="cw-dashboard-eyebrow">Tools</div>
+            <div className="cw-hero-content">
+              <div className="cw-dashboard-eyebrow">
+                <span className="cw-pulse"></span>
+                Tools & Extensions
+              </div>
               <h1>MCP 管理</h1>
               <p>
                 接入 Model Context Protocol (MCP)，扩展 Agent
-                的原生工具调用能力与外部系统集成。
+                的原生工具调用能力。实现与外部系统、知识库及本地工具链的深度集成。
               </p>
+            </div>
+            <div className="cw-user-card" style={{ padding: '24px 32px' }}>
+              <div className="cw-user-avatar-wrap">
+                <div style={{ 
+                  width: 48, 
+                  height: 48, 
+                  background: 'linear-gradient(135deg, #10b981, #059669)', 
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff'
+                }}>
+                  <ApiOutlined style={{ fontSize: 24 }} />
+                </div>
+              </div>
+              <div>
+                <div className="cw-user-name" style={{ fontSize: 18 }}>{servers.length} 个节点</div>
+                <div className="cw-user-desc">已连接</div>
+              </div>
             </div>
           </section>
 

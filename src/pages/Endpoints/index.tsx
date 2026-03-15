@@ -256,12 +256,36 @@ export default () => {
 
         <main className="cw-dashboard-main-wrap">
           <section className="cw-dashboard-hero">
-            <div>
-              <div className="cw-dashboard-eyebrow">Cloud</div>
+            <div className="cw-hero-content">
+              <div className="cw-dashboard-eyebrow">
+                <span className="cw-pulse"></span>
+                LLM Connectivity
+              </div>
               <h1>LLM 端点</h1>
               <p>
-                端点负责接入模型；模型负责启用状态、默认高级参数，以及全局主模型/备用模型策略。
+                管理并接入多样的模型后端。配置主从模型策略，确保 Agent 随时都能调用最合适的 LLM 能力。
+                端点负责连接；模型负责逻辑与参数。
               </p>
+            </div>
+            <div className="cw-user-card" style={{ padding: '24px 32px' }}>
+              <div className="cw-user-avatar-wrap">
+                <div style={{ 
+                  width: 48, 
+                  height: 48, 
+                  background: 'linear-gradient(135deg, #2563eb, #06b6d4)', 
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff'
+                }}>
+                  <ApiOutlined style={{ fontSize: 24 }} />
+                </div>
+              </div>
+              <div>
+                <div className="cw-user-name" style={{ fontSize: 18 }}>{endpoints.length} 个端点</div>
+                <div className="cw-user-desc">连接正常</div>
+              </div>
             </div>
           </section>
 

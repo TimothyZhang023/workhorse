@@ -102,13 +102,13 @@ router.get("/", (req, res) => {
 
 router.post("/", (req, res) => {
   try {
-    const { title, tool_names, context_window } = req.body;
+    const { title, tool_names, context_window, channel_id } = req.body;
     res.json(
       createConversation(
         req.uid,
         title,
         Array.isArray(tool_names) ? tool_names : null,
-        { contextWindow: context_window }
+        { contextWindow: context_window, channelId: channel_id }
       )
     );
   } catch (error) {
@@ -1402,6 +1402,131 @@ async function streamWithFallback(uid, model, messages, res, opts = {}) {
   }
 
   return await executeTurn(messages, opts.aiMsgId);
+}
+
+function createBufferedSseResponse() {
+  const events = [];
+
+  return {
+    writableEnded: false,
+    headers: {},
+    socket: {
+      setNoDelay() {},
+    },
+    setHeader(key, value) {
+      this.headers[key] = value;
+    },
+    flushHeaders() {},
+    write(chunk) {
+      const text = String(chunk || "");
+      for (const line of text.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          events.push(JSON.parse(payload));
+        } catch {
+          // ignore non-json SSE fragments
+        }
+      }
+      return true;
+    },
+    end() {
+      this.writableEnded = true;
+    },
+    getEvents() {
+      return events;
+    },
+  };
+}
+
+export async function runConversationMessage({
+  uid,
+  conversationId,
+  message,
+  model,
+  images,
+  debug = false,
+  generationConfig = {},
+  source = "channel",
+  allowedToolNames = null,
+}) {
+  const bufferedRes = createBufferedSseResponse();
+  const executionContext = createExecutionContext(uid, conversationId, bufferedRes);
+  initSse(bufferedRes);
+
+  try {
+    const conversation = getConversation(conversationId, uid);
+    if (!conversation) {
+      throw new Error("对话不存在或无权限");
+    }
+
+    const existingHistory = getMessages(conversationId, uid);
+    const shouldSummarizeTitle =
+      !existingHistory.some((item) => item.role === "user");
+
+    let storedContent = String(message || "");
+    if (Array.isArray(images) && images.length > 0) {
+      storedContent +=
+        "\n" + images.map((img) => `[IMAGE_DATA:${img}]`).join("\n");
+    }
+    addMessage(conversationId, uid, "user", storedContent);
+
+    const history = getMessages(conversationId, uid);
+    const systemPrompt = buildConversationSystemPrompt(uid, conversation);
+    const messages = buildMessages(history, systemPrompt);
+    const aiMsg = addMessage(conversationId, uid, "assistant", "");
+
+    const fullContent = await streamWithFallback(
+      uid,
+      String(model || "").trim(),
+      messages,
+      bufferedRes,
+      {
+        conversationId,
+        source,
+        aiMsgId: aiMsg.id,
+        debug,
+        generationConfig,
+        conversationContextWindow: conversation?.context_window ?? null,
+        allowedToolNames:
+          Array.isArray(allowedToolNames) && allowedToolNames.length > 0
+            ? allowedToolNames
+            : conversation?.tool_names ?? null,
+        executionContext,
+      }
+    );
+
+    if (fullContent === false) {
+      const events = bufferedRes.getEvents();
+      const latestError = [...events]
+        .reverse()
+        .find((event) => event?.error || event?.notice);
+      throw new Error(latestError?.error || latestError?.notice || "Agent 执行失败");
+    }
+
+    if (fullContent !== "_HANDLED_INTERNALLY_") {
+      updateMessage(aiMsg.id, uid, fullContent);
+    }
+
+    if (shouldSummarizeTitle) {
+      summarizeConversationTitle(uid, conversationId, model).catch(() => {});
+    }
+
+    const finalAssistantMessage = getMessages(conversationId, uid).find(
+      (item) => Number(item.id) === Number(aiMsg.id)
+    );
+
+    finalizeSse(bufferedRes);
+    return {
+      conversationId: String(conversationId),
+      assistantMessageId: aiMsg.id,
+      finalResponse: String(finalAssistantMessage?.content || fullContent || "").trim(),
+      events: bufferedRes.getEvents(),
+    };
+  } finally {
+    clearExecutionContext(uid, conversationId);
+  }
 }
 
 // ============ 流式聊天 ============

@@ -193,13 +193,36 @@ export default () => {
 
         <main className="cw-dashboard-main-wrap">
           <section className="cw-dashboard-hero">
-            <div>
-              <div className="cw-dashboard-eyebrow">Scheduled Jobs</div>
+            <div className="cw-hero-content">
+              <div className="cw-dashboard-eyebrow">
+                <span className="cw-pulse"></span>
+                Automation & Scheduling
+              </div>
               <h1>定时调度</h1>
               <p>
-                让 Agent 自动运行。支持标准的 Cron
-                表达式，定时执行预定义的任务编排。
+                自动化 Agent 执行计划。通过 Cron 表达式预设周期性任务，实现 24/7 全天候无缝监控与处理。
+                让 Agent 成为你的数字雇员，在后台默默完成复杂工作。
               </p>
+            </div>
+            <div className="cw-user-card" style={{ padding: '24px 32px' }}>
+              <div className="cw-user-avatar-wrap">
+                <div style={{ 
+                  width: 48, 
+                  height: 48, 
+                  background: 'linear-gradient(135deg, #10b981, #34d399)', 
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff'
+                }}>
+                  <ScheduleOutlined style={{ fontSize: 24 }} />
+                </div>
+              </div>
+              <div>
+                <div className="cw-user-name" style={{ fontSize: 18 }}>{jobs.length} 个调度</div>
+                <div className="cw-user-desc">自动运行中</div>
+              </div>
             </div>
           </section>
 

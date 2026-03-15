@@ -1,10 +1,12 @@
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { Sidebar } from "@/components/Sidebar";
-import { SystemPromptModal } from "@/components/SystemPromptModal";
 import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
+  createChannel,
   createConversation,
   deleteConversation,
+  getChannelExtensions,
+  getChannels,
   getConversations,
   getMessages,
   stopConversationExecution,
@@ -17,10 +19,10 @@ import {
   CheckOutlined,
   CloseOutlined,
   CopyOutlined,
+  ArrowLeftOutlined,
   DownOutlined,
   DeleteOutlined,
   EditOutlined,
-  MenuOutlined,
   PictureOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -30,7 +32,7 @@ import {
   UpOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useAppStore } from "@/stores/useAppStore";
 import { createAuthHeaders, resolveApiUrl } from "@/services/request";
 import {
@@ -38,19 +40,22 @@ import {
   Button,
   ConfigProvider,
   Drawer,
+  Form,
   Input,
-  Layout,
+  Modal,
   Popconfirm,
+  Select,
+  Segmented,
   Switch,
+  Tag,
   Tooltip,
   Upload,
   message as antdMessage,
   theme as antdTheme,
 } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./index.css";
 
-const { Sider, Content } = Layout;
 const { TextArea } = Input;
 
 // 将图片文件转为 base64
@@ -109,6 +114,57 @@ type ChatDebugEvent = {
   [key: string]: any;
 };
 
+type WorkspaceAgent = {
+  id: string;
+  name: string;
+  kind: "main" | "channel";
+  platform?: string;
+  channelId?: number;
+  description: string;
+};
+
+type ChannelCreateFormValues = {
+  name: string;
+  platform: string;
+  client_id?: string;
+  client_secret?: string;
+  update_mode?: "polling" | "webhook";
+  webhook_url?: string;
+  secret_token?: string;
+  bot_token?: string;
+};
+
+const MAIN_AGENT_ID = "main";
+const CONVERSATION_AGENT_MAP_KEY = "cw.conversation_agent_map.v1";
+const CHANNEL_AGENT_ADAPTERS: Record<
+  string,
+  {
+    label: string;
+    docs: string;
+    connectionLabel: string;
+    description: string;
+  }
+> = {
+  dingding: {
+    label: "DingTalk",
+    docs: "https://open-dingtalk.github.io/developerpedia/docs/learn/bot/stream/bot-stream-overview/",
+    connectionLabel: "Stream Mode",
+    description: "通过 Stream Mode 与钉钉服务端保持长连接接收机器人事件。",
+  },
+  dingtalk: {
+    label: "DingTalk",
+    docs: "https://open-dingtalk.github.io/developerpedia/docs/learn/bot/stream/bot-stream-overview/",
+    connectionLabel: "Stream Mode",
+    description: "通过 Stream Mode 与钉钉服务端保持长连接接收机器人事件。",
+  },
+  telegram: {
+    label: "Telegram",
+    docs: "https://core.telegram.org/bots/api",
+    connectionLabel: "Polling / Webhook",
+    description: "通过 Bot API 接收更新，支持长轮询或 webhook 两种模式。",
+  },
+};
+
 const splitIncomingStreamContent = (text: string): string[] => {
   const raw = String(text || "");
   if (!raw) return [];
@@ -149,11 +205,34 @@ const getResponseErrorMessage = async (response: Response) => {
   }
 };
 
+const readConversationAgentMap = (): Record<string, string> => {
+  try {
+    const raw = window.localStorage.getItem(CONVERSATION_AGENT_MAP_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, string>;
+  } catch {
+    return {};
+  }
+};
+
+const resolveConversationAgentId = (
+  conversation: Pick<API.Conversation, "id" | "channel_id">,
+  conversationAgentMap: Record<string, string>
+) => {
+  if (conversation.channel_id) {
+    return `channel:${conversation.channel_id}`;
+  }
+  return conversationAgentMap[String(conversation.id)] || MAIN_AGENT_ID;
+};
+
 export default () => {
   const { currentUser, isLoggedIn } = useAppStore();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedConversationId = searchParams.get("conversationId");
+  const requestedAgentId = searchParams.get("agent");
+  const [channelAgentForm] = Form.useForm<ChannelCreateFormValues>();
   const [messageApi, messageContextHolder] = antdMessage.useMessage();
   const {
     moduleExpanded,
@@ -169,6 +248,16 @@ export default () => {
   const [conversationDrawerVisible, setConversationDrawerVisible] =
     useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [agentModalVisible, setAgentModalVisible] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [activeAgentId, setActiveAgentId] = useState(MAIN_AGENT_ID);
+  const [channels, setChannels] = useState<API.Channel[]>([]);
+  const [channelExtensions, setChannelExtensions] = useState<
+    API.ChannelExtension[]
+  >([]);
+  const [conversationAgentMap, setConversationAgentMap] = useState<
+    Record<string, string>
+  >(() => readConversationAgentMap());
 
   // 对话状态
   const [conversations, setConversations] = useState<API.Conversation[]>([]);
@@ -187,14 +276,6 @@ export default () => {
   // 流式处理状态
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  // 设置弹窗
-
-  // System Prompt
-  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
-  const currentConv = conversations.find((c) => c.id === currentConvId) ?? null;
-  const currentSystemPrompt = currentConv?.system_prompt ?? "";
-  const currentContextWindow = currentConv?.context_window ?? null;
 
   // 对话重命名状态
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -236,6 +317,77 @@ export default () => {
     currentConvIdRef.current = currentConvId;
   }, [currentConvId]);
 
+  const patchConversationAgentMap = useCallback(
+    (updater: (prev: Record<string, string>) => Record<string, string>) => {
+      setConversationAgentMap((prev) => {
+        const next = updater(prev);
+        window.localStorage.setItem(
+          CONVERSATION_AGENT_MAP_KEY,
+          JSON.stringify(next)
+        );
+        return next;
+      });
+    },
+    []
+  );
+
+  const availableChannelPlatforms = useMemo(() => {
+    const extensionPlatforms = (channelExtensions || [])
+      .map((item) => item.platform)
+      .filter(Boolean);
+    const createDefaults = ["dingding", "telegram"];
+    return Array.from(new Set([...createDefaults, ...extensionPlatforms])).filter(
+      (platform) => Boolean(CHANNEL_AGENT_ADAPTERS[platform])
+    );
+  }, [channelExtensions]);
+
+  const agents = useMemo<WorkspaceAgent[]>(() => {
+    const main: WorkspaceAgent = {
+      id: MAIN_AGENT_ID,
+      name: "main",
+      kind: "main",
+      description: "Web 工作台主 Agent（原对话入口）",
+    };
+    const channelAgents = (channels || [])
+      .filter(
+        (channel) =>
+          channel.platform &&
+          CHANNEL_AGENT_ADAPTERS[channel.platform] &&
+          Number(channel.is_enabled) === 1
+      )
+      .map<WorkspaceAgent>((channel) => ({
+        id: `channel:${channel.id}`,
+        kind: "channel",
+        name: channel.name,
+        platform: channel.platform,
+        channelId: channel.id,
+        description: `${CHANNEL_AGENT_ADAPTERS[channel.platform!]?.label || channel.platform} 渠道机器人`,
+      }));
+    return [main, ...channelAgents];
+  }, [channels]);
+
+  const activeAgent = useMemo(
+    () => agents.find((agent) => agent.id === activeAgentId) || agents[0],
+    [activeAgentId, agents]
+  );
+  const showAgencyOverview = !requestedAgentId && !requestedConversationId;
+
+  const pushAgencyParams = useCallback(
+    (next: { agent?: string | null; conversationId?: string | null }) => {
+      const params = new URLSearchParams(searchParams);
+      if (next.agent === null) params.delete("agent");
+      else if (next.agent !== undefined) params.set("agent", next.agent);
+
+      if (next.conversationId === null) params.delete("conversationId");
+      else if (next.conversationId !== undefined) {
+        params.set("conversationId", next.conversationId);
+      }
+
+      setSearchParams(params);
+    },
+    [searchParams, setSearchParams]
+  );
+
   // 登录检查 & 初始化
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -253,6 +405,17 @@ export default () => {
 
     handleSelectConversation(requestedConversationId);
   }, [requestedConversationId, conversations, currentConvId]);
+
+  useEffect(() => {
+    if (!requestedAgentId) return;
+    if (agents.some((agent) => agent.id === requestedAgentId)) {
+      setActiveAgentId(requestedAgentId);
+      return;
+    }
+    if (!activeAgent) {
+      setActiveAgentId(MAIN_AGENT_ID);
+    }
+  }, [activeAgent, agents, requestedAgentId]);
 
   useEffect(() => {
     const handleHistoryCleared = () => {
@@ -280,6 +443,9 @@ export default () => {
       setConversations([]);
       setCurrentConvId(null);
       setMessages([]);
+      setChannels([]);
+      setChannelExtensions([]);
+      setActiveAgentId(MAIN_AGENT_ID);
       setToolMessageExpanded({});
       setSearchQuery("");
       setDebugEventsByConversation({});
@@ -301,15 +467,22 @@ export default () => {
     return () => window.removeEventListener("keydown", handler);
   }, [conversations]);
 
+
+
   const loadInitData = async () => {
     try {
-      const convs = await getConversations();
-
+      const [convs, channelList, extensions] = await Promise.all([
+        getConversations(),
+        getChannels().catch(() => []),
+        getChannelExtensions().catch(() => []),
+      ]);
       setConversations(convs);
+      setChannels(channelList);
+      setChannelExtensions(extensions);
       if (convs.length > 0) {
         const initialConversationId =
           requestedConversationId &&
-          convs.some((conv) => String(conv.id) === requestedConversationId)
+            convs.some((conv) => String(conv.id) === requestedConversationId)
             ? requestedConversationId
             : convs[0].id;
         handleSelectConversation(initialConversationId);
@@ -327,6 +500,26 @@ export default () => {
       console.error(error);
     }
   };
+
+  const refreshChannels = async () => {
+    try {
+      const channelList = await getChannels();
+      setChannels(channelList);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleOpenAgent = useCallback(
+    (agentId: string) => {
+      setActiveAgentId(agentId);
+      setCurrentConvId(null);
+      setMessages([]);
+      setSearchQuery("");
+      pushAgencyParams({ agent: agentId, conversationId: null });
+    },
+    [pushAgencyParams]
+  );
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -563,9 +756,15 @@ export default () => {
   const handleCreateChat = async () => {
     try {
       const newConv = await createConversation("新对话");
+      const agentId = activeAgentId || MAIN_AGENT_ID;
+      patchConversationAgentMap((prev) => ({
+        ...prev,
+        [String(newConv.id)]: agentId,
+      }));
       setConversations((prev) => [newConv, ...prev]);
       setCurrentConvId(newConv.id);
       setMessages([]);
+      pushAgencyParams({ agent: agentId, conversationId: String(newConv.id) });
       if (isMobile) setConversationDrawerVisible(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     } catch (error) {
@@ -573,8 +772,67 @@ export default () => {
     }
   };
 
+  const handleCreateChannelAgent = async () => {
+    try {
+      const values = await channelAgentForm.validateFields();
+      setCreatingAgent(true);
+      const normalizedPlatform =
+        values.platform === "dingding" ? "dingtalk" : values.platform;
+      const metadata =
+        normalizedPlatform === "dingtalk"
+          ? {
+              connection_mode: "stream",
+              docs: CHANNEL_AGENT_ADAPTERS[normalizedPlatform].docs,
+              client_id: values.client_id?.trim() || "",
+              client_secret: values.client_secret?.trim() || "",
+            }
+          : {
+              connection_mode: values.update_mode || "polling",
+              docs: CHANNEL_AGENT_ADAPTERS[normalizedPlatform].docs,
+              secret_token: values.secret_token?.trim() || "",
+            };
+      const payload: Partial<API.Channel> = {
+        name: values.name.trim(),
+        platform: normalizedPlatform,
+        webhook_url:
+          normalizedPlatform === "telegram" &&
+          values.update_mode === "webhook" &&
+          values.webhook_url?.trim()
+            ? values.webhook_url.trim()
+            : undefined,
+        bot_token:
+          normalizedPlatform === "telegram"
+            ? values.bot_token?.trim() || undefined
+            : undefined,
+        metadata,
+        is_enabled: 1,
+      };
+      const channel = await createChannel(payload);
+      await refreshChannels();
+      const newAgentId = `channel:${channel.id}`;
+      setActiveAgentId(newAgentId);
+      pushAgencyParams({ agent: newAgentId, conversationId: null });
+      setAgentModalVisible(false);
+      channelAgentForm.resetFields();
+      messageApi.success("渠道 Agent 已创建");
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      messageApi.error(error?.message || "创建渠道 Agent 失败");
+    } finally {
+      setCreatingAgent(false);
+    }
+  };
+
   const handleSelectConversation = async (id: string) => {
+    const targetConversation = conversations.find((item) => String(item.id) === String(id));
+    const mappedAgentId = targetConversation
+      ? resolveConversationAgentId(targetConversation, conversationAgentMap)
+      : conversationAgentMap[String(id)] || MAIN_AGENT_ID;
+    if (mappedAgentId !== activeAgentId) {
+      setActiveAgentId(mappedAgentId);
+    }
     setCurrentConvId(id);
+    pushAgencyParams({ agent: mappedAgentId, conversationId: id });
     setToolMessageExpanded({});
     try {
       const msgs = await getMessages(id);
@@ -589,6 +847,11 @@ export default () => {
     e.stopPropagation();
     try {
       await deleteConversation(id);
+      patchConversationAgentMap((prev) => {
+        const next = { ...prev };
+        delete next[String(id)];
+        return next;
+      });
       const newConvs = conversations.filter((c) => c.id !== id);
       setConversations(newConvs);
       if (currentConvId === id) {
@@ -597,6 +860,7 @@ export default () => {
         } else {
           setCurrentConvId(null);
           setMessages([]);
+          pushAgencyParams({ conversationId: null });
         }
       }
     } catch (error) {
@@ -626,32 +890,6 @@ export default () => {
       console.error(e);
     }
     setEditingTitleId(null);
-  };
-
-  const handleSaveSystemPrompt = async (
-    prompt: string,
-    contextWindow: number | null
-  ) => {
-    if (!currentConvId) return;
-    try {
-      await updateConversation(
-        currentConvId,
-        undefined as any,
-        prompt,
-        undefined,
-        contextWindow
-      );
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === currentConvId
-            ? { ...c, system_prompt: prompt, context_window: contextWindow }
-            : c
-        )
-      );
-      messageApi.success("对话设置已保存");
-    } catch (e) {
-      messageApi.error("保存失败");
-    }
   };
 
   // 核心发送函数（兼容 send + regenerate）
@@ -1135,9 +1373,41 @@ export default () => {
     });
   };
 
-  const filteredConversations = conversations.filter((c) =>
-    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredConversations = conversations
+    .filter((conversation) => {
+      const mappedAgentId = resolveConversationAgentId(
+        conversation,
+        conversationAgentMap
+      );
+      return mappedAgentId === (activeAgent?.id || MAIN_AGENT_ID);
+    })
+    .filter((conversation) =>
+      conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  const extensionByPlatform = useMemo(
+    () => new Map(channelExtensions.map((item) => [item.platform, item])),
+    [channelExtensions]
   );
+
+  useEffect(() => {
+    if (!currentConvId) return;
+    const currentConversation = conversations.find(
+      (item) => String(item.id) === String(currentConvId)
+    );
+    const currentAgentForConversation = currentConversation
+      ? resolveConversationAgentId(currentConversation, conversationAgentMap)
+      : conversationAgentMap[String(currentConvId)] || MAIN_AGENT_ID;
+    if (currentAgentForConversation !== (activeAgent?.id || MAIN_AGENT_ID)) {
+      setCurrentConvId(null);
+      setMessages([]);
+    }
+  }, [activeAgent, conversationAgentMap, conversations, currentConvId]);
+
+  useEffect(() => {
+    if (!showAgencyOverview) return;
+    setCurrentConvId(null);
+    setMessages([]);
+  }, [showAgencyOverview]);
   const currentDebugEvents = currentConvId
     ? debugEventsByConversation[currentConvId] || []
     : [];
@@ -1158,8 +1428,77 @@ export default () => {
       themeMode={themeMode}
       resolvedTheme={resolvedTheme}
       setThemeMode={setThemeMode}
-      activePath="/chat"
+      activePath="/agency"
     />
+  );
+
+  const agencyOverviewContent = (
+    <div className="agency-overview">
+      <div className="agency-overview-hero">
+        <div>
+          <div className="agency-overview-eyebrow">Agency</div>
+          <h1>当前已配置的 Agents</h1>
+          <p>
+            先选 Agent，再进入它的独立会话空间。主工作台 `main`
+            和各渠道机器人都在这里统一管理。
+          </p>
+        </div>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            channelAgentForm.setFieldsValue({
+              platform: availableChannelPlatforms[0],
+              update_mode: "polling",
+            });
+            setAgentModalVisible(true);
+          }}
+        >
+          新增渠道 Agent
+        </Button>
+      </div>
+
+      <div className="agency-agent-grid">
+        {agents.map((agent) => {
+          const conversationCount = conversations.filter((conversation) => {
+            const mappedAgentId = resolveConversationAgentId(
+              conversation,
+              conversationAgentMap
+            );
+            return mappedAgentId === agent.id;
+          }).length;
+
+          return (
+            <div
+              key={agent.id}
+              className="agency-agent-card"
+              onClick={() => handleOpenAgent(agent.id)}
+            >
+              <div className="agency-agent-card-top">
+                <div>
+                  <div className="agency-agent-card-name">{agent.name}</div>
+                  <div className="agency-agent-card-desc">{agent.description}</div>
+                </div>
+                <Tag bordered={false} className="agent-item-kind">
+                  {agent.kind === "main"
+                    ? "web"
+                    : CHANNEL_AGENT_ADAPTERS[agent.platform || ""]?.label ||
+                      agent.platform}
+                </Tag>
+              </div>
+              <div className="agency-agent-card-meta">
+                <span>{conversationCount} 个会话</span>
+                <span>
+                  {agent.kind === "main"
+                    ? "内置工作台"
+                    : CHANNEL_AGENT_ADAPTERS[agent.platform || ""]?.connectionLabel}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 
   const conversationListContent = (
@@ -1167,35 +1506,77 @@ export default () => {
       <div className="conversation-panel-header">
         <div className="conversation-panel-title">
           <AppstoreOutlined />
-          <span>对话列表</span>
+          <span>{activeAgent?.name || "main"}</span>
         </div>
+        <Button
+          type="text"
+          size="small"
+          onClick={() => pushAgencyParams({ agent: null, conversationId: null })}
+        >
+          返回 Agency
+        </Button>
+      </div>
+
+      <div className="agent-conversation-head">
+        <span className="agency-section-title">会话列表</span>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           size="small"
           onClick={handleCreateChat}
-          title={"新对话 (Ctrl+N)"}
+          title="新会话 (Ctrl+N)"
         >
-          新建
+          新会话
         </Button>
       </div>
-
       <Input.Search
-        placeholder="搜索对话..."
+        placeholder="搜索当前 Agent 会话..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         allowClear
         size="small"
         className="conversation-search"
       />
+      {activeAgent?.kind === "channel" && (
+        <div className="agent-binding-tip">
+          渠道绑定: {activeAgent.platform} ·{" "}
+          {CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.connectionLabel}
+          {" · "}
+          <a
+            href={
+              extensionByPlatform.get(activeAgent.platform || "")?.metadata?.docs ||
+              CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.docs
+            }
+            target="_blank"
+            rel="noreferrer"
+          >
+            官方文档
+          </a>
+        </div>
+      )}
+
+      {activeAgent?.kind === "channel" && (
+        <div className="agent-item active" style={{ cursor: "default" }}>
+          <div className="agent-item-main">
+            <span className="agent-item-name">
+              {CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.label}
+            </span>
+            <Tag className="agent-item-kind" bordered={false}>
+              {CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.connectionLabel}
+            </Tag>
+          </div>
+          <div className="agent-item-desc">
+            {CHANNEL_AGENT_ADAPTERS[activeAgent.platform || ""]?.description}
+          </div>
+        </div>
+      )}
 
       <div className="conversation-scroll">
         {filteredConversations.map((conv) => (
           <div
             key={conv.id}
-            className={`conversation-item ${
-              currentConvId === conv.id ? "active" : ""
-            }`}
+            className={`conversation-item ${currentConvId === conv.id ? "active" : ""
+              }`}
             onClick={() => handleSelectConversation(conv.id)}
           >
             {editingTitleId === conv.id ? (
@@ -1252,10 +1633,25 @@ export default () => {
             )}
           </div>
         ))}
-        {conversations.length === 0 && (
-          <div className="empty-conv">暂无对话记录</div>
+        {filteredConversations.length === 0 && (
+          <div className="empty-conv">
+            当前 Agent 暂无会话，先创建一条新会话。
+          </div>
         )}
       </div>
+    </div>
+  );
+
+  const agentEmptyContent = (
+    <div className="empty-messages">
+      <div className="empty-icon">◌</div>
+      <div className="empty-title">{activeAgent?.name || "main"} 还没有打开会话</div>
+      <div className="empty-hint">
+        先创建一条新会话，再进入这个 Agent 的聊天上下文。
+      </div>
+      <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateChat}>
+        新建会话
+      </Button>
     </div>
   );
 
@@ -1279,66 +1675,38 @@ export default () => {
       <div
         className={`chat-layout cw-dashboard-layout ${isDark ? "dark" : ""}`}
       >
-        {!isMobile && moduleNavContent}
-
-        {isMobile && (
-          <>
-            <Drawer
-              placement="left"
-              open={moduleDrawerVisible}
-              onClose={() => setModuleDrawerVisible(false)}
-              width={220}
-              styles={{ body: { padding: 0 } }}
-              title={null}
-            >
-              {moduleNavContent}
-            </Drawer>
-            <Drawer
-              placement="right"
-              open={conversationDrawerVisible}
-              onClose={() => setConversationDrawerVisible(false)}
-              width={320}
-              styles={{ body: { padding: 0 } }}
-              title={null}
-            >
-              {conversationListContent}
-            </Drawer>
-          </>
+        {moduleNavContent}
+        {isMobile && !showAgencyOverview && (
+          <Drawer
+            placement="right"
+            open={conversationDrawerVisible}
+            onClose={() => setConversationDrawerVisible(false)}
+            width={320}
+            styles={{ body: { padding: 0 } }}
+            title={null}
+          >
+            {conversationListContent}
+          </Drawer>
         )}
 
         <main className="chat-content" style={{ flex: 1, minWidth: 0 }}>
           <div className="chat-header">
             <div className="header-left">
-              {isMobile && (
+              {!showAgencyOverview && (
                 <Button
                   type="text"
-                  icon={<MenuOutlined />}
-                  onClick={() => setModuleDrawerVisible(true)}
-                />
-              )}
-              <span className="header-title">CW · 对话</span>
-              {currentConvId && (
-                <Tooltip
-                  title={
-                    currentSystemPrompt
-                      ? "编辑 System Prompt（已激活）"
-                      : "设置 System Prompt"
-                  }
+                  size="small"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => pushAgencyParams({ agent: null, conversationId: null })}
                 >
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => setShowSystemPrompt(true)}
-                    style={{
-                      color: currentSystemPrompt ? "#f59e0b" : undefined,
-                      fontWeight: currentSystemPrompt ? 600 : undefined,
-                    }}
-                  >
-                    {currentSystemPrompt ? "System Prompt ✦" : "System Prompt"}
-                  </Button>
-                </Tooltip>
+                  返回 Agency
+                </Button>
               )}
+              <span className="header-title">
+                {showAgencyOverview
+                  ? "Agency"
+                  : `${activeAgent?.name || "main"} · 会话`}
+              </span>
               {currentConvId && (
                 <Tooltip title="查看本次对话的模型调试输出">
                   <Button
@@ -1371,8 +1739,8 @@ export default () => {
               )}
             </div>
             <div className="header-right">
-              {isMobile && (
-                <Tooltip title="对话列表">
+              {isMobile && !showAgencyOverview && (
+                <Tooltip title="Agency / Agents">
                   <Button
                     type="text"
                     icon={<AppstoreOutlined />}
@@ -1390,10 +1758,21 @@ export default () => {
             </div>
           </div>
 
-          <div className="chat-main">
-            <div className="chat-center">
+          {showAgencyOverview ? (
+            <div className="chat-main">
+              <div className="chat-center">
+                <div className="messages-area agency-overview-scroll">
+                  {agencyOverviewContent}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="chat-main">
+              <div className="chat-center">
               <div className="messages-area">
-                {messages.length === 0 ? (
+                {!currentConvId ? (
+                  agentEmptyContent
+                ) : messages.length === 0 ? (
                   <div className="empty-messages">
                     <div className="empty-icon">✨</div>
                     <div className="empty-title">有什么我可以帮你的？</div>
@@ -1491,9 +1870,8 @@ export default () => {
                                   </Button>
                                 </div>
                                 <pre
-                                  className={`tool-message-body ${
-                                    isExpanded ? "expanded" : "collapsed"
-                                  }`}
+                                  className={`tool-message-body ${isExpanded ? "expanded" : "collapsed"
+                                    }`}
                                 >
                                   {fullContent}
                                 </pre>
@@ -1596,7 +1974,8 @@ export default () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="input-area">
+              {currentConvId && (
+                <div className="input-area">
                 {pendingImages.length > 0 && (
                   <div className="pending-images">
                     {pendingImages.map((img, i) => (
@@ -1674,21 +2053,132 @@ export default () => {
                 <div className="input-hint">
                   CW 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行
                 </div>
+                </div>
+              )}
               </div>
-            </div>
 
-            {!isMobile && conversationListContent}
-          </div>
+              {!isMobile && conversationListContent}
+            </div>
+          )}
         </main>
 
-        <SystemPromptModal
-          open={showSystemPrompt}
-          onClose={() => setShowSystemPrompt(false)}
-          conversationId={currentConvId}
-          currentPrompt={currentSystemPrompt}
-          currentContextWindow={currentContextWindow}
-          onSave={handleSaveSystemPrompt}
-        />
+        <Modal
+          title="新增渠道 Agent"
+          open={agentModalVisible}
+          onCancel={() => setAgentModalVisible(false)}
+          onOk={handleCreateChannelAgent}
+          confirmLoading={creatingAgent}
+          okText="创建"
+          destroyOnHidden
+        >
+          <Form
+            form={channelAgentForm}
+            layout="vertical"
+            initialValues={{
+              name: "",
+              platform: availableChannelPlatforms[0],
+              update_mode: "polling",
+              bot_token: "",
+            }}
+          >
+            <Form.Item
+              label="Agent 名称"
+              name="name"
+              rules={[{ required: true, message: "请输入 Agent 名称" }]}
+            >
+              <Input placeholder="例如：telegram-notify" maxLength={64} />
+            </Form.Item>
+            <Form.Item
+              label="渠道平台"
+              name="platform"
+              rules={[{ required: true, message: "请选择渠道平台" }]}
+            >
+              <Select
+                options={availableChannelPlatforms.map((platform) => ({
+                  value: platform,
+                  label: CHANNEL_AGENT_ADAPTERS[platform]?.label || platform,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item shouldUpdate noStyle>
+              {({ getFieldValue }) => {
+                const platform = getFieldValue("platform");
+                const normalizedPlatform =
+                  platform === "dingding" ? "dingtalk" : platform;
+                const adapter = CHANNEL_AGENT_ADAPTERS[normalizedPlatform];
+                return (
+                  <>
+                    <div className="agent-binding-tip" style={{ marginTop: -4 }}>
+                      接入方式: {adapter?.connectionLabel}
+                      {adapter?.docs ? (
+                        <>
+                          {" · "}
+                          <a href={adapter.docs} target="_blank" rel="noreferrer">
+                            官方文档
+                          </a>
+                        </>
+                      ) : null}
+                    </div>
+
+                    {normalizedPlatform === "dingtalk" && (
+                      <>
+                        <Form.Item
+                          label="Client ID"
+                          name="client_id"
+                          rules={[{ required: true, message: "请输入 Client ID" }]}
+                        >
+                          <Input placeholder="钉钉应用 Client ID" />
+                        </Form.Item>
+                        <Form.Item
+                          label="Client Secret"
+                          name="client_secret"
+                          rules={[{ required: true, message: "请输入 Client Secret" }]}
+                        >
+                          <Input.Password placeholder="钉钉应用 Client Secret" />
+                        </Form.Item>
+                      </>
+                    )}
+
+                    {normalizedPlatform === "telegram" && (
+                      <>
+                        <Form.Item
+                          label="Bot Token"
+                          name="bot_token"
+                          rules={[{ required: true, message: "请输入 Telegram Bot Token" }]}
+                        >
+                          <Input.Password placeholder="123456:ABC-DEF..." />
+                        </Form.Item>
+                        <Form.Item label="更新接入方式" name="update_mode">
+                          <Segmented
+                            block
+                            options={[
+                              { label: "长轮询 getUpdates", value: "polling" },
+                              { label: "Webhook", value: "webhook" },
+                            ]}
+                          />
+                        </Form.Item>
+                        {getFieldValue("update_mode") === "webhook" && (
+                          <>
+                            <Form.Item
+                              label="Webhook 地址"
+                              name="webhook_url"
+                              rules={[{ required: true, message: "请输入 Webhook 地址" }]}
+                            >
+                              <Input placeholder="https://your-domain/bot/telegram" />
+                            </Form.Item>
+                            <Form.Item label="Secret Token" name="secret_token">
+                              <Input.Password placeholder="可选，用于验证 Telegram 请求" />
+                            </Form.Item>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </>
+                );
+              }}
+            </Form.Item>
+          </Form>
+        </Modal>
         <Drawer
           title="开发者调试"
           placement="right"
