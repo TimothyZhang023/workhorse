@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 import { getMcpServer, listMcpServers } from "./database.js";
-import { getShellEnv } from "../utils/shellEnv.js";
+import { getShellEnv, resolveExecutableCommand } from "../utils/shellEnv.js";
 
 // Global map to hold connected MCP clients
 // key: string (e.g. `uid_serverId`), value: { client: Client, transport: Transport }
@@ -355,8 +355,15 @@ export async function getConnectedMcpClient(serverConfig) {
           }
         }
 
+        const resolvedCommand = resolveExecutableCommand(serverConfig.command, env);
+        if (resolvedCommand !== serverConfig.command) {
+          console.log(
+            `[MCP] Resolved stdio command ${serverConfig.command} -> ${resolvedCommand}`
+          );
+        }
+
         transport = new StdioClientTransport({
-          command: serverConfig.command,
+          command: resolvedCommand,
           args: args,
           env: env,
         });

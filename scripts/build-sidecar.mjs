@@ -14,6 +14,7 @@ const runtimeNodeSourceCandidates = [
   process.env.WORKHORSE_NODE_BIN,
   path.join(repoRoot, "src-tauri", "sidecar-node", runtimeNodeFileName),
   path.join(repoRoot, "src-tauri", "sidecar-node", "node"),
+  "/Users/zts/.antcli_agent/local_agent/node",
   process.execPath,
 ].filter(Boolean);
 const runtimeDependencyNames = ["better-sqlite3", "pino", "pino-http", "pino-pretty"];
@@ -198,6 +199,29 @@ async function main() {
 
   const runtimeNodePath = path.join(runtimeDir, runtimeNodeFileName);
   await fsp.copyFile(runtimeNodeSource, runtimeNodePath);
+
+  // Fix for macOS Homebrew Node dynamic links
+  if (process.platform === "darwin") {
+    try {
+      const { execSync } = await import("node:child_process");
+      const libs = execSync(`otool -L "${runtimeNodeSource}"`).toString();
+      const lines = libs.split("\n");
+      for (const line of lines) {
+        const match = line.match(/\s+(@rpath\/libnode\.\d+\.dylib)\s+/);
+        if (match) {
+          const libName = path.basename(match[1]);
+          // Try to find the lib on the system
+          const libPath = execSync(`find /opt/homebrew /usr/local -name "${libName}" 2>/dev/null | head -n 1`).toString().trim();
+          if (libPath && await pathExists(libPath)) {
+            console.log(`Bundling dynamic dependency: ${libName}`);
+            await fsp.copyFile(libPath, path.join(runtimeDir, libName));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to bundle dynamic dependencies:", e.message);
+    }
+  }
 
   await build({
     entryPoints: [serverEntrySource],

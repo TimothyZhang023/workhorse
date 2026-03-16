@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:12620",
-    "beforeDevCommand": "npm run dev:facade",
-    "beforeBuildCommand": "npm run build:facade"
+    "beforeDevCommand": "npx vite",
+    "beforeBuildCommand": "npx vite build"
   },
   "app": {
     "windows": [
