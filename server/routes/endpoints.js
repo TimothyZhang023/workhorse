@@ -85,6 +85,21 @@ function normalizeOpenRouterBaseCandidates(baseUrl) {
   return [...new Set(candidates)];
 }
 
+function normalizeExportedModel(model = {}) {
+  return {
+    model_id: String(model.model_id || "").trim(),
+    display_name: String(model.display_name || model.model_id || "").trim(),
+    is_enabled: Number(model.is_enabled) === 1 ? 1 : 0,
+    source: String(model.source || "manual").trim() || "manual",
+    generation_config:
+      model.generation_config &&
+      typeof model.generation_config === "object" &&
+      !Array.isArray(model.generation_config)
+        ? model.generation_config
+        : {},
+  };
+}
+
 async function fetchRemoteModels(endpoint) {
   if (endpoint.provider === "openrouter") {
     const candidates = normalizeOpenRouterBaseCandidates(endpoint.base_url);
@@ -255,6 +270,103 @@ router.put("/settings/model-policy", (req, res) => {
     );
   } catch (error) {
     return res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/export-config", (req, res) => {
+  try {
+    const endpoints = getEndpointGroups(req.uid).map((endpoint) => ({
+      name: endpoint.name,
+      provider: endpoint.provider || "openai_compatible",
+      base_url: endpoint.base_url,
+      is_default: Number(endpoint.is_default) === 1 ? 1 : 0,
+      use_preset_models: Number(endpoint.use_preset_models) === 1 ? 1 : 0,
+      models: getModels(endpoint.id, req.uid).map(normalizeExportedModel),
+    }));
+
+    return res.json({
+      version: 1,
+      exported_at: new Date().toISOString(),
+      global_model_policy: getGlobalModelSettings(req.uid),
+      endpoints,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/import-config", (req, res) => {
+  try {
+    const payload = req.body || {};
+    const importedEndpoints = Array.isArray(payload?.endpoints) ? payload.endpoints : [];
+    const importedPolicy = payload?.global_model_policy || {};
+    const existingEndpoints = getEndpointGroups(req.uid);
+
+    const results = [];
+    for (const item of importedEndpoints) {
+      const name = String(item?.name || "").trim();
+      const provider = normalizeProvider(item?.provider);
+      const baseUrl = resolveBaseUrl(provider, item?.base_url);
+      if (!name || !baseUrl) {
+        continue;
+      }
+
+      const models = Array.isArray(item?.models)
+        ? item.models.map(normalizeExportedModel).filter((model) => model.model_id)
+        : [];
+      let endpoint = existingEndpoints.find(
+        (existing) =>
+          String(existing.name || "").trim() === name &&
+          String(existing.provider || "openai_compatible") === provider &&
+          String(existing.base_url || "").trim() === baseUrl
+      );
+
+      if (endpoint) {
+        updateEndpointGroup(
+          endpoint.id,
+          req.uid,
+          name,
+          provider,
+          baseUrl,
+          undefined,
+          Number(item?.use_preset_models) === 1
+        );
+        replaceModels(endpoint.id, req.uid, models);
+        endpoint = getEndpointGroup(endpoint.id, req.uid);
+        results.push({ status: "updated", endpoint_id: endpoint.id, name });
+      } else {
+        endpoint = createEndpointGroup(
+          req.uid,
+          name,
+          provider,
+          baseUrl,
+          "",
+          Number(item?.is_default) === 1,
+          Number(item?.use_preset_models) === 1
+        );
+        replaceModels(endpoint.id, req.uid, models);
+        results.push({ status: "created", endpoint_id: endpoint.id, name });
+      }
+
+      if (Number(item?.is_default) === 1 && endpoint?.id) {
+        setDefaultEndpointGroup(endpoint.id, req.uid);
+      }
+    }
+
+    saveGlobalModelSettings(req.uid, {
+      primary_model: String(importedPolicy?.primary_model || "").trim(),
+      fallback_models: Array.isArray(importedPolicy?.fallback_models)
+        ? importedPolicy.fallback_models
+        : [],
+    });
+
+    return res.json({
+      success: true,
+      imported: results,
+      global_model_policy: getGlobalModelSettings(req.uid),
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
   }
 });
 

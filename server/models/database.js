@@ -44,6 +44,9 @@ db.exec(`
     title TEXT NOT NULL,
     system_prompt TEXT DEFAULT '',
     channel_id INTEGER,
+    acp_agent_id INTEGER,
+    acp_session_id TEXT,
+    acp_model_id TEXT,
     context_window INTEGER,
     tool_names TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -56,6 +59,8 @@ db.exec(`
     uid TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
+    is_hidden INTEGER DEFAULT 0,
+    is_archived INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
   );
@@ -162,6 +167,7 @@ db.exec(`
     skill_ids TEXT, -- JSON 数组 of skill IDs
     tool_names TEXT, -- JSON 数组 of tool names (mcp)
     model_id TEXT,
+    acp_agent_id INTEGER,
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -242,9 +248,27 @@ db.exec(`
     uid TEXT NOT NULL,
     name TEXT NOT NULL,
     platform TEXT NOT NULL,
+    agent_prompt TEXT DEFAULT '',
     webhook_url TEXT,
     bot_token TEXT,
     metadata TEXT,
+    is_enabled INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uid) REFERENCES users(uid) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS acp_agents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL,
+    name TEXT NOT NULL,
+    preset TEXT NOT NULL,
+    command TEXT NOT NULL,
+    args TEXT DEFAULT '[]',
+    env TEXT,
+    agent_prompt TEXT DEFAULT '',
+    default_model_id TEXT,
+    last_used_model_id TEXT,
     is_enabled INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -264,6 +288,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_task_run_events_timeline ON task_run_events(run_id, created_at, id);
   CREATE INDEX IF NOT EXISTS idx_task_runs_conversation_id ON task_runs(conversation_id);
   CREATE INDEX IF NOT EXISTS idx_channels_uid ON channels(uid);
+  CREATE INDEX IF NOT EXISTS idx_acp_agents_uid ON acp_agents(uid);
   CREATE INDEX IF NOT EXISTS idx_app_settings_uid_key ON app_settings(uid, setting_key);
 `);
 
@@ -279,6 +304,42 @@ try {
   db.prepare("ALTER TABLE conversations ADD COLUMN channel_id INTEGER").run();
 } catch (e) {
   /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE conversations ADD COLUMN acp_agent_id INTEGER").run();
+} catch (e) {
+  /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE conversations ADD COLUMN acp_session_id TEXT").run();
+} catch (e) {
+  /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE conversations ADD COLUMN acp_model_id TEXT").run();
+} catch (e) {
+  /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE acp_agents ADD COLUMN default_model_id TEXT").run();
+} catch (e) {
+  /* column already exists */
+}
+
+for (const statement of [
+  "ALTER TABLE channels ADD COLUMN agent_prompt TEXT DEFAULT ''",
+  "ALTER TABLE acp_agents ADD COLUMN agent_prompt TEXT DEFAULT ''",
+  "ALTER TABLE acp_agents ADD COLUMN last_used_model_id TEXT",
+]) {
+  try {
+    db.prepare(statement).run();
+  } catch (e) {
+    /* column already exists */
+  }
 }
 
 // 运行时迁移：添加 provider 列（已存在时忽略）
@@ -359,6 +420,12 @@ try {
 
 try {
   db.prepare("ALTER TABLE agent_tasks ADD COLUMN model_id TEXT").run();
+} catch (e) {
+  /* column already exists */
+}
+
+try {
+  db.prepare("ALTER TABLE agent_tasks ADD COLUMN acp_agent_id INTEGER").run();
 } catch (e) {
   /* column already exists */
 }
@@ -542,6 +609,14 @@ try {
 }
 
 try {
+  db.prepare("ALTER TABLE messages ADD COLUMN is_hidden INTEGER DEFAULT 0").run();
+} catch (e) {}
+
+try {
+  db.prepare("ALTER TABLE messages ADD COLUMN is_archived INTEGER DEFAULT 0").run();
+} catch (e) {}
+
+try {
   db.prepare("ALTER TABLE conversations ADD COLUMN context_window INTEGER").run();
 } catch (e) {
   /* column already exists */
@@ -579,6 +654,7 @@ function normalizeConversationRow(row) {
   if (!row) return row;
 
   const parsedContextWindow = Number(row.context_window);
+  const parsedAcpAgentId = Number(row.acp_agent_id);
 
   return {
     ...row,
@@ -586,6 +662,12 @@ function normalizeConversationRow(row) {
       row.channel_id === null || row.channel_id === undefined
         ? null
         : Number(row.channel_id),
+    acp_agent_id:
+      Number.isFinite(parsedAcpAgentId) && parsedAcpAgentId > 0
+        ? Math.round(parsedAcpAgentId)
+        : null,
+    acp_session_id: row.acp_session_id || null,
+    acp_model_id: row.acp_model_id || null,
     context_window:
       Number.isFinite(parsedContextWindow) && parsedContextWindow > 0
         ? Math.round(parsedContextWindow)
@@ -603,6 +685,9 @@ export function getConversations(uid) {
       `
     SELECT id, title, system_prompt, created_at, updated_at
          , channel_id
+         , acp_agent_id
+         , acp_session_id
+         , acp_model_id
          , context_window
          , tool_names
     FROM conversations
@@ -625,24 +710,45 @@ export function createConversation(uid, title = "新对话", toolNames = null, o
     Number.isFinite(parsedChannelId) && parsedChannelId > 0
       ? Math.round(parsedChannelId)
       : null;
+  const parsedAcpAgentId = Number(options?.acpAgentId);
+  const acpAgentId =
+    Number.isFinite(parsedAcpAgentId) && parsedAcpAgentId > 0
+      ? Math.round(parsedAcpAgentId)
+      : null;
+  const acpAgent = acpAgentId ? getAcpAgent(acpAgentId, uid) : null;
+  const acpModelId =
+    String(
+      options?.acpModelId ||
+        acpAgent?.last_used_model_id ||
+        acpAgent?.default_model_id ||
+        ""
+    ).trim() || null;
+  const systemPrompt = String(options?.systemPrompt || "").trim();
   const result = db
     .prepare(
       `
-    INSERT INTO conversations (uid, title, tool_names, context_window, channel_id) VALUES (?, ?, ?, ?, ?)
+    INSERT INTO conversations (uid, title, system_prompt, tool_names, context_window, channel_id, acp_agent_id, acp_session_id, acp_model_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `
     )
     .run(
       uid,
       title,
+      systemPrompt,
       Array.isArray(toolNames) ? JSON.stringify(toolNames) : null,
       contextWindow,
-      channelId
+      channelId,
+      acpAgentId,
+      null,
+      acpModelId
     );
   return {
     id: result.lastInsertRowid,
     title,
-    system_prompt: "",
+    system_prompt: systemPrompt,
     channel_id: channelId,
+    acp_agent_id: acpAgentId,
+    acp_session_id: null,
+    acp_model_id: acpModelId,
     context_window: contextWindow,
     tool_names: Array.isArray(toolNames) ? toolNames : null,
   };
@@ -684,6 +790,22 @@ export function updateConversationContextWindow(id, uid, contextWindow) {
     UPDATE conversations SET context_window = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
   `
   ).run(normalizedValue, id, uid);
+}
+
+export function updateConversationAcpSession(id, uid, sessionId) {
+  db.prepare(
+    `
+    UPDATE conversations SET acp_session_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
+  `
+  ).run(sessionId || null, id, uid);
+}
+
+export function updateConversationAcpModel(id, uid, modelId) {
+  db.prepare(
+    `
+    UPDATE conversations SET acp_model_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND uid = ?
+  `
+  ).run(String(modelId || "").trim() || null, id, uid);
 }
 
 export function deleteConversation(id, uid) {
@@ -728,7 +850,7 @@ export function getMessages(conversationId, uid) {
   return db
     .prepare(
       `
-    SELECT id, role, content, created_at
+    SELECT id, role, content, is_hidden, is_archived, created_at
     FROM messages
     WHERE conversation_id = ? AND uid = ?
     ORDER BY id ASC
@@ -737,14 +859,15 @@ export function getMessages(conversationId, uid) {
     .all(conversationId, uid);
 }
 
-export function addMessage(conversationId, uid, role, content) {
+export function addMessage(conversationId, uid, role, content, options = {}) {
+  const { is_hidden = 0, is_archived = 0 } = options;
   const result = db
     .prepare(
       `
-    INSERT INTO messages (conversation_id, uid, role, content) VALUES (?, ?, ?, ?)
+    INSERT INTO messages (conversation_id, uid, role, content, is_hidden, is_archived) VALUES (?, ?, ?, ?, ?, ?)
   `
     )
-    .run(conversationId, uid, role, content);
+    .run(conversationId, uid, role, content, is_hidden ? 1 : 0, is_archived ? 1 : 0);
 
   db.prepare(
     `
@@ -1695,6 +1818,23 @@ export function listSkills(uid) {
     }));
 }
 
+export function getSkill(id, uid) {
+  const skill = db
+    .prepare("SELECT * FROM skills WHERE id = ? AND uid = ?")
+    .get(id, uid);
+
+  if (!skill) {
+    return null;
+  }
+
+  return {
+    ...skill,
+    examples: skill.examples ? JSON.parse(skill.examples) : [],
+    tools: skill.tools ? JSON.parse(skill.tools) : [],
+    is_enabled: Number(skill.is_enabled) === 0 ? 0 : 1,
+  };
+}
+
 export function createSkill(
   uid,
   name,
@@ -1851,6 +1991,7 @@ export function listAgentTasks(uid) {
       skill_ids: t.skill_ids ? JSON.parse(t.skill_ids) : [],
       tool_names: t.tool_names ? JSON.parse(t.tool_names) : [],
       model_id: t.model_id || "",
+      acp_agent_id: t.acp_agent_id || null,
     }));
 }
 
@@ -1862,6 +2003,7 @@ export function getAgentTask(id, uid) {
     t.skill_ids = t.skill_ids ? JSON.parse(t.skill_ids) : [];
     t.tool_names = t.tool_names ? JSON.parse(t.tool_names) : [];
     t.model_id = t.model_id || "";
+    t.acp_agent_id = t.acp_agent_id || null;
   }
   return t;
 }
@@ -1873,13 +2015,19 @@ export function createAgentTask(
   systemPrompt,
   skillIds = [],
   toolNames = [],
-  modelId = ""
+  modelId = "",
+  acpAgentId = null
 ) {
+  const parsedAcpAgentId = Number(acpAgentId);
+  const normalizedAcpAgentId =
+    Number.isFinite(parsedAcpAgentId) && parsedAcpAgentId > 0
+      ? Math.round(parsedAcpAgentId)
+      : null;
   const result = db
     .prepare(
       `
-    INSERT INTO agent_tasks (uid, name, description, system_prompt, skill_ids, tool_names, model_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO agent_tasks (uid, name, description, system_prompt, skill_ids, tool_names, model_id, acp_agent_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `
     )
     .run(
@@ -1889,7 +2037,8 @@ export function createAgentTask(
       systemPrompt,
       JSON.stringify(skillIds),
       JSON.stringify(toolNames),
-      modelId
+      modelId,
+      normalizedAcpAgentId
     );
 
   return {
@@ -1901,6 +2050,7 @@ export function createAgentTask(
     skill_ids: skillIds,
     tool_names: toolNames,
     model_id: modelId,
+    acp_agent_id: normalizedAcpAgentId,
   };
 }
 
@@ -1917,12 +2067,20 @@ export function updateAgentTask(id, uid, updates) {
         "tool_names",
         "is_active",
         "model_id",
+        "acp_agent_id",
       ].includes(key)
     ) {
       fields.push(`${key} = ?`);
       let val = typeof value === "object" ? JSON.stringify(value) : value;
       if (key === "is_active") {
         val = value ? 1 : 0;
+      }
+      if (key === "acp_agent_id") {
+        const parsedAcpAgentId = Number(value);
+        val =
+          Number.isFinite(parsedAcpAgentId) && parsedAcpAgentId > 0
+            ? Math.round(parsedAcpAgentId)
+            : null;
       }
       values.push(val);
     }
@@ -2179,6 +2337,7 @@ export function listChannels(uid) {
     .all(uid)
     .map((channel) => ({
       ...channel,
+      agent_prompt: String(channel.agent_prompt || ""),
       metadata: channel.metadata ? JSON.parse(channel.metadata) : null,
     }));
 }
@@ -2194,6 +2353,7 @@ export function getChannelById(id, uid) {
 
   return {
     ...channel,
+    agent_prompt: String(channel.agent_prompt || ""),
     metadata: channel.metadata ? JSON.parse(channel.metadata) : null,
   };
 }
@@ -2202,14 +2362,15 @@ export function createChannel(uid, payload) {
   const result = db
     .prepare(
       `
-    INSERT INTO channels (uid, name, platform, webhook_url, bot_token, metadata, is_enabled)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO channels (uid, name, platform, agent_prompt, webhook_url, bot_token, metadata, is_enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `
     )
     .run(
       uid,
       payload.name,
       payload.platform,
+      String(payload.agent_prompt || "").trim(),
       payload.webhook_url || null,
       payload.bot_token || null,
       payload.metadata ? JSON.stringify(payload.metadata) : null,
@@ -2220,6 +2381,7 @@ export function createChannel(uid, payload) {
     id: result.lastInsertRowid,
     uid,
     ...payload,
+    agent_prompt: String(payload.agent_prompt || "").trim(),
   };
 }
 
@@ -2228,7 +2390,7 @@ export function updateChannel(id, uid, updates) {
   const values = [];
   for (const [key, value] of Object.entries(updates)) {
     if (
-      ["name", "platform", "webhook_url", "bot_token", "is_enabled"].includes(
+      ["name", "platform", "agent_prompt", "webhook_url", "bot_token", "is_enabled"].includes(
         key
       )
     ) {
@@ -2252,6 +2414,130 @@ export function updateChannel(id, uid, updates) {
 
 export function deleteChannel(id, uid) {
   db.prepare("DELETE FROM channels WHERE id = ? AND uid = ?").run(id, uid);
+}
+
+function normalizeAcpAgentRow(row, { includeSecrets = false } = {}) {
+  if (!row) return null;
+
+  const parsedArgs = parseJsonArray(row.args, []);
+  const parsedEnv = row.env ? parseJsonObject(decrypt(row.env), {}) : {};
+
+  return {
+    ...row,
+    args: parsedArgs,
+    agent_prompt: String(row.agent_prompt || ""),
+    default_model_id: row.default_model_id || null,
+    last_used_model_id: row.last_used_model_id || null,
+    ...(includeSecrets ? { env: parsedEnv } : {}),
+    env_keys: Object.keys(parsedEnv),
+    has_env: Object.keys(parsedEnv).length > 0,
+  };
+}
+
+export function listAcpAgents(uid) {
+  return db
+    .prepare("SELECT * FROM acp_agents WHERE uid = ? ORDER BY created_at DESC")
+    .all(uid)
+    .map((row) => normalizeAcpAgentRow(row));
+}
+
+export function getAcpAgent(id, uid, options = {}) {
+  const row = db
+    .prepare("SELECT * FROM acp_agents WHERE id = ? AND uid = ?")
+    .get(id, uid);
+  return normalizeAcpAgentRow(row, options);
+}
+
+export function createAcpAgent(uid, payload = {}) {
+  const normalizedArgs = Array.isArray(payload.args) ? payload.args : [];
+  const normalizedEnv =
+    payload.env && typeof payload.env === "object" ? payload.env : {};
+  const encryptedEnv = encrypt(JSON.stringify(normalizedEnv));
+  const result = db
+    .prepare(
+      `
+    INSERT INTO acp_agents (uid, name, preset, command, args, env, agent_prompt, default_model_id, is_enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `
+    )
+    .run(
+      uid,
+      payload.name,
+      payload.preset,
+      payload.command,
+      JSON.stringify(normalizedArgs),
+      encryptedEnv,
+      String(payload.agent_prompt || "").trim(),
+      payload.default_model_id || null,
+      payload.is_enabled ?? 1
+    );
+
+  return getAcpAgent(result.lastInsertRowid, uid);
+}
+
+export function deleteAcpAgent(id, uid) {
+  db.prepare(
+    "UPDATE conversations SET acp_agent_id = NULL, acp_session_id = NULL, acp_model_id = NULL WHERE acp_agent_id = ? AND uid = ?"
+  ).run(id, uid);
+  db.prepare("UPDATE agent_tasks SET acp_agent_id = NULL WHERE acp_agent_id = ? AND uid = ?").run(
+    id,
+    uid
+  );
+  db.prepare("DELETE FROM acp_agents WHERE id = ? AND uid = ?").run(id, uid);
+}
+
+export function updateAcpAgent(id, uid, payload = {}) {
+  const current = getAcpAgent(id, uid, { includeSecrets: true });
+  if (!current) {
+    throw new Error("ACP Agent not found");
+  }
+
+  const nextArgs = Array.isArray(payload.args) ? payload.args : current.args;
+  const nextEnv =
+    payload.env && typeof payload.env === "object" ? payload.env : current.env || {};
+
+  db.prepare(
+    `
+    UPDATE acp_agents
+    SET name = ?,
+        preset = ?,
+        command = ?,
+        args = ?,
+        env = ?,
+        agent_prompt = ?,
+        default_model_id = ?,
+        last_used_model_id = ?,
+        is_enabled = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND uid = ?
+  `
+  ).run(
+    payload.name !== undefined ? payload.name : current.name,
+    payload.preset !== undefined ? payload.preset : current.preset,
+    payload.command !== undefined ? payload.command : current.command,
+    JSON.stringify(nextArgs),
+    encrypt(JSON.stringify(nextEnv)),
+    payload.agent_prompt !== undefined ? String(payload.agent_prompt || "").trim() : current.agent_prompt || "",
+    payload.default_model_id !== undefined ? payload.default_model_id || null : current.default_model_id || null,
+    payload.last_used_model_id !== undefined
+      ? String(payload.last_used_model_id || "").trim() || null
+      : current.last_used_model_id || null,
+    payload.is_enabled !== undefined ? (payload.is_enabled ? 1 : 0) : current.is_enabled ?? 1,
+    id,
+    uid
+  );
+
+  return getAcpAgent(id, uid);
+}
+
+export function updateAcpAgentLastUsedModel(id, uid, modelId) {
+  db.prepare(
+    `
+    UPDATE acp_agents
+    SET last_used_model_id = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND uid = ?
+  `
+  ).run(String(modelId || "").trim() || null, id, uid);
 }
 
 export default db;

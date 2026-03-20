@@ -16,6 +16,7 @@ import { getAllAvailableTools } from "../models/mcpManager.js";
 import { getShellEnv } from "../utils/shellEnv.js";
 import { buildStaticContextBudget } from "../utils/contextBudget.js";
 import { getPreferredEnabledModel } from "../utils/modelSelection.js";
+import { MAIN_AGENT_PROMPT_SETTING_KEY } from "../utils/workspaceAgentConfig.js";
 
 const router = Router();
 const execFileAsync = promisify(execFile);
@@ -141,6 +142,27 @@ router.put("/settings/global-system-prompt", (req, res) => {
     const markdown = String(req.body?.markdown ?? "");
 
     const saved = setAppSetting(req.uid, GLOBAL_SYSTEM_PROMPT_MD_KEY, markdown);
+    return res.json({ success: true, ...saved });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/settings/main-agent-prompt", (req, res) => {
+  try {
+    return res.json({
+      key: MAIN_AGENT_PROMPT_SETTING_KEY,
+      markdown: getAppSetting(req.uid, MAIN_AGENT_PROMPT_SETTING_KEY, ""),
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.put("/settings/main-agent-prompt", (req, res) => {
+  try {
+    const markdown = String(req.body?.markdown ?? "");
+    const saved = setAppSetting(req.uid, MAIN_AGENT_PROMPT_SETTING_KEY, markdown);
     return res.json({ success: true, ...saved });
   } catch (error) {
     return res.status(500).json({ error: error.message });

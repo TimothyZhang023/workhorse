@@ -12,6 +12,7 @@ import { bootstrapChannelListeners } from "./models/channelRunner.js";
 // import accountRoutes from "./routes/account.js"; -- User deleted these for standalone mode
 // import adminRoutes from "./routes/admin.js";
 import agentTasksRoutes from "./routes/agentTasks.js";
+import acpAgentsRoutes from "./routes/acpAgents.js";
 // import authRoutes from "./routes/auth.js";
 import conversationRoutes from "./routes/conversations.js";
 import cronJobsRoutes from "./routes/cronJobs.js";
@@ -20,6 +21,7 @@ import channelWebhooksRoutes from "./routes/channelWebhooks.js";
 import endpointRoutes from "./routes/endpoints.js";
 import mcpRoutes from "./routes/mcp.js";
 // import proxyRoutes from "./routes/proxy.js";
+import installShareRoutes from "./routes/installShare.js";
 import skillsRoutes from "./routes/skills.js";
 import systemRoutes from "./routes/system.js";
 
@@ -71,7 +73,9 @@ export function createApp() {
   app.use("/api/endpoints", endpointRoutes);
   app.use("/api/mcp", mcpRoutes);
   app.use("/api/skills", skillsRoutes);
+  app.use("/api/install-share", installShareRoutes);
   app.use("/api/agent-tasks", agentTasksRoutes);
+  app.use("/api/acp-agents", acpAgentsRoutes);
   app.use("/api/cron-jobs", cronJobsRoutes);
   app.use("/api/channels", channelsRoutes);
   app.use("/api/channel-webhooks", channelWebhooksRoutes);

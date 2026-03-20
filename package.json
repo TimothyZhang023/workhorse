@@ -21,10 +21,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@agentclientprotocol/sdk": "^0.16.1",
     "@ant-design/icons": "^5.0.1",
     "@ant-design/pro-components": "^2.4.4",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-deep-link": "^2.4.7",
     "@tauri-apps/plugin-shell": "^2.0.0",
     "antd": "^5.4.0",
     "better-sqlite3": "^12.6.2",

@@ -76,6 +76,7 @@ router.post("/extensions/:platform/install", (req, res) => {
         ...template.metadata,
         ...(req.body?.metadata || {}),
       },
+      agent_prompt: req.body?.agent_prompt,
       is_enabled: req.body?.is_enabled ?? 1,
     });
     refreshSingleChannelListener(req.uid, channel.id);
@@ -104,7 +105,15 @@ router.get("/", (req, res) => {
 
 router.post("/", (req, res) => {
   try {
-    const { name, platform, webhook_url, bot_token, metadata, is_enabled } =
+    const {
+      name,
+      platform,
+      agent_prompt,
+      webhook_url,
+      bot_token,
+      metadata,
+      is_enabled,
+    } =
       req.body || {};
     if (!name || !platform) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -113,6 +122,7 @@ router.post("/", (req, res) => {
     const channel = createChannel(req.uid, {
       name,
       platform,
+      agent_prompt,
       webhook_url,
       bot_token,
       metadata,

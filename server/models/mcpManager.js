@@ -62,7 +62,10 @@ export function abortBuiltInShellExecutions(scope = {}) {
   return killed;
 }
 
-function truncateShellOutput(value, maxLength = BUILTIN_SHELL_MAX_OUTPUT_CHARS) {
+function truncateShellOutput(
+  value,
+  maxLength = BUILTIN_SHELL_MAX_OUTPUT_CHARS
+) {
   const text = String(value || "");
   if (text.length <= maxLength) {
     return text;
@@ -102,7 +105,7 @@ function getShellLaunchConfig(command) {
     };
   }
 
-  const shell = process.env.SHELL || "/bin/zsh";
+  const shell = getShellEnv().SHELL || process.env.SHELL || "/bin/zsh";
   return {
     command: shell,
     args: ["-lc", normalizedCommand],
@@ -122,7 +125,8 @@ export function getBuiltInTools() {
           properties: {
             command: {
               type: "string",
-              description: "要执行的 shell 命令，例如 `pwd`、`ls -la`、`git status`。",
+              description:
+                "要执行的 shell 命令，例如 `pwd`、`ls -la`、`git status`。",
             },
             cwd: {
               type: "string",
@@ -131,8 +135,7 @@ export function getBuiltInTools() {
             },
             timeout_ms: {
               type: "integer",
-              description:
-                "可选超时时间，单位毫秒。默认 20000，最大 120000。",
+              description: "可选超时时间，单位毫秒。默认 20000，最大 120000。",
               minimum: 1000,
               maximum: BUILTIN_SHELL_MAX_TIMEOUT_MS,
             },
@@ -155,7 +158,10 @@ export async function executeBuiltInShellTool(args = {}, options = {}) {
   const cwd = resolveShellWorkingDirectory(args?.cwd);
   const requestedTimeout = Number(args?.timeout_ms);
   const timeoutMs = Number.isFinite(requestedTimeout)
-    ? Math.max(1000, Math.min(BUILTIN_SHELL_MAX_TIMEOUT_MS, Math.round(requestedTimeout)))
+    ? Math.max(
+        1000,
+        Math.min(BUILTIN_SHELL_MAX_TIMEOUT_MS, Math.round(requestedTimeout))
+      )
     : BUILTIN_SHELL_DEFAULT_TIMEOUT_MS;
   const launch = getShellLaunchConfig(commandText);
   const abortSignal = options?.signal || null;
@@ -355,7 +361,10 @@ export async function getConnectedMcpClient(serverConfig) {
           }
         }
 
-        const resolvedCommand = resolveExecutableCommand(serverConfig.command, env);
+        const resolvedCommand = resolveExecutableCommand(
+          serverConfig.command,
+          env
+        );
         if (resolvedCommand !== serverConfig.command) {
           console.log(
             `[MCP] Resolved stdio command ${serverConfig.command} -> ${resolvedCommand}`
@@ -437,7 +446,10 @@ export async function getAllAvailableTools(uid) {
   for (const serverConfig of enabledServers) {
     try {
       const client = await getConnectedMcpClient(serverConfig);
-      const mcpToolsRes = await client.listTools();
+      const mcpToolsRes = await Promise.race([
+        client.listTools(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout retrieving MCP tools")), 4000))
+      ]);
 
       for (const t of mcpToolsRes.tools) {
         // Ensure the tool name avoids collisions or prefix it with the server ID if needed
@@ -467,7 +479,13 @@ export async function getAllAvailableTools(uid) {
 /**
  * Execute a specific tool on its associated MCP server.
  */
-export async function executeMcpTool(uid, serverId, toolName, args, options = {}) {
+export async function executeMcpTool(
+  uid,
+  serverId,
+  toolName,
+  args,
+  options = {}
+) {
   if (
     serverId === BUILTIN_SHELL_SERVER_ID &&
     String(toolName || "") === BUILTIN_SHELL_TOOL_NAME
@@ -507,7 +525,11 @@ export async function disconnectMcpServer(uid, serverId) {
   }
 }
 
-export async function testMcpServerConnection(uid, serverId, timeoutMs = 12000) {
+export async function testMcpServerConnection(
+  uid,
+  serverId,
+  timeoutMs = 12000
+) {
   const serverConfig = getMcpServer(serverId, uid);
   if (!serverConfig) {
     throw new Error(`MCP Server ${serverId} not found or access denied.`);
@@ -518,7 +540,9 @@ export async function testMcpServerConnection(uid, serverId, timeoutMs = 12000) 
   const runTest = async () => {
     const client = await getConnectedMcpClient(serverConfig);
     const toolsResponse = await client.listTools();
-    const tools = Array.isArray(toolsResponse?.tools) ? toolsResponse.tools : [];
+    const tools = Array.isArray(toolsResponse?.tools)
+      ? toolsResponse.tools
+      : [];
 
     return {
       success: true,

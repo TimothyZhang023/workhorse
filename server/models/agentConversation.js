@@ -23,6 +23,7 @@ import {
   resolveModelCandidates,
 } from "../utils/modelSelection.js";
 import { getTaskConfig } from "../utils/systemConfig.js";
+import { getConversationAgentPrompt } from "../utils/workspaceAgentConfig.js";
 
 const activeConversationExecutions = new Map();
 const DEFAULT_CONVERSATION_AGENT_PROMPT = `
@@ -155,6 +156,7 @@ export function buildConversationSystemPrompt(uid, conversation) {
     uid,
     baseSystemPrompt: [
       DEFAULT_CONVERSATION_AGENT_PROMPT.trim(),
+      getConversationAgentPrompt(uid, conversation),
       String(conversation?.system_prompt || "").trim(),
     ]
       .filter(Boolean)

@@ -12,6 +12,7 @@ import {
   updateConversationContextWindow,
   updateConversationSystemPrompt,
 } from "./database.js";
+import { streamAcpConversation } from "./acpAgentManager.js";
 import {
   executeAgentToolCall,
   requestAgentTurnWithFallback,
@@ -219,7 +220,11 @@ function prepareTaskRunExecution(uid, taskId, options = {}) {
   if (!conversationId) {
     const conv = createConversation(
       uid,
-      `Run: ${task.name} at ${new Date().toLocaleString()}`
+      `Run: ${task.name} at ${new Date().toLocaleString()}`,
+      null,
+      {
+        acpAgentId: task.acp_agent_id || null,
+      }
     );
     conversationId = conv.id;
   }
@@ -256,6 +261,118 @@ function prepareTaskRunExecution(uid, taskId, options = {}) {
     initialUserMessage,
     runId,
   };
+}
+
+function buildAcpTaskPrompt(systemPrompt, initialUserMessage) {
+  const trimmedSystemPrompt = String(systemPrompt || "").trim();
+  const trimmedUserMessage = String(initialUserMessage || "").trim();
+
+  return [
+    "你正在执行 Workhorse 的后台编排任务。",
+    "请把下面的任务 system prompt 视为本次执行的最高优先级约束，并据此完成任务。",
+    "如果需要工具，请按需调用；如果不需要，不要为了调用而调用。",
+    "输出直接给出最终执行结果，不要解释你在模拟 system prompt。",
+    "",
+    "任务 system prompt：",
+    trimmedSystemPrompt || "无",
+    "",
+    "本次运行指令：",
+    trimmedUserMessage || "请开始执行当前任务。",
+  ].join("\n");
+}
+
+async function executePreparedAcpTaskRun(execution) {
+  const {
+    uid,
+    task,
+    conversationId,
+    initialUserMessage,
+    runId,
+  } = execution;
+  try {
+    const globalPromptMarkdown = getAppSetting(
+      uid,
+      "global_system_prompt_markdown",
+      process.env.GLOBAL_SYSTEM_PROMPT_MD || ""
+    );
+    const systemPrompt = buildAgentSystemPrompt({
+      uid,
+      baseSystemPrompt: task.system_prompt,
+      skillIds: task.skill_ids,
+      globalMarkdown: globalPromptMarkdown,
+    });
+    updateConversationSystemPrompt(conversationId, uid, systemPrompt);
+
+    const userPrompt = buildAcpTaskPrompt(systemPrompt, initialUserMessage);
+    addMessage(conversationId, uid, "user", userPrompt, { is_hidden: 1, is_archived: 0 });
+    // User visible stub
+    addMessage(conversationId, uid, "user", initialUserMessage, { is_hidden: 0, is_archived: 1 });
+    safeAddRunEvent(runId, uid, "turn_started", "ACP 任务开始执行", "", {
+      agentId: task.acp_agent_id,
+    });
+
+    const streamChunks = [];
+    const fullContent = await streamAcpConversation({
+      uid,
+      conversation: {
+        id: conversationId,
+        acp_agent_id: task.acp_agent_id,
+        acp_session_id: null,
+        acp_model_id: null,
+      },
+      conversationId: String(conversationId),
+      message: userPrompt,
+      images: [],
+      history: [{ role: "user", content: userPrompt }],
+      res: {
+        write(payload) {
+          streamChunks.push(String(payload));
+        },
+      },
+      debug: false,
+    });
+
+    addMessage(conversationId, uid, "assistant", fullContent);
+    safeAddRunEvent(
+      runId,
+      uid,
+      "final_response",
+      "ACP 任务返回最终结果",
+      normalizeInlineText(fullContent, 500),
+      {
+        agentId: task.acp_agent_id,
+        eventCount: streamChunks.length,
+      }
+    );
+
+    updateTaskRun(runId, uid, {
+      conversation_id: conversationId,
+      status: "success",
+      final_response: fullContent,
+      finished_at: new Date().toISOString(),
+    });
+    safeAddRunEvent(runId, uid, "run_completed", "任务执行完成", "", {
+      conversationId,
+      finalResponsePreview: normalizeInlineText(fullContent, 240),
+      agentId: task.acp_agent_id,
+    });
+
+    return { conversationId, finalResponse: fullContent, runId };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error || "Unknown error");
+    updateTaskRun(runId, uid, {
+      conversation_id: conversationId,
+      status: "failed",
+      error_message: errorMessage,
+      finished_at: new Date().toISOString(),
+    });
+    safeAddRunEvent(runId, uid, "run_failed", "任务执行失败", errorMessage, {
+      conversationId,
+      agentId: task.acp_agent_id,
+    });
+    throw error;
+  }
 }
 
 function formatMessageForCompaction(message) {
@@ -412,6 +529,10 @@ async function maybeCompactTaskContext({
 }
 
 async function executePreparedTaskRun(execution) {
+  if (execution.task?.acp_agent_id) {
+    return executePreparedAcpTaskRun(execution);
+  }
+
   const {
     uid,
     task,

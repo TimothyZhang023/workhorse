@@ -1,16 +1,29 @@
 import {
+  createAcpAgent,
+  createAgentTask,
   createApiKey,
   createEndpointGroup,
+  createConversation,
   createUser,
+  deleteAcpAgent,
   deleteEndpointGroup,
   createChannel,
   deleteChannel,
+  getAcpAgent,
+  getConversation,
   getDefaultEndpointGroup,
   getEndpointGroups,
   listChannels,
+  listAcpAgents,
   listApiKeys,
+  listAgentTasks,
+  updateAcpAgent,
+  updateAcpAgentLastUsedModel,
   revokeApiKey,
+  updateConversationAcpModel,
+  updateConversationAcpSession,
   updateChannel,
+  updateAgentTask,
   updateEndpointGroup,
   verifyApiKey,
 } from "../server/models/database.js";
@@ -93,13 +106,125 @@ describe("Database Models - Channels", () => {
     const channels = listChannels(user.uid);
     expect(channels).toHaveLength(1);
     expect(channels[0].metadata.room).toBe("ops");
+    expect(channels[0].agent_prompt).toBe("");
 
-    updateChannel(channel.id, user.uid, { is_enabled: 0, name: "Ops TG" });
+    updateChannel(channel.id, user.uid, {
+      is_enabled: 0,
+      name: "Ops TG",
+      agent_prompt: "只处理告警消息",
+    });
     const updated = listChannels(user.uid)[0];
     expect(updated.name).toBe("Ops TG");
     expect(updated.is_enabled).toBe(0);
+    expect(updated.agent_prompt).toBe("只处理告警消息");
 
     deleteChannel(channel.id, user.uid);
     expect(listChannels(user.uid)).toHaveLength(0);
+  });
+});
+
+describe("Database Models - ACP Agents", () => {
+  it("creates ACP agents, persists prompts, and prefers last used model for new conversations", () => {
+    const user = createUser(`user_${Date.now()}_acp`, "password123");
+
+    const agent = createAcpAgent(user.uid, {
+      name: "OpenCode Main",
+      preset: "opencode",
+      command: "opencode",
+      args: ["acp"],
+      env: {
+        OPENCODE_API_KEY: "test-key",
+      },
+      agent_prompt: "优先走工程执行路径",
+      default_model_id: "test-model",
+      is_enabled: 1,
+    });
+
+    expect(agent.id).toBeGreaterThan(0);
+    expect(agent.env_keys).toEqual(["OPENCODE_API_KEY"]);
+    expect(agent.default_model_id).toBe("test-model");
+
+    const listed = listAcpAgents(user.uid);
+    expect(listed).toHaveLength(1);
+    expect(listed[0].preset).toBe("opencode");
+    expect(listed[0].has_env).toBe(true);
+    expect(listed[0].default_model_id).toBe("test-model");
+    expect(listed[0].agent_prompt).toBe("优先走工程执行路径");
+
+    const detailed = getAcpAgent(agent.id, user.uid, { includeSecrets: true });
+    expect(detailed.env.OPENCODE_API_KEY).toBe("test-key");
+    expect(detailed.agent_prompt).toBe("优先走工程执行路径");
+
+    updateAcpAgent(agent.id, user.uid, {
+      agent_prompt: "保持简洁直接",
+      default_model_id: "gpt-5",
+    });
+    updateAcpAgentLastUsedModel(agent.id, user.uid, "o4-mini");
+
+    const updatedAgent = getAcpAgent(agent.id, user.uid, {
+      includeSecrets: true,
+    });
+    expect(updatedAgent.agent_prompt).toBe("保持简洁直接");
+    expect(updatedAgent.default_model_id).toBe("gpt-5");
+    expect(updatedAgent.last_used_model_id).toBe("o4-mini");
+
+    const fallbackConversation = createConversation(user.uid, "ACP 默认模型", null, {
+      acpAgentId: agent.id,
+    });
+    expect(fallbackConversation.acp_model_id).toBe("o4-mini");
+
+    const conversation = createConversation(user.uid, "ACP 会话", null, {
+      acpAgentId: agent.id,
+      acpModelId: "session-model",
+      systemPrompt: "会话级补充提示词",
+    });
+    expect(conversation.acp_agent_id).toBe(agent.id);
+    expect(conversation.acp_model_id).toBe("session-model");
+    expect(conversation.system_prompt).toBe("会话级补充提示词");
+
+    updateConversationAcpSession(conversation.id, user.uid, "session-123");
+    updateConversationAcpModel(conversation.id, user.uid, "other-model");
+    const updatedConversation = getConversation(conversation.id, user.uid);
+    expect(updatedConversation.acp_session_id).toBe("session-123");
+    expect(updatedConversation.acp_model_id).toBe("other-model");
+
+    deleteAcpAgent(agent.id, user.uid);
+    expect(listAcpAgents(user.uid)).toHaveLength(0);
+    expect(getConversation(conversation.id, user.uid).acp_agent_id).toBeNull();
+    expect(getConversation(conversation.id, user.uid).acp_model_id).toBeNull();
+  });
+});
+
+describe("Database Models - Agent Tasks", () => {
+  it("persists ACP agent binding for orchestrated tasks", () => {
+    const user = createUser(`user_${Date.now()}_task_binding`, "password123");
+    const agent = createAcpAgent(user.uid, {
+      name: "Task ACP",
+      preset: "opencode",
+      command: "opencode",
+      args: ["acp"],
+      env: {},
+      is_enabled: 1,
+    });
+
+    const task = createAgentTask(
+      user.uid,
+      "绑定 ACP 的任务",
+      "",
+      "执行一次外部 agent 调研",
+      [],
+      [],
+      "",
+      agent.id
+    );
+
+    expect(task.acp_agent_id).toBe(agent.id);
+    expect(listAgentTasks(user.uid)[0].acp_agent_id).toBe(agent.id);
+
+    updateAgentTask(task.id, user.uid, {
+      acp_agent_id: null,
+    });
+
+    expect(listAgentTasks(user.uid)[0].acp_agent_id).toBeNull();
   });
 });

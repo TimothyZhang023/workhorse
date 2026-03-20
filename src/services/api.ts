@@ -36,7 +36,13 @@ export async function getConversations() {
 
 export async function createConversation(
   title: string,
-  options?: { context_window?: number | null; channel_id?: number | null }
+  options?: {
+    context_window?: number | null;
+    channel_id?: number | null;
+    acp_agent_id?: number | null;
+    acp_model_id?: string | null;
+    system_prompt?: string | null;
+  }
 ) {
   return request<API.Conversation>("/api/conversations", {
     method: "POST",
@@ -47,6 +53,15 @@ export async function createConversation(
       }),
       ...(options?.channel_id !== undefined && {
         channel_id: options.channel_id,
+      }),
+      ...(options?.acp_agent_id !== undefined && {
+        acp_agent_id: options.acp_agent_id,
+      }),
+      ...(options?.acp_model_id !== undefined && {
+        acp_model_id: options.acp_model_id,
+      }),
+      ...(options?.system_prompt !== undefined && {
+        system_prompt: options.system_prompt,
       }),
     },
   });
@@ -63,7 +78,8 @@ export async function updateConversation(
   title?: string,
   systemPrompt?: string,
   toolNames?: string[] | null,
-  contextWindow?: number | null
+  contextWindow?: number | null,
+  acpModelId?: string | null
 ) {
   return request(`/api/conversations/${id}`, {
     method: "PUT",
@@ -72,8 +88,30 @@ export async function updateConversation(
       ...(systemPrompt !== undefined && { system_prompt: systemPrompt }),
       ...(toolNames !== undefined && { tool_names: toolNames }),
       ...(contextWindow !== undefined && { context_window: contextWindow }),
+      ...(acpModelId !== undefined && { acp_model_id: acpModelId }),
     },
   });
+}
+
+export async function getConversationAcpModels(id: string) {
+  return request<API.AcpConversationModels>(
+    `/api/conversations/${id}/acp-models`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function setConversationAcpModel(id: string, modelId: string) {
+  return request<API.AcpConversationModels>(
+    `/api/conversations/${id}/acp-model`,
+    {
+      method: "POST",
+      data: {
+        model_id: modelId,
+      },
+    }
+  );
 }
 
 export async function regenerateMessage(conversationId: string, model?: string) {
@@ -123,6 +161,26 @@ export async function stopConversationExecution(conversationId: string) {
   );
 }
 
+export async function getConversationContextBudget(conversationId: string) {
+  return request<API.ConversationContextBudget>(
+    `/api/conversations/${conversationId}/context-budget`,
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function compactConversation(conversationId: string) {
+  return request<{
+    success: boolean;
+    compacted: boolean;
+    compacted_messages?: number;
+    budget: API.ConversationContextBudget;
+  }>(`/api/conversations/${conversationId}/compact`, {
+    method: "POST",
+  });
+}
+
 // Channels
 export async function getChannels() {
   return request<API.Channel[]>("/api/channels", {
@@ -140,6 +198,61 @@ export async function createChannel(data: Partial<API.Channel>) {
   return request<API.Channel>("/api/channels", {
     method: "POST",
     data,
+  });
+}
+
+export async function updateChannelAgent(id: number, data: Partial<API.Channel>) {
+  return request(`/api/channels/${id}`, {
+    method: "PUT",
+    data,
+  });
+}
+
+export async function deleteChannelAgent(id: number) {
+  return request(`/api/channels/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getAcpAgentTemplates() {
+  return request<API.AcpAgentTemplate[]>("/api/acp-agents/templates", {
+    method: "GET",
+  });
+}
+
+export async function getAcpAgents() {
+  return request<API.AcpAgent[]>("/api/acp-agents", {
+    method: "GET",
+  });
+}
+
+export async function createAcpAgent(data: {
+  name: string;
+  preset: API.AcpAgent["preset"];
+  command?: string;
+  api_key?: string;
+  agent_prompt?: string;
+  default_model_id?: string;
+}) {
+  return request<API.AcpAgent>("/api/acp-agents", {
+    method: "POST",
+    data,
+  });
+}
+
+export async function updateAcpAgent(
+  id: number,
+  data: Partial<API.AcpAgent> & { agent_prompt?: string }
+) {
+  return request<API.AcpAgent>(`/api/acp-agents/${id}`, {
+    method: "PUT",
+    data,
+  });
+}
+
+export async function deleteAcpAgent(id: number) {
+  return request(`/api/acp-agents/${id}`, {
+    method: "DELETE",
   });
 }
 
@@ -238,6 +351,12 @@ export async function batchDeleteMcpServers(serverIds: number[]) {
   return request<{ success: boolean; deleted: number }>("/api/mcp/batch", {
     method: "DELETE",
     data: { server_ids: serverIds },
+  });
+}
+
+export async function exportMcpInstallShare(id: number) {
+  return request<API.InstallShare>(`/api/install-share/mcp/${id}`, {
+    method: "GET",
   });
 }
 
@@ -343,6 +462,21 @@ export async function getGlobalModelPolicy() {
   });
 }
 
+export async function exportEndpointModelConfig() {
+  return request<API.EndpointModelConfigExport>("/api/endpoints/export-config", {
+    method: "GET",
+  });
+}
+
+export async function importEndpointModelConfig(
+  payload: API.EndpointModelConfigExport
+) {
+  return request("/api/endpoints/import-config", {
+    method: "POST",
+    data: payload,
+  });
+}
+
 export async function updateGlobalModelPolicy(data: API.GlobalModelPolicy) {
   return request<API.GlobalModelPolicy>("/api/endpoints/settings/model-policy", {
     method: "PUT",
@@ -367,6 +501,25 @@ export async function getGlobalSystemPromptSetting() {
     "/api/system/settings/global-system-prompt",
     {
       method: "GET",
+    }
+  );
+}
+
+export async function getMainAgentPromptSetting() {
+  return request<API.GlobalSystemPromptSetting>(
+    "/api/system/settings/main-agent-prompt",
+    {
+      method: "GET",
+    }
+  );
+}
+
+export async function updateMainAgentPromptSetting(markdown: string) {
+  return request<{ success: boolean; key: string; value: string }>(
+    "/api/system/settings/main-agent-prompt",
+    {
+      method: "PUT",
+      data: { markdown },
     }
   );
 }
@@ -423,6 +576,19 @@ export async function installSkillFromZipArchive(
       zip_base64: zipBase64,
     },
     timeout: 60000,
+  });
+}
+
+export async function exportSkillInstallShare(id: number) {
+  return request<API.InstallShare>(`/api/install-share/skills/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function importInstallShare(bundle: string) {
+  return request<API.InstallShareImportResult>("/api/install-share/import", {
+    method: "POST",
+    data: { bundle },
   });
 }
 

@@ -16,6 +16,7 @@ import {
   theme as antdTheme,
 } from "antd";
 import { useEffect, useState } from "react";
+import "../Dashboard/index.css";
 
 const { TextArea } = Input;
 
@@ -85,18 +86,9 @@ export default function SystemSettingsPage() {
           setThemeMode={setThemeMode}
           activePath="/settings/system"
         />
-        <main
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: 32,
-            overflow: "auto",
-          }}
-        >
+        <main className="cw-dashboard-main-wrap">
           <div
             style={{
-              maxWidth: 980,
-              margin: "0 auto",
               display: "grid",
               gap: 20,
             }}

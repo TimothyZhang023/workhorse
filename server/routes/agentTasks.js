@@ -14,6 +14,10 @@ import { generateAgentTaskBlueprint } from "../utils/agentTaskGenerator.js";
 
 const router = Router();
 
+function normalizeAcpAgentId(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
 
 router.get("/", (req, res) => {
   try {
@@ -48,7 +52,7 @@ router.get("/runs/:runId/events", (req, res) => {
 
 router.post("/", (req, res) => {
   try {
-    const { name, description, system_prompt } = req.body;
+    const { name, description, system_prompt, acp_agent_id } = req.body;
     if (!name || !system_prompt) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -59,7 +63,8 @@ router.post("/", (req, res) => {
       system_prompt,
       [],
       [],
-      ""
+      "",
+      normalizeAcpAgentId(acp_agent_id)
     );
     res.json(task);
   } catch (error) {
@@ -97,7 +102,8 @@ router.post("/generate", async (req, res) => {
         result.draft.system_prompt,
         [],
         [],
-        ""
+        "",
+        normalizeAcpAgentId(result.draft.acp_agent_id)
       );
 
       return res.json({

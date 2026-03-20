@@ -10,6 +10,7 @@ import db, {
   getConversations,
   getMessages,
   getModels,
+  updateConversationAcpModel,
   updateConversationContextWindow,
   updateConversationSystemPrompt,
   updateConversationTitle,
@@ -33,9 +34,20 @@ import {
   stopConversationExecution,
   streamConversationAgent,
 } from "../models/agentConversation.js";
+import { prepareAgentTooling } from "../models/agentRuntimeConfig.js";
+import {
+  cancelAcpConversation,
+  getConversationAcpModels,
+  setConversationAcpModel,
+  streamAcpConversation,
+} from "../models/acpAgentManager.js";
 import { normalizeBaseUrlCandidates } from "../models/agentExecutionCore.js";
 import { logger } from "../utils/logger.js";
 import { getOrderedEndpointGroups } from "../utils/modelSelection.js";
+import {
+  buildCompactedConversationHistory,
+  computeConversationContextBudget,
+} from "../utils/conversationCompaction.js";
 
 const router = Router();
 const titleSummaryInFlight = new Set();
@@ -57,13 +69,28 @@ router.get("/", (req, res) => {
 
 router.post("/", (req, res) => {
   try {
-    const { title, tool_names, context_window, channel_id } = req.body;
+    const {
+      title,
+      tool_names,
+      system_prompt,
+      context_window,
+      channel_id,
+      acp_agent_id,
+      acp_model_id,
+    } =
+      req.body;
     res.json(
       createConversation(
         req.uid,
         title,
         Array.isArray(tool_names) ? tool_names : null,
-        { contextWindow: context_window, channelId: channel_id }
+        {
+          contextWindow: context_window,
+          channelId: channel_id,
+          acpAgentId: acp_agent_id,
+          acpModelId: acp_model_id,
+          systemPrompt: system_prompt,
+        }
       )
     );
   } catch (error) {
@@ -74,7 +101,8 @@ router.post("/", (req, res) => {
 router.put("/:id", (req, res) => {
   try {
     const { id } = req.params;
-    const { title, system_prompt, tool_names, context_window } = req.body;
+    const { title, system_prompt, tool_names, context_window, acp_model_id } =
+      req.body;
     if (title !== undefined) updateConversationTitle(id, req.uid, title);
     if (system_prompt !== undefined) {
       updateConversationSystemPrompt(id, req.uid, system_prompt);
@@ -89,9 +117,113 @@ router.put("/:id", (req, res) => {
         Array.isArray(tool_names) ? tool_names : null
       );
     }
+    if (acp_model_id !== undefined) {
+      updateConversationAcpModel(id, req.uid, acp_model_id);
+    }
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/:id/acp-models", async (req, res) => {
+  try {
+    const conversation = getConversation(req.params.id, req.uid);
+    if (!conversation) {
+      return res.status(404).json({ error: "对话不存在或无权限" });
+    }
+
+    res.json(await getConversationAcpModels(req.uid, conversation));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/:id/acp-model", async (req, res) => {
+  try {
+    const conversation = getConversation(req.params.id, req.uid);
+    if (!conversation) {
+      return res.status(404).json({ error: "对话不存在或无权限" });
+    }
+
+    res.json(
+      await setConversationAcpModel(
+        req.uid,
+        conversation,
+        String(req.body?.model_id || "").trim()
+      )
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/:id/context-budget", async (req, res) => {
+  try {
+    const conversation = getConversation(req.params.id, req.uid);
+    if (!conversation) {
+      return res.status(404).json({ error: "对话不存在或无权限" });
+    }
+
+    const history = getMessages(req.params.id, req.uid).filter(m => !m.is_archived);
+    const tools = await getConversationTooling(req.uid, conversation);
+    const systemPrompt = buildConversationSystemPrompt(req.uid, conversation);
+    const budget = await computeConversationContextBudget({
+      uid: req.uid,
+      conversation,
+      history,
+      systemPrompt,
+      tools,
+    });
+
+    return res.json(budget);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/:id/compact", async (req, res) => {
+  try {
+    const conversation = getConversation(req.params.id, req.uid);
+    if (!conversation) {
+      return res.status(404).json({ error: "对话不存在或无权限" });
+    }
+
+    const history = getMessages(req.params.id, req.uid).filter(m => !m.is_archived);
+    const compacted = await getConversationHistoryForExecution(
+      req.uid,
+      conversation,
+      history,
+      { force: true }
+    );
+
+    if (!compacted.compacted || !Array.isArray(compacted.summaryMessages)) {
+      return res.json({
+        success: true,
+        compacted: false,
+        budget: compacted.budget,
+      });
+    }
+
+    const droppedIds = compacted.droppedMessages.map(m => m.id);
+    if (droppedIds.length > 0) {
+      const placeholders = droppedIds.map(() => '?').join(',');
+      db.prepare(`UPDATE messages SET is_archived = 1 WHERE id IN (${placeholders}) AND uid = ?`)
+        .run(...droppedIds, req.uid);
+    }
+
+    for (const message of compacted.summaryMessages) {
+      addMessage(req.params.id, req.uid, message.role, message.content, { is_hidden: 1, is_archived: 0 });
+    }
+
+    return res.json({
+      success: true,
+      compacted: true,
+      compacted_messages: compacted.summaryMessages.length,
+      budget: compacted.budget,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -142,6 +274,35 @@ function updateTitleIfUntitled(conversationId, uid, nextTitle) {
 
 function extractDisplayText(content) {
   return String(content || "").replace(/\[IMAGE_DATA:[^\]]+\]/g, "[图片]");
+}
+
+function decomposeStoredUserContent(content) {
+  const raw = String(content || "");
+  const images = [...raw.matchAll(/\[IMAGE_DATA:([^\]]+)\]/g)].map(
+    (match) => match[1]
+  );
+  const message = raw.replace(/\[IMAGE_DATA:[^\]]+\]/g, "").trim();
+  return { message, images };
+}
+
+async function getConversationTooling(uid, conversation) {
+  const { requestTools } = await prepareAgentTooling(uid, {
+    toolNames: conversation?.tool_names ?? null,
+  });
+  return requestTools;
+}
+
+async function getConversationHistoryForExecution(uid, conversation, history, options = {}) {
+  const systemPrompt = buildConversationSystemPrompt(uid, conversation);
+  const tools = await getConversationTooling(uid, conversation);
+  return buildCompactedConversationHistory({
+    uid,
+    conversation,
+    history,
+    systemPrompt,
+    tools,
+    force: Boolean(options.force),
+  });
 }
 
 function isQuotaLikeSummaryError(reasonText) {
@@ -334,25 +495,41 @@ router.post("/:id/chat", async (req, res) => {
     }
     addMessage(id, uid, "user", storedContent);
 
-    const history = getMessages(id, uid);
-    const systemPrompt = buildConversationSystemPrompt(uid, conversation);
-    const messages = buildConversationMessages(history, systemPrompt);
-    aiMessage = addMessage(id, uid, "assistant", "");
-
-    const fullContent = await streamConversationAgent({
+    const history = getMessages(id, uid).filter(m => !m.is_archived);
+    const compactedState = await getConversationHistoryForExecution(
       uid,
-      model: requestedModel,
-      messages,
-      res,
-      conversationId: id,
-      source: "chat",
-      aiMsgId: aiMessage.id,
-      debug,
-      generationConfig,
-      conversationContextWindow: conversation?.context_window ?? null,
-      allowedToolNames: conversation?.tool_names ?? null,
-      executionContext,
-    });
+      conversation,
+      history
+    );
+    aiMessage = addMessage(id, uid, "assistant", "");
+    const fullContent = conversation?.acp_agent_id
+      ? await streamAcpConversation({
+          uid,
+          conversation,
+          conversationId: id,
+          message,
+          images,
+          history: compactedState.history,
+          res,
+          debug,
+        })
+      : await streamConversationAgent({
+          uid,
+          model: requestedModel,
+          messages: buildConversationMessages(
+            compactedState.history,
+            buildConversationSystemPrompt(uid, conversation)
+          ),
+          res,
+          conversationId: id,
+          source: "chat",
+          aiMsgId: aiMessage.id,
+          debug,
+          generationConfig,
+          conversationContextWindow: conversation?.context_window ?? null,
+          allowedToolNames: conversation?.tool_names ?? null,
+          executionContext,
+        });
 
     if (fullContent === false) {
       finalizeSse(res);
@@ -388,8 +565,20 @@ router.post("/:id/chat", async (req, res) => {
   }
 });
 
-router.post("/:id/stop", (req, res) => {
-  res.json(stopConversationExecution(req.uid, req.params.id));
+router.post("/:id/stop", async (req, res) => {
+  const conversation = getConversation(req.params.id, req.uid);
+  const stopped = stopConversationExecution(req.uid, req.params.id);
+
+  if (conversation?.acp_agent_id) {
+    const acpStopped = await cancelAcpConversation(req.uid, conversation);
+    return res.json({
+      ...stopped,
+      acp_stopped: acpStopped.stopped,
+      stopped: stopped.stopped || acpStopped.stopped,
+    });
+  }
+
+  res.json(stopped);
 });
 
 router.post("/:id/summarize-title", (req, res) => {
@@ -455,7 +644,7 @@ router.post("/:id/regenerate", async (req, res) => {
       return;
     }
 
-    const history = getMessages(id, uid);
+    const history = getMessages(id, uid).filter(m => !m.is_archived);
     if (!history.length) {
       res.write(
         `data: ${JSON.stringify({ error: "没有可重新生成的消息" })}\n\n`
@@ -465,24 +654,53 @@ router.post("/:id/regenerate", async (req, res) => {
     }
 
     const conversation = getConversation(id, uid);
-    const systemPrompt = buildConversationSystemPrompt(uid, conversation);
-    const messages = buildConversationMessages(history, systemPrompt);
-    aiMessage = addMessage(id, uid, "assistant", "");
-
-    const fullContent = await streamConversationAgent({
+    if (!conversation) {
+      res.write(`data: ${JSON.stringify({ error: "对话不存在或无权限" })}\n\n`);
+      finalizeSse(res);
+      return;
+    }
+    const compactedState = await getConversationHistoryForExecution(
       uid,
-      model: requestedModel,
-      messages,
-      res,
-      conversationId: id,
-      source: "chat",
-      aiMsgId: aiMessage.id,
-      debug,
-      generationConfig,
-      conversationContextWindow: conversation?.context_window ?? null,
-      allowedToolNames: conversation?.tool_names ?? null,
-      executionContext,
-    });
+      conversation,
+      history
+    );
+    const systemPrompt = buildConversationSystemPrompt(uid, conversation);
+    const messages = buildConversationMessages(compactedState.history, systemPrompt);
+    aiMessage = addMessage(id, uid, "assistant", "");
+    const lastUserMessage = [...history]
+      .reverse()
+      .find((message) => message.role === "user");
+    const fullContent = conversation?.acp_agent_id
+      ? await (() => {
+          const payload = decomposeStoredUserContent(lastUserMessage?.content || "");
+          if (!payload.message && payload.images.length === 0) {
+            throw new Error("没有可重新生成的用户消息");
+          }
+          return streamAcpConversation({
+            uid,
+            conversation,
+            conversationId: id,
+            message: payload.message,
+            images: payload.images,
+            history: compactedState.history,
+            res,
+            debug,
+          });
+        })()
+      : await streamConversationAgent({
+          uid,
+          model: requestedModel,
+          messages,
+          res,
+          conversationId: id,
+          source: "chat",
+          aiMsgId: aiMessage.id,
+          debug,
+          generationConfig,
+          conversationContextWindow: conversation?.context_window ?? null,
+          allowedToolNames: conversation?.tool_names ?? null,
+          executionContext,
+        });
 
     if (fullContent === false) {
       finalizeSse(res);
@@ -559,7 +777,6 @@ router.put("/:id/messages/:msgId", async (req, res) => {
       res.end();
       return;
     }
-
     const message = db
       .prepare(
         "SELECT * FROM messages WHERE id = ? AND conversation_id = ? AND uid = ?"
@@ -576,25 +793,49 @@ router.put("/:id/messages/:msgId", async (req, res) => {
     ).run(id, uid, msgId);
     updateMessage(msgId, uid, content);
 
-    const history = getMessages(id, uid);
-    const systemPrompt = buildConversationSystemPrompt(uid, conversation);
-    const messages = buildConversationMessages(history, systemPrompt);
-    aiMessage = addMessage(id, uid, "assistant", "");
-
-    const fullContent = await streamConversationAgent({
+    const history = getMessages(id, uid).filter(m => !m.is_archived);
+    const compactedState = await getConversationHistoryForExecution(
       uid,
-      model: requestedModel,
-      messages,
-      res,
-      conversationId: id,
-      source: "chat",
-      aiMsgId: aiMessage.id,
-      debug,
-      generationConfig,
-      conversationContextWindow: conversation?.context_window ?? null,
-      allowedToolNames: conversation?.tool_names ?? null,
-      executionContext,
-    });
+      conversation,
+      history
+    );
+    const systemPrompt = buildConversationSystemPrompt(uid, conversation);
+    const messages = buildConversationMessages(compactedState.history, systemPrompt);
+    aiMessage = addMessage(id, uid, "assistant", "");
+    const lastUserMessage = [...history]
+      .reverse()
+      .find((item) => item.role === "user");
+    const fullContent = conversation?.acp_agent_id
+      ? await (() => {
+          const payload = decomposeStoredUserContent(lastUserMessage?.content || "");
+          if (!payload.message && payload.images.length === 0) {
+            throw new Error("编辑后缺少可发送的用户消息");
+          }
+          return streamAcpConversation({
+            uid,
+            conversation,
+            conversationId: id,
+            message: payload.message,
+            images: payload.images,
+            history: compactedState.history,
+            res,
+            debug,
+          });
+        })()
+      : await streamConversationAgent({
+          uid,
+          model: requestedModel,
+          messages,
+          res,
+          conversationId: id,
+          source: "chat",
+          aiMsgId: aiMessage.id,
+          debug,
+          generationConfig,
+          conversationContextWindow: conversation?.context_window ?? null,
+          allowedToolNames: conversation?.tool_names ?? null,
+          executionContext,
+        });
 
     if (fullContent === false) {
       finalizeSse(res);

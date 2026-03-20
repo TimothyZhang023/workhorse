@@ -1,9 +1,11 @@
 import { Sidebar } from "@/components/Sidebar";
+import { InstallShareModal } from "@/components/InstallShareModal";
 import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
   batchDeleteSkills,
   batchUpdateSkills,
   deleteSkill,
+  exportSkillInstallShare,
   getMcpTools,
   getSkills,
   installSkillFromGitRepository,
@@ -13,6 +15,7 @@ import {
 import {
   DeleteOutlined,
   EditOutlined,
+  ExportOutlined,
   InboxOutlined,
   LinkOutlined,
   PauseCircleOutlined,
@@ -84,6 +87,9 @@ export default () => {
   const [zipFileList, setZipFileList] = useState<UploadFile[]>([]);
   const [installingZip, setInstallingZip] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([]);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareLoadingSkillId, setShareLoadingSkillId] = useState<number | null>(null);
+  const [installShare, setInstallShare] = useState<API.InstallShare | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -112,6 +118,20 @@ export default () => {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const handleShareImport = (event: Event) => {
+      const detail = (event as CustomEvent<API.InstallShareImportResult>).detail;
+      if (detail?.kind === "skill") {
+        void loadData();
+      }
+    };
+
+    window.addEventListener("workhorse:install-share-imported", handleShareImport);
+    return () => {
+      window.removeEventListener("workhorse:install-share-imported", handleShareImport);
+    };
   }, []);
 
   const skillInitialValues = editingSkill
@@ -177,6 +197,19 @@ export default () => {
       await loadData();
     } catch (error: any) {
       messageApi.error(error?.message || "状态更新失败");
+    }
+  };
+
+  const handleOpenInstallShare = async (skill: API.Skill) => {
+    try {
+      setShareLoadingSkillId(skill.id);
+      const share = await exportSkillInstallShare(skill.id);
+      setInstallShare(share);
+      setShareModalOpen(true);
+    } catch (error: any) {
+      messageApi.error(error?.message || "导出安装链接失败");
+    } finally {
+      setShareLoadingSkillId(null);
     }
   };
 
@@ -569,6 +602,15 @@ export default () => {
                             }
                           />
                         </Tooltip>
+                        <Tooltip title="分享安装">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<ExportOutlined />}
+                            loading={shareLoadingSkillId === row.id}
+                            onClick={() => handleOpenInstallShare(row)}
+                          />
+                        </Tooltip>
                         <Tooltip title="删除">
                           <Button
                             type="text"
@@ -645,6 +687,14 @@ export default () => {
             initialValue={true}
           />
         </ModalForm>
+        <InstallShareModal
+          open={shareModalOpen}
+          share={installShare}
+          onClose={() => {
+            setShareModalOpen(false);
+            setInstallShare(null);
+          }}
+        />
       </div>
     </ConfigProvider>
   );

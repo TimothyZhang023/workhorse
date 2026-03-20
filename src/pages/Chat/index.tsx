@@ -2,16 +2,29 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { Sidebar } from "@/components/Sidebar";
 import { useShellPreferences } from "@/hooks/useShellPreferences";
 import {
+  createAcpAgent,
   createChannel,
   createConversation,
   deleteConversation,
+  deleteAcpAgent,
+  deleteChannelAgent,
+  compactConversation,
+  getConversationAcpModels,
+  getConversationContextBudget,
+  getAcpAgents,
+  getAcpAgentTemplates,
   getChannelExtensions,
   getChannels,
   getConversations,
+  getMainAgentPromptSetting,
   getMessages,
+  setConversationAcpModel,
   stopConversationExecution,
   summarizeConversationTitle,
   updateConversation,
+  updateAcpAgent,
+  updateChannelAgent,
+  updateMainAgentPromptSetting,
 } from "@/services/api";
 import {
   AppstoreOutlined,
@@ -27,6 +40,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SendOutlined,
+  SettingOutlined,
   StopOutlined,
   ToolOutlined,
   UpOutlined,
@@ -44,6 +58,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Progress,
   Select,
   Segmented,
   Switch,
@@ -117,9 +132,14 @@ type ChatDebugEvent = {
 type WorkspaceAgent = {
   id: string;
   name: string;
-  kind: "main" | "channel";
+  kind: "main" | "channel" | "acp";
   platform?: string;
   channelId?: number;
+  acpAgentId?: number;
+  preset?: API.AcpAgent["preset"];
+  agentPrompt?: string;
+  defaultModelId?: string | null;
+  lastUsedModelId?: string | null;
   description: string;
   listenerState?: API.Channel["listener_state"];
 };
@@ -127,6 +147,7 @@ type WorkspaceAgent = {
 type ChannelCreateFormValues = {
   name: string;
   platform: string;
+  agent_prompt?: string;
   client_id?: string;
   client_secret?: string;
   update_mode?: "polling" | "webhook";
@@ -134,6 +155,25 @@ type ChannelCreateFormValues = {
   secret_token?: string;
   bot_token?: string;
 };
+
+type AcpAgentCreateFormValues = {
+  name: string;
+  preset: API.AcpAgent["preset"];
+  command?: string;
+  api_key?: string;
+  agent_prompt?: string;
+  default_model_id?: string;
+};
+
+type AgentSettingsFormValues = {
+  name?: string;
+  agent_prompt?: string;
+  default_model_id?: string;
+};
+
+type AcpConversationModelsState = API.AcpConversationModels | null;
+
+const safeTrim = (value: unknown): string => String(value ?? "").trim();
 
 const MAIN_AGENT_ID = "main";
 const CONVERSATION_AGENT_MAP_KEY = "cw.conversation_agent_map.v1";
@@ -263,9 +303,12 @@ const readConversationAgentMap = (): Record<string, string> => {
 };
 
 const resolveConversationAgentId = (
-  conversation: Pick<API.Conversation, "id" | "channel_id">,
+  conversation: Pick<API.Conversation, "id" | "channel_id" | "acp_agent_id">,
   conversationAgentMap: Record<string, string>
 ) => {
+  if (conversation.acp_agent_id) {
+    return `acp:${conversation.acp_agent_id}`;
+  }
   if (conversation.channel_id) {
     return `channel:${conversation.channel_id}`;
   }
@@ -278,6 +321,8 @@ export default () => {
   const requestedConversationId = searchParams.get("conversationId");
   const requestedAgentId = searchParams.get("agent");
   const [channelAgentForm] = Form.useForm<ChannelCreateFormValues>();
+  const [acpAgentForm] = Form.useForm<AcpAgentCreateFormValues>();
+  const [agentSettingsForm] = Form.useForm<AgentSettingsFormValues>();
   const [messageApi, messageContextHolder] = antdMessage.useMessage();
   const {
     moduleExpanded,
@@ -293,12 +338,23 @@ export default () => {
   const [conversationDrawerVisible, setConversationDrawerVisible] =
     useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [agentModalVisible, setAgentModalVisible] = useState(false);
-  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [channelAgentModalVisible, setChannelAgentModalVisible] =
+    useState(false);
+  const [acpAgentModalVisible, setAcpAgentModalVisible] = useState(false);
+  const [creatingChannelAgent, setCreatingChannelAgent] = useState(false);
+  const [creatingAcpAgent, setCreatingAcpAgent] = useState(false);
+  const [agentSettingsVisible, setAgentSettingsVisible] = useState(false);
+  const [settingsAgentId, setSettingsAgentId] = useState<string | null>(null);
+  const [savingAgentSettings, setSavingAgentSettings] = useState(false);
+  const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
   const [activeAgentId, setActiveAgentId] = useState(MAIN_AGENT_ID);
   const [channels, setChannels] = useState<API.Channel[]>([]);
   const [channelExtensions, setChannelExtensions] = useState<
     API.ChannelExtension[]
+  >([]);
+  const [acpAgents, setAcpAgents] = useState<API.AcpAgent[]>([]);
+  const [acpAgentTemplates, setAcpAgentTemplates] = useState<
+    API.AcpAgentTemplate[]
   >([]);
   const [conversationAgentMap, setConversationAgentMap] = useState<
     Record<string, string>
@@ -308,6 +364,16 @@ export default () => {
   const [conversations, setConversations] = useState<API.Conversation[]>([]);
   const [currentConvId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<API.Message[]>([]);
+  const [acpConversationModels, setAcpConversationModels] =
+    useState<AcpConversationModelsState>(null);
+  const [acpModelsLoading, setAcpModelsLoading] = useState(false);
+  const [switchingAcpModel, setSwitchingAcpModel] = useState(false);
+  const [conversationBudget, setConversationBudget] =
+    useState<API.ConversationContextBudget | null>(null);
+  const [conversationBudgetLoading, setConversationBudgetLoading] =
+    useState(false);
+  const [compactingConversation, setCompactingConversation] = useState(false);
+  const [contextBudgetExpanded, setContextBudgetExpanded] = useState(false);
   const [toolMessageExpanded, setToolMessageExpanded] = useState<
     Record<string, boolean>
   >({});
@@ -386,6 +452,12 @@ export default () => {
     );
   }, [channelExtensions]);
 
+  const acpPresetMeta = useMemo(() => {
+    return Object.fromEntries(
+      (acpAgentTemplates || []).map((item) => [item.id, item])
+    );
+  }, [acpAgentTemplates]);
+
   const agents = useMemo<WorkspaceAgent[]>(() => {
     const main: WorkspaceAgent = {
       id: MAIN_AGENT_ID,
@@ -406,17 +478,68 @@ export default () => {
         name: channel.name,
         platform: channel.platform,
         channelId: channel.id,
+        agentPrompt: channel.agent_prompt,
         listenerState: channel.listener_state,
         description: `${CHANNEL_AGENT_ADAPTERS[channel.platform!]?.label || channel.platform} 渠道机器人`,
       }));
-    return [main, ...channelAgents];
-  }, [channels]);
+    const externalAcpAgents = (acpAgents || [])
+      .filter((agent) => Number(agent.is_enabled) === 1)
+      .map<WorkspaceAgent>((agent) => ({
+        id: `acp:${agent.id}`,
+        kind: "acp",
+        name: agent.name,
+        acpAgentId: agent.id,
+        preset: agent.preset,
+        agentPrompt: agent.agent_prompt,
+        defaultModelId: agent.default_model_id || null,
+        lastUsedModelId: agent.last_used_model_id || null,
+        description:
+          acpPresetMeta[agent.preset]?.description || "外部 ACP Agent",
+      }));
+    return [main, ...channelAgents, ...externalAcpAgents];
+  }, [acpAgents, acpPresetMeta, channels]);
 
   const activeAgent = useMemo(
     () => agents.find((agent) => agent.id === activeAgentId) || agents[0],
     [activeAgentId, agents]
   );
+  const settingsAgent = useMemo(
+    () => agents.find((agent) => agent.id === settingsAgentId) || null,
+    [agents, settingsAgentId]
+  );
+  const currentConversation = useMemo(
+    () =>
+      currentConvId
+        ? conversations.find((item) => String(item.id) === String(currentConvId)) ||
+          null
+        : null,
+    [conversations, currentConvId]
+  );
   const showAgencyOverview = !requestedAgentId && !requestedConversationId;
+
+  const buildConversationCreateOptions = useCallback(
+    (agent: WorkspaceAgent | undefined) => {
+      if (!agent || agent.kind === "main") {
+        return undefined;
+      }
+
+      if (agent.kind === "channel") {
+        return {
+          channel_id: agent.channelId || null,
+        };
+      }
+
+      if (agent.kind === "acp") {
+        return {
+          acp_agent_id: agent.acpAgentId || null,
+          acp_model_id: agent.lastUsedModelId || agent.defaultModelId || null,
+        };
+      }
+
+      return undefined;
+    },
+    []
+  );
 
   const pushAgencyParams = useCallback(
     (next: { agent?: string | null; conversationId?: string | null }) => {
@@ -517,14 +640,19 @@ export default () => {
 
   const loadInitData = async () => {
     try {
-      const [convs, channelList, extensions] = await Promise.all([
+      const [convs, channelList, extensions, acpList, acpTemplates] =
+        await Promise.all([
         getConversations(),
         getChannels().catch(() => []),
         getChannelExtensions().catch(() => []),
-      ]);
+        getAcpAgents().catch(() => []),
+        getAcpAgentTemplates().catch(() => []),
+        ]);
       setConversations(convs);
       setChannels(channelList);
       setChannelExtensions(extensions);
+      setAcpAgents(acpList);
+      setAcpAgentTemplates(acpTemplates);
       if (convs.length > 0) {
         const initialConversationId =
           requestedConversationId &&
@@ -555,6 +683,186 @@ export default () => {
       console.error(error);
     }
   };
+
+  const refreshAcpAgents = async () => {
+    try {
+      const items = await getAcpAgents();
+      setAcpAgents(items);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const refreshConversationBudget = useCallback(
+    async (conversationId: string) => {
+      setConversationBudgetLoading(true);
+      try {
+        const budget = await getConversationContextBudget(conversationId);
+        if (currentConvIdRef.current === conversationId) {
+          setConversationBudget(budget);
+        }
+      } catch (error) {
+        console.error(error);
+        if (currentConvIdRef.current === conversationId) {
+          setConversationBudget(null);
+        }
+      } finally {
+        if (currentConvIdRef.current === conversationId) {
+          setConversationBudgetLoading(false);
+        }
+      }
+    },
+    []
+  );
+
+  const loadAcpConversationModels = useCallback(
+    async (conversationId: string) => {
+      setAcpModelsLoading(true);
+      try {
+        const result = await getConversationAcpModels(conversationId);
+        setAcpConversationModels(result);
+      } catch (error) {
+        console.error(error);
+        setAcpConversationModels(null);
+      } finally {
+        setAcpModelsLoading(false);
+      }
+    },
+    []
+  );
+
+  const openAgentSettings = useCallback(
+    async (agent: WorkspaceAgent | undefined) => {
+      if (!agent) return;
+      setSettingsAgentId(agent.id);
+
+      if (agent.kind === "main") {
+        try {
+          const result = await getMainAgentPromptSetting();
+          agentSettingsForm.setFieldsValue({
+            name: agent.name,
+            agent_prompt: result.markdown || "",
+          });
+        } catch (error) {
+          console.error(error);
+          messageApi.error("读取 main Agent 提示词失败");
+          return;
+        }
+      } else if (agent.kind === "channel") {
+        const channel = channels.find((item) => item.id === agent.channelId);
+        agentSettingsForm.setFieldsValue({
+          name: channel?.name || agent.name,
+          agent_prompt: channel?.agent_prompt || "",
+        });
+      } else if (agent.kind === "acp") {
+        const acpAgent = acpAgents.find((item) => item.id === agent.acpAgentId);
+        agentSettingsForm.setFieldsValue({
+          name: acpAgent?.name || agent.name,
+          agent_prompt: acpAgent?.agent_prompt || "",
+          default_model_id: acpAgent?.default_model_id || "",
+        });
+      }
+
+      setAgentSettingsVisible(true);
+    },
+    [acpAgents, agentSettingsForm, channels, messageApi]
+  );
+
+  const handleSaveAgentSettings = useCallback(async () => {
+    if (!settingsAgent) return;
+
+    try {
+      const validatedValues = await agentSettingsForm.validateFields();
+      const values = {
+        ...agentSettingsForm.getFieldsValue(true),
+        ...validatedValues,
+      } as AgentSettingsFormValues;
+      setSavingAgentSettings(true);
+
+      if (settingsAgent.kind === "main") {
+        await updateMainAgentPromptSetting(safeTrim(values.agent_prompt));
+      } else if (settingsAgent.kind === "channel" && settingsAgent.channelId) {
+        await updateChannelAgent(settingsAgent.channelId, {
+          name: safeTrim(values.name) || settingsAgent.name,
+          agent_prompt: safeTrim(values.agent_prompt),
+        });
+        await refreshChannels();
+      } else if (settingsAgent.kind === "acp" && settingsAgent.acpAgentId) {
+        await updateAcpAgent(settingsAgent.acpAgentId, {
+          name: safeTrim(values.name) || settingsAgent.name,
+          agent_prompt: safeTrim(values.agent_prompt),
+          default_model_id: safeTrim(values.default_model_id) || null,
+        });
+        await refreshAcpAgents();
+      }
+
+      setAgentSettingsVisible(false);
+      setSettingsAgentId(null);
+      messageApi.success("Agent 配置已保存");
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      messageApi.error(error?.message || "保存 Agent 配置失败");
+    } finally {
+      setSavingAgentSettings(false);
+    }
+  }, [
+    agentSettingsForm,
+    messageApi,
+    refreshAcpAgents,
+    refreshChannels,
+    settingsAgent,
+  ]);
+
+  const handleDeleteAgent = useCallback(
+    async (agent: WorkspaceAgent | undefined) => {
+      if (!agent || agent.kind === "main") return;
+
+      try {
+        setDeletingAgentId(agent.id);
+        if (agent.kind === "channel" && agent.channelId) {
+          await deleteChannelAgent(agent.channelId);
+          await refreshChannels();
+        } else if (agent.kind === "acp" && agent.acpAgentId) {
+          await deleteAcpAgent(agent.acpAgentId);
+          await refreshAcpAgents();
+        }
+        await refreshConversations();
+
+        const fallbackAgentId = MAIN_AGENT_ID;
+        setActiveAgentId(fallbackAgentId);
+        setCurrentConvId(null);
+        setMessages([]);
+        pushAgencyParams({ agent: fallbackAgentId, conversationId: null });
+        messageApi.success(`${agent.name} 已删除`);
+      } catch (error: any) {
+        messageApi.error(error?.message || "删除 Agent 失败");
+      } finally {
+        setDeletingAgentId(null);
+      }
+    },
+    [messageApi, pushAgencyParams, refreshAcpAgents, refreshChannels]
+  );
+
+  const handleManualCompact = useCallback(async () => {
+    if (!currentConvId) return;
+
+    try {
+      setCompactingConversation(true);
+      const result = await compactConversation(currentConvId);
+      const latestMessages = await getMessages(currentConvId);
+      setMessages(latestMessages);
+      setConversationBudget(result.budget);
+      messageApi.success(
+        result.compacted
+          ? `已完成上下文压缩，写入 ${result.compacted_messages || 0} 段摘要`
+          : "当前上下文空间仍充足，未执行压缩"
+      );
+    } catch (error: any) {
+      messageApi.error(error?.message || "上下文压缩失败");
+    } finally {
+      setCompactingConversation(false);
+    }
+  }, [currentConvId, messageApi]);
 
   const handleOpenAgent = useCallback(
     (agentId: string) => {
@@ -821,12 +1129,17 @@ export default () => {
 
   const handleCreateChat = async () => {
     try {
-      const newConv = await createConversation("新对话");
+      const newConv = await createConversation(
+        "新对话",
+        buildConversationCreateOptions(activeAgent)
+      );
       const agentId = activeAgentId || MAIN_AGENT_ID;
-      patchConversationAgentMap((prev) => ({
-        ...prev,
-        [String(newConv.id)]: agentId,
-      }));
+      if (agentId === MAIN_AGENT_ID) {
+        patchConversationAgentMap((prev) => ({
+          ...prev,
+          [String(newConv.id)]: agentId,
+        }));
+      }
       setConversations((prev) => [newConv, ...prev]);
       setCurrentConvId(newConv.id);
       setMessages([]);
@@ -840,8 +1153,16 @@ export default () => {
 
   const handleCreateChannelAgent = async () => {
     try {
-      const values = await channelAgentForm.validateFields();
-      setCreatingAgent(true);
+      const validatedValues = await channelAgentForm.validateFields();
+      const values = {
+        ...channelAgentForm.getFieldsValue(true),
+        ...validatedValues,
+      } as ChannelCreateFormValues;
+      const name = safeTrim(values.name);
+      if (!name) {
+        throw new Error("请输入 Agent 名称");
+      }
+      setCreatingChannelAgent(true);
       const normalizedPlatform =
         values.platform === "dingding" ? "dingtalk" : values.platform;
       const metadata =
@@ -858,8 +1179,9 @@ export default () => {
               secret_token: values.secret_token?.trim() || "",
             };
       const payload: Partial<API.Channel> = {
-        name: values.name.trim(),
+        name,
         platform: normalizedPlatform,
+        agent_prompt: safeTrim((values as any).agent_prompt),
         webhook_url:
           normalizedPlatform === "telegram" &&
           values.update_mode === "webhook" &&
@@ -878,14 +1200,51 @@ export default () => {
       const newAgentId = `channel:${channel.id}`;
       setActiveAgentId(newAgentId);
       pushAgencyParams({ agent: newAgentId, conversationId: null });
-      setAgentModalVisible(false);
+      setChannelAgentModalVisible(false);
       channelAgentForm.resetFields();
       messageApi.success("渠道 Agent 已创建");
     } catch (error: any) {
       if (error?.errorFields) return;
       messageApi.error(error?.message || "创建渠道 Agent 失败");
     } finally {
-      setCreatingAgent(false);
+      setCreatingChannelAgent(false);
+    }
+  };
+
+  const handleCreateAcpAgent = async () => {
+    try {
+      const validatedValues = await acpAgentForm.validateFields();
+      const values = {
+        ...acpAgentForm.getFieldsValue(true),
+        ...validatedValues,
+      } as AcpAgentCreateFormValues;
+      const name = safeTrim(values.name);
+      if (!name) {
+        throw new Error("请输入 Agent 名称");
+      }
+      const preset = values.preset || "opencode";
+      setCreatingAcpAgent(true);
+      const template = acpPresetMeta[preset];
+      const agent = await createAcpAgent({
+        name,
+        preset,
+        command: safeTrim(values.command) || template?.command,
+        api_key: safeTrim(values.api_key) || undefined,
+        agent_prompt: safeTrim(values.agent_prompt) || undefined,
+        default_model_id: safeTrim(values.default_model_id) || undefined,
+      });
+      await refreshAcpAgents();
+      const newAgentId = `acp:${agent.id}`;
+      setActiveAgentId(newAgentId);
+      pushAgencyParams({ agent: newAgentId, conversationId: null });
+      setAcpAgentModalVisible(false);
+      acpAgentForm.resetFields();
+      messageApi.success("ACP Agent 已创建");
+    } catch (error: any) {
+      if (error?.errorFields) return;
+      messageApi.error(error?.message || "创建 ACP Agent 失败");
+    } finally {
+      setCreatingAcpAgent(false);
     }
   };
 
@@ -1143,7 +1502,10 @@ export default () => {
     let convId = currentConvId;
     const shouldSummarizeTitle = messages.length === 0;
     if (!convId) {
-      const newConv = await createConversation("新对话");
+      const newConv = await createConversation(
+        "新对话",
+        buildConversationCreateOptions(activeAgent)
+      );
       setConversations((prev) => [newConv, ...prev]);
       convId = newConv.id;
       setCurrentConvId(convId);
@@ -1386,6 +1748,29 @@ export default () => {
     setLoading(false);
   };
 
+  const handleSwitchAcpModel = async (modelId: string) => {
+    if (!currentConvId || !currentConversation?.acp_agent_id) return;
+
+    try {
+      setSwitchingAcpModel(true);
+      const result = await setConversationAcpModel(currentConvId, modelId);
+      setAcpConversationModels(result);
+      setConversations((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(currentConvId)
+            ? { ...item, acp_model_id: modelId }
+            : item
+        )
+      );
+      await refreshAcpAgents();
+      messageApi.success(`已切换到模型 ${modelId}`);
+    } catch (error: any) {
+      messageApi.error(error?.message || "切换 ACP 会话模型失败");
+    } finally {
+      setSwitchingAcpModel(false);
+    }
+  };
+
   const getToolMessageKey = (msg: API.Message, idx: number) => {
     if (msg.id) return `tool-${msg.id}`;
     return `tool-${idx}-${getToolMessageName(msg)}`;
@@ -1474,11 +1859,46 @@ export default () => {
     setCurrentConvId(null);
     setMessages([]);
   }, [showAgencyOverview]);
+
+  useEffect(() => {
+    if (!currentConversation?.acp_agent_id || !currentConvId) {
+      setAcpConversationModels(null);
+      setAcpModelsLoading(false);
+      return;
+    }
+
+    loadAcpConversationModels(String(currentConvId)).catch(() => undefined);
+  }, [currentConversation?.acp_agent_id, currentConvId, loadAcpConversationModels]);
+
+  useEffect(() => {
+    if (!currentConvId) {
+      setConversationBudget(null);
+      setConversationBudgetLoading(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (!loading) {
+        refreshConversationBudget(String(currentConvId)).catch(() => undefined);
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    currentConvId,
+    currentConversation?.context_window,
+    currentConversation?.acp_model_id,
+    loading,
+    messages,
+    refreshConversationBudget,
+  ]);
+
   const currentDebugEvents = currentConvId
     ? debugEventsByConversation[currentConvId] || []
     : [];
   const visibleMessages = messages.filter(
     (msg) =>
+      !msg.is_hidden &&
       !(
         msg.role === "assistant" &&
         !msg.content &&
@@ -1506,22 +1926,43 @@ export default () => {
           <h1>当前已配置的 Agents</h1>
           <p>
             先选 Agent，再进入它的独立会话空间。主工作台 `main`
-            和各渠道机器人都在这里统一管理。
+            、渠道机器人和外部 ACP Agent 都在这里统一管理。
           </p>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            channelAgentForm.setFieldsValue({
-              platform: availableChannelPlatforms[0],
-              update_mode: "polling",
-            });
-            setAgentModalVisible(true);
-          }}
-        >
-          新增渠道 Agent
-        </Button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              channelAgentForm.setFieldsValue({
+                name: "",
+                agent_prompt: "",
+                platform: availableChannelPlatforms[0],
+                update_mode: "polling",
+                bot_token: "",
+              });
+              setChannelAgentModalVisible(true);
+            }}
+          >
+            新增渠道 Agent
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => {
+              acpAgentForm.setFieldsValue({
+                name: "",
+                preset: "opencode",
+                command: acpPresetMeta.opencode?.command || "opencode",
+                api_key: "",
+                agent_prompt: "",
+                default_model_id: "",
+              });
+              setAcpAgentModalVisible(true);
+            }}
+          >
+            新增 ACP Agent
+          </Button>
+        </div>
       </div>
 
       <div className="agency-agent-grid">
@@ -1545,18 +1986,57 @@ export default () => {
                   <div className="agency-agent-card-name">{agent.name}</div>
                   <div className="agency-agent-card-desc">{agent.description}</div>
                 </div>
-                <Tag bordered={false} className="agent-item-kind">
-                  {agent.kind === "main"
-                    ? "web"
-                    : CHANNEL_AGENT_ADAPTERS[agent.platform || ""]?.label ||
-                      agent.platform}
-                </Tag>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Tag bordered={false} className="agent-item-kind">
+                    {agent.kind === "main"
+                      ? "web"
+                      : agent.kind === "acp"
+                        ? acpPresetMeta[agent.preset || ""]?.label || "ACP"
+                        : CHANNEL_AGENT_ADAPTERS[agent.platform || ""]?.label ||
+                          agent.platform}
+                  </Tag>
+                  <Tooltip title="Agent 设置">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<SettingOutlined />}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openAgentSettings(agent).catch(() => undefined);
+                      }}
+                    />
+                  </Tooltip>
+                  {agent.kind !== "main" && (
+                    <Popconfirm
+                      title={`删除 ${agent.name}`}
+                      description="删除后不会清理已存在的会话，但新的入口会被移除。"
+                      okText="删除"
+                      cancelText="取消"
+                      onConfirm={(event) => {
+                        event?.stopPropagation?.();
+                        return handleDeleteAgent(agent);
+                      }}
+                      onCancel={(event) => event?.stopPropagation?.()}
+                    >
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        loading={deletingAgentId === agent.id}
+                        icon={<DeleteOutlined />}
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                    </Popconfirm>
+                  )}
+                </div>
               </div>
               <div className="agency-agent-card-meta">
                 <span>{conversationCount} 个会话</span>
                 <span>
                   {agent.kind === "main"
                     ? "内置工作台"
+                    : agent.kind === "acp"
+                      ? "ACP 连接器"
                     : getListenerStatusText(agent.listenerState)}
                 </span>
               </div>
@@ -1723,6 +2203,16 @@ export default () => {
     .map((m) => m.role)
     .lastIndexOf("assistant");
   const latestDebugIssue = getLatestDebugIssue(currentDebugEvents);
+  const budgetPercent = Math.max(
+    0,
+    Math.min(100, Number(conversationBudget?.remaining_percentage || 0))
+  );
+  const budgetStatus: "success" | "normal" | "exception" =
+    budgetPercent >= 70 ? "success" : budgetPercent >= 50 ? "normal" : "exception";
+  const budgetHint =
+    budgetPercent < 50
+      ? "已进入三段式压缩区间：近处轻压缩，中段中压缩，远处深压缩。"
+      : "上下文空间充足，系统会优先保留最近对话原貌。";
 
   return (
     <ConfigProvider
@@ -1772,6 +2262,37 @@ export default () => {
                   ? "Agency"
                   : `${activeAgent?.name || "main"} · 会话`}
               </span>
+              {!showAgencyOverview && activeAgent && (
+                <Tooltip title="编辑当前 Agent 的独立提示词与配置">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<SettingOutlined />}
+                    onClick={() => openAgentSettings(activeAgent).catch(() => undefined)}
+                  >
+                    Agent 设置
+                  </Button>
+                </Tooltip>
+              )}
+              {!showAgencyOverview && activeAgent?.kind !== "main" && (
+                <Popconfirm
+                  title={`删除 ${activeAgent?.name}`}
+                  description="删除后会返回 main，现有会话记录会保留。"
+                  okText="删除"
+                  cancelText="取消"
+                  onConfirm={() => handleDeleteAgent(activeAgent)}
+                >
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    loading={deletingAgentId === activeAgent?.id}
+                    icon={<DeleteOutlined />}
+                  >
+                    删除 Agent
+                  </Button>
+                </Popconfirm>
+              )}
               {currentConvId && (
                 <Tooltip title="查看本次对话的模型调试输出">
                   <Button
@@ -1801,6 +2322,29 @@ export default () => {
                     一键停机
                   </Button>
                 </Tooltip>
+              )}
+              {currentConvId && currentConversation?.acp_agent_id && (
+                <Select
+                  size="small"
+                  loading={acpModelsLoading || switchingAcpModel}
+                  value={
+                    acpConversationModels?.current_model_id ||
+                    currentConversation.acp_model_id ||
+                    undefined
+                  }
+                  placeholder="选择 ACP 模型"
+                  style={{ minWidth: 220 }}
+                  options={(acpConversationModels?.available_models || []).map((item) => ({
+                    value: item.model_id,
+                    label: item.name || item.model_id,
+                  }))}
+                  onChange={handleSwitchAcpModel}
+                  disabled={
+                    loading ||
+                    !acpConversationModels?.supports_switching ||
+                    (acpConversationModels?.available_models || []).length === 0
+                  }
+                />
               )}
             </div>
             <div className="header-right">
@@ -2081,6 +2625,76 @@ export default () => {
                   </div>
                 )}
 
+                {contextBudgetExpanded ? (
+                  <div className="context-budget-panel">
+                    <div className="context-budget-row">
+                      <div>
+                        <div className="context-budget-title">
+                          Context 空间剩余
+                          {conversationBudgetLoading && (
+                            <span className="context-budget-loading">计算中...</span>
+                          )}
+                        </div>
+                        <div className="context-budget-meta">
+                          {conversationBudget
+                            ? `${conversationBudget.remaining_tokens.toLocaleString()} / ${conversationBudget.context_window.toLocaleString()} tokens`
+                            : "发送后会自动估算本会话上下文空间"}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <Button
+                          size="small"
+                          icon={<ReloadOutlined />}
+                          onClick={handleManualCompact}
+                          loading={compactingConversation}
+                          disabled={!currentConvId || loading}
+                        >
+                          手动 Compact
+                        </Button>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<UpOutlined />}
+                          onClick={() => setContextBudgetExpanded(false)}
+                        />
+                      </div>
+                    </div>
+                    <Progress
+                      percent={budgetPercent}
+                      size="small"
+                      status={budgetStatus}
+                      showInfo
+                      format={(percent) => `${Number(percent || 0).toFixed(0)}%`}
+                    />
+                    <div
+                      className={`context-budget-hint ${
+                        budgetPercent < 50 ? "warning" : ""
+                      }`}
+                    >
+                      {budgetHint}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`context-budget-indicator ${
+                      budgetPercent < 50 ? "warning" : budgetPercent >= 70 ? "good" : ""
+                    }`}
+                    onClick={() => setContextBudgetExpanded(true)}
+                  >
+                    <span className="context-budget-indicator-dot" />
+                    <span className="context-budget-indicator-label">
+                      Context{" "}
+                      {conversationBudget
+                        ? `${Number(budgetPercent).toFixed(0)}%`
+                        : "—"}
+                    </span>
+                    {conversationBudgetLoading && (
+                      <span className="context-budget-loading">计算中...</span>
+                    )}
+                    <DownOutlined style={{ fontSize: 10, opacity: 0.45 }} />
+                  </div>
+                )}
+
                 <div className="input-container">
                   <Tooltip title="上传图片">
                     <Upload
@@ -2137,9 +2751,6 @@ export default () => {
                     />
                   )}
                 </div>
-                <div className="input-hint">
-                  CW 是一款 AI 工具，其回答未必正确无误。Shift+Enter 换行
-                </div>
                 </div>
               )}
               </div>
@@ -2151,10 +2762,10 @@ export default () => {
 
         <Modal
           title="新增渠道 Agent"
-          open={agentModalVisible}
-          onCancel={() => setAgentModalVisible(false)}
+          open={channelAgentModalVisible}
+          onCancel={() => setChannelAgentModalVisible(false)}
           onOk={handleCreateChannelAgent}
-          confirmLoading={creatingAgent}
+          confirmLoading={creatingChannelAgent}
           okText="创建"
           destroyOnHidden
         >
@@ -2163,6 +2774,7 @@ export default () => {
             layout="vertical"
             initialValues={{
               name: "",
+              agent_prompt: "",
               platform: availableChannelPlatforms[0],
               update_mode: "polling",
               bot_token: "",
@@ -2174,6 +2786,16 @@ export default () => {
               rules={[{ required: true, message: "请输入 Agent 名称" }]}
             >
               <Input placeholder="例如：telegram-notify" maxLength={64} />
+            </Form.Item>
+            <Form.Item
+              label="Agent 提示词（可选）"
+              name="agent_prompt"
+              extra="这段提示词只作用于当前 Agent，不影响全局系统提示词。"
+            >
+              <Input.TextArea
+                placeholder="例如：你是一个专注于处理渠道消息的通知机器人，输出要简洁、结构化。"
+                autoSize={{ minRows: 3, maxRows: 6 }}
+              />
             </Form.Item>
             <Form.Item
               label="渠道平台"
@@ -2264,6 +2886,162 @@ export default () => {
                 );
               }}
             </Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal
+          title="新增 ACP Agent"
+          open={acpAgentModalVisible}
+          onCancel={() => setAcpAgentModalVisible(false)}
+          onOk={handleCreateAcpAgent}
+          confirmLoading={creatingAcpAgent}
+          okText="创建"
+          destroyOnHidden
+        >
+          <Form
+            form={acpAgentForm}
+            layout="vertical"
+            initialValues={{
+              name: "",
+              preset: "opencode",
+              command: acpPresetMeta.opencode?.command || "opencode",
+              agent_prompt: "",
+              default_model_id: "",
+            }}
+          >
+            <Form.Item
+              label="Agent 名称"
+              name="name"
+              rules={[{ required: true, message: "请输入 Agent 名称" }]}
+            >
+              <Input placeholder="例如：opencode-main" maxLength={64} />
+            </Form.Item>
+            <Form.Item
+              label="Agent 提示词（可选）"
+              name="agent_prompt"
+              extra="这段提示词会在 ACP 会话启动、恢复和历史重放时优先生效。"
+            >
+              <Input.TextArea
+                placeholder="例如：你是一个偏工程实现型的外部编码 Agent，优先给出可执行改动。"
+                autoSize={{ minRows: 3, maxRows: 6 }}
+              />
+            </Form.Item>
+            <Form.Item
+              label="ACP 实现"
+              name="preset"
+              rules={[{ required: true, message: "请选择 ACP 实现" }]}
+            >
+              <Select
+                onChange={(value: API.AcpAgent["preset"]) => {
+                  const template = acpPresetMeta[value];
+                  if (template) {
+                    acpAgentForm.setFieldValue("command", template.command);
+                  }
+                }}
+                options={(acpAgentTemplates || []).map((item) => ({
+                  value: item.id,
+                  label: item.label,
+                }))}
+              />
+            </Form.Item>
+            <Form.Item shouldUpdate noStyle>
+              {({ getFieldValue }) => {
+                const preset = getFieldValue("preset") as API.AcpAgent["preset"];
+                const template = acpPresetMeta[preset];
+                return (
+                  <>
+                    <div className="agent-binding-tip" style={{ marginTop: -4 }}>
+                      {template?.description || "通过 ACP 协议接入外部编码 Agent"}
+                      {template?.docs ? (
+                        <>
+                          {" · "}
+                          <a href={template.docs} target="_blank" rel="noreferrer">
+                            官方文档
+                          </a>
+                        </>
+                      ) : null}
+                    </div>
+                    <Form.Item
+                      label="启动命令"
+                      name="command"
+                      rules={[{ required: true, message: "请输入可执行命令" }]}
+                    >
+                      <Input placeholder={template?.command || "opencode"} />
+                    </Form.Item>
+                    <Form.Item
+                      label={`${template?.env_key || "API_KEY"}（可选）`}
+                      name="api_key"
+                    >
+                      <Input.Password placeholder="如已在系统环境变量中配置可留空" />
+                    </Form.Item>
+                    <Form.Item
+                      label="默认模型 ID（可选）"
+                      name="default_model_id"
+                      extra="如果外部 ACP Agent 支持 session model 切换，将在建会话后自动切到这个模型。"
+                    >
+                      <Input placeholder="例如：gpt-5 / claude-sonnet-4 / o4-mini" />
+                    </Form.Item>
+                  </>
+                );
+              }}
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        <Modal
+          title={
+            settingsAgent?.kind === "main"
+              ? "main Agent 设置"
+              : `Agent 设置 · ${settingsAgent?.name || ""}`
+          }
+          open={agentSettingsVisible}
+          onCancel={() => {
+            setAgentSettingsVisible(false);
+            setSettingsAgentId(null);
+            agentSettingsForm.resetFields();
+          }}
+          onOk={handleSaveAgentSettings}
+          confirmLoading={savingAgentSettings}
+          okText="保存"
+          destroyOnHidden
+        >
+          <Form form={agentSettingsForm} layout="vertical">
+            {settingsAgent?.kind !== "main" && (
+              <Form.Item
+                label="Agent 名称"
+                name="name"
+                rules={[{ required: true, message: "请输入 Agent 名称" }]}
+              >
+                <Input maxLength={64} />
+              </Form.Item>
+            )}
+            <Form.Item
+              label="独立 Agent 提示词"
+              name="agent_prompt"
+              extra="会叠加在全局系统提示词之前，只对当前 Agent 生效。"
+            >
+              <Input.TextArea
+                placeholder="输入当前 Agent 的专属行为约束、角色定位或执行偏好"
+                autoSize={{ minRows: 6, maxRows: 12 }}
+              />
+            </Form.Item>
+            {settingsAgent?.kind === "acp" && (
+              <Form.Item
+                label="默认模型 ID"
+                name="default_model_id"
+                extra="新建 ACP 会话时会优先使用上次使用模型；没有历史时再回退到这里。"
+              >
+                <Input placeholder="例如：gpt-5 / claude-sonnet-4 / o4-mini" />
+              </Form.Item>
+            )}
+            {settingsAgent?.kind === "acp" && (
+              <div className="agent-binding-tip" style={{ marginTop: -4 }}>
+                最近一次使用模型：
+                {acpAgents.find((item) => item.id === settingsAgent.acpAgentId)
+                  ?.last_used_model_id || "暂无"}
+                。新建对话会优先选中它，再回退到默认模型。
+              </div>
+            )}
           </Form>
         </Modal>
         <Drawer

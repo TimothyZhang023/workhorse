@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { createUser } from "../server/models/database.js";
 import {
@@ -31,6 +34,33 @@ describe("built-in shell tool", () => {
     expect(text).toContain("hello-shell");
     const expectedCwd = process.env.WORKHORSE_DATA_DIR || process.cwd();
     expect(text).toContain(`CWD: ${expectedCwd}`);
+  });
+
+  it("prefers WORKHORSE_WORKSPACE_ROOT for the default shell cwd", async () => {
+    const workspaceRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "workhorse-workspace-root-")
+    );
+    const previousWorkspaceRoot = process.env.WORKHORSE_WORKSPACE_ROOT;
+    process.env.WORKHORSE_WORKSPACE_ROOT = workspaceRoot;
+
+    try {
+      const result = await executeBuiltInShellTool({
+        command: "printf 'workspace-root'",
+        cwd: ".",
+        timeout_ms: 5000,
+      });
+
+      const text = String(result.content?.[0]?.text || "");
+      expect(text).toContain(`CWD: ${workspaceRoot}`);
+      expect(text).toContain("workspace-root");
+    } finally {
+      if (previousWorkspaceRoot === undefined) {
+        delete process.env.WORKHORSE_WORKSPACE_ROOT;
+      } else {
+        process.env.WORKHORSE_WORKSPACE_ROOT = previousWorkspaceRoot;
+      }
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
   });
 
   it("aborts shell execution via abort signal", async () => {

@@ -6,10 +6,12 @@ import {
   createEndpoint,
   deleteEndpoint,
   deleteModelFromEndpoint,
+  exportEndpointModelConfig,
   getAvailableModels,
   getEndpointModels,
   getEndpoints,
   getGlobalModelPolicy,
+  importEndpointModelConfig,
   syncEndpointModels,
   updateEndpoint,
   updateEndpointModel,
@@ -18,11 +20,13 @@ import {
 import {
   ApiOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   PlusOutlined,
   SyncOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import {
   ModalForm,
@@ -43,6 +47,7 @@ import {
   Space,
   Tag,
   Tooltip,
+  Upload,
   Typography,
   message,
   theme as antdTheme,
@@ -109,6 +114,8 @@ export default () => {
   );
   const [selectedModelIds, setSelectedModelIds] = useState<number[]>([]);
   const [modelSearchText, setModelSearchText] = useState("");
+  const [exportingConfig, setExportingConfig] = useState(false);
+  const [importingConfig, setImportingConfig] = useState(false);
 
   const loadModelsForEndpoint = async (endpointId: number) => {
     const models = await getEndpointModels(endpointId);
@@ -249,6 +256,48 @@ export default () => {
     } catch (error: any) {
       messageApi.error(error?.message || "批量更新失败");
     }
+  };
+
+  const handleExportConfig = async () => {
+    try {
+      setExportingConfig(true);
+      const payload = await exportEndpointModelConfig();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `workhorse-model-config-${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      messageApi.success("模型配置已导出（不含密钥）");
+    } catch (error: any) {
+      messageApi.error(error?.message || "导出模型配置失败");
+    } finally {
+      setExportingConfig(false);
+    }
+  };
+
+  const handleImportConfig = async (file: File) => {
+    try {
+      setImportingConfig(true);
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      await importEndpointModelConfig(payload);
+      await loadData();
+      messageApi.success("模型配置已导入");
+    } catch (error: any) {
+      messageApi.error(error?.message || "导入模型配置失败，请检查 JSON 格式");
+    } finally {
+      setImportingConfig(false);
+    }
+
+    return false;
   };
 
   useEffect(() => {
@@ -401,25 +450,52 @@ export default () => {
                   marginBottom: 16,
                   display: "flex",
                   justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
                 }}
               >
                 <Space>
                   <ApiOutlined style={{ fontSize: 20, color: "#3b82f6" }} />
                   <h3 style={{ margin: 0 }}>接入点列表</h3>
                 </Space>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    setEditingEndpoint({
-                      provider: "openai_compatible",
-                      use_preset_models: true,
-                    })
-                  }
-                >
-                  添加端点
-                </Button>
+                <Space wrap>
+                  <Upload
+                    accept="application/json,.json"
+                    showUploadList={false}
+                    beforeUpload={handleImportConfig}
+                    disabled={importingConfig}
+                  >
+                    <Button
+                      icon={<UploadOutlined />}
+                      loading={importingConfig}
+                    >
+                      导入模型配置
+                    </Button>
+                  </Upload>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    loading={exportingConfig}
+                    onClick={handleExportConfig}
+                  >
+                    导出模型配置
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() =>
+                      setEditingEndpoint({
+                        provider: "openai_compatible",
+                        use_preset_models: true,
+                      })
+                    }
+                  >
+                    添加端点
+                  </Button>
+                </Space>
               </div>
+              <Typography.Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+                导入导出只包含端点、模型和全局模型策略，不会导出任何 API Key。
+              </Typography.Text>
 
               <ProList<API.Endpoint>
                 rowKey="id"

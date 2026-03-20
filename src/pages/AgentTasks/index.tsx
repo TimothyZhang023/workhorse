@@ -4,6 +4,7 @@ import {
   createAgentTask,
   deleteAgentTask,
   generateAgentTask,
+  getAcpAgents,
   getAgentTasks,
   getMcpServers,
   getSkills,
@@ -22,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import {
   ModalForm,
+  ProFormSelect,
   ProFormSwitch,
   ProFormText,
   ProFormTextArea,
@@ -111,6 +113,7 @@ export default () => {
   } = useShellPreferences();
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<API.AgentTask[]>([]);
+  const [acpAgents, setAcpAgents] = useState<API.AcpAgent[]>([]);
   const [runtimeSnapshot, setRuntimeSnapshot] = useState<{
     enabledSkills: number;
     enabledMcpServers: number;
@@ -158,8 +161,12 @@ export default () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const taskData = await getAgentTasks();
+      const [taskData, acpAgentData] = await Promise.all([
+        getAgentTasks(),
+        getAcpAgents(),
+      ]);
       setTasks(taskData);
+      setAcpAgents(acpAgentData.filter((item) => Number(item.is_enabled) === 1));
     } catch {
       messageApi.error("加载数据失败");
     } finally {
@@ -338,6 +345,16 @@ export default () => {
                   description: {
                     render: (_, row) => (
                       <Space direction="vertical" style={{ width: "100%" }}>
+                        <Space size={8} wrap>
+                          <Tag color={row.acp_agent_id ? "geekblue" : "default"}>
+                            {row.acp_agent_id
+                              ? `ACP · ${
+                                  acpAgents.find((item) => item.id === row.acp_agent_id)
+                                    ?.name || row.acp_agent_id
+                                }`
+                              : "main"}
+                          </Tag>
+                        </Space>
                         <Typography.Paragraph
                           ellipsis={{ rows: 2, expandable: false }}
                           style={{ marginBottom: 0 }}
@@ -504,11 +521,20 @@ export default () => {
           open={!!editingTask}
           onOpenChange={(visible) => !visible && setEditingTask(null)}
           modalProps={{ destroyOnHidden: true }}
-          initialValues={editingTask || {}}
+          initialValues={{
+            ...(editingTask || {}),
+            agent_binding: editingTask?.acp_agent_id
+              ? String(editingTask.acp_agent_id)
+              : "main",
+          }}
           onFinish={async (values) => {
             const payload = {
               name: String(values.name || "").trim(),
               system_prompt: String(values.system_prompt || "").trim(),
+              acp_agent_id:
+                values.agent_binding === "main"
+                  ? null
+                  : Number(values.agent_binding),
             };
 
             try {
@@ -540,6 +566,19 @@ export default () => {
             rules={[{ required: true }]}
             fieldProps={{ rows: 10 }}
           />
+          <ProFormSelect
+            name="agent_binding"
+            label="绑定 Agent"
+            tooltip="未绑定时默认走 main；也可以绑定到外部 ACP Agent。"
+            initialValue={editingTask?.acp_agent_id ? String(editingTask.acp_agent_id) : "main"}
+            options={[
+              { label: "main（默认）", value: "main" },
+              ...acpAgents.map((agent) => ({
+                label: `${agent.name} · ACP`,
+                value: String(agent.id),
+              })),
+            ]}
+          />
         </ModalForm>
 
         <ModalForm
@@ -566,6 +605,7 @@ export default () => {
               setEditingTask({
                 name: result.draft?.name || "",
                 system_prompt: result.draft?.system_prompt || "",
+                acp_agent_id: result.draft?.acp_agent_id || null,
               });
               messageApi.success("已生成任务草稿");
               setGeneratorOpen(false);
@@ -623,7 +663,14 @@ export default () => {
                     type="secondary"
                     style={{ marginBottom: 0 }}
                   >
-                    本任务不会单独指定模型、Skills 或工具，后端会在启动时实时读取当前全局启用配置。
+                    当前执行 Agent：
+                    {runModalTask.acp_agent_id
+                      ? ` ACP · ${
+                          acpAgents.find((item) => item.id === runModalTask.acp_agent_id)
+                            ?.name || runModalTask.acp_agent_id
+                        }`
+                      : " main（默认）"}
+                    。后端会在启动时实时读取当前全局启用配置。
                   </Typography.Paragraph>
                   {runtimeSnapshot && (
                     <Typography.Text type="secondary">

@@ -22,15 +22,71 @@ declare namespace API {
     title: string;
     system_prompt?: string;
     channel_id?: number | null;
+    acp_agent_id?: number | null;
+    acp_model_id?: string | null;
     context_window?: number | null;
     tool_names?: string[] | null;
     created_at?: string;
+  };
+
+  type ConversationContextBudget = {
+    context_window: number;
+    static_tokens: number;
+    estimated_message_tokens: number;
+    estimated_tool_tokens: number;
+    total_estimated_tokens: number;
+    remaining_tokens: number;
+    remaining_percentage: number;
+    compact_required: boolean;
+    preferred_model_id?: string | null;
+  };
+
+  type AcpSessionModel = {
+    model_id: string;
+    name: string;
+  };
+
+  type AcpConversationModels = {
+    session_id: string;
+    current_model_id?: string | null;
+    configured_model_id?: string | null;
+    agent_default_model_id?: string | null;
+    agent_last_used_model_id?: string | null;
+    supports_switching: boolean;
+    available_models: AcpSessionModel[];
+  };
+
+  type AcpAgentTemplate = {
+    id: "opencode" | "claude_code";
+    label: string;
+    docs: string;
+    command: string;
+    args: string[];
+    env_key: string;
+    description: string;
+  };
+
+  type AcpAgent = {
+    id: number;
+    name: string;
+    preset: "opencode" | "claude_code";
+    command: string;
+    args: string[];
+    agent_prompt?: string;
+    default_model_id?: string | null;
+    last_used_model_id?: string | null;
+    env_keys: string[];
+    has_env: boolean;
+    is_enabled: number;
+    created_at?: string;
+    updated_at?: string;
   };
 
   type Channel = {
     id: number;
     name: string;
     platform: string;
+    agent_prompt?: string;
     webhook_url?: string | null;
     bot_token?: string | null;
     metadata?: Record<string, any> | null;
@@ -65,6 +121,8 @@ declare namespace API {
     tool_calls?: any[];
     tool_call_id?: string;
     name?: string;
+    is_hidden?: number;
+    is_archived?: number;
   };
 
   type McpTool = {
@@ -112,6 +170,20 @@ declare namespace API {
   type GlobalModelPolicy = {
     primary_model: string;
     fallback_models: string[];
+  };
+
+  type EndpointModelConfigExport = {
+    version: number;
+    exported_at: string;
+    global_model_policy: GlobalModelPolicy;
+    endpoints: Array<{
+      name: string;
+      provider: string;
+      base_url: string;
+      is_default: number;
+      use_preset_models: number;
+      models: Model[];
+    }>;
   };
 
   type McpServer = {
@@ -195,7 +267,7 @@ declare namespace API {
     examples?: any[];
     tools?: string[];
     is_enabled?: number;
-    source_type?: "git" | "zip" | null;
+    source_type?: "git" | "zip" | "share" | null;
     source_location?: string | null;
     source_item_path?: string | null;
     source_refreshed_at?: string | null;
@@ -203,8 +275,32 @@ declare namespace API {
     updated_at?: string;
   };
 
+  type InstallShare = {
+    kind: "mcp" | "skill";
+    name: string;
+    bundle: string;
+    share_url: string;
+    commands: {
+      macos: string;
+      linux: string;
+      windows: string;
+    };
+  };
+
+  type InstallShareImportResult =
+    | {
+        kind: "mcp";
+        status: "created" | "existing";
+        server: McpServer;
+      }
+    | {
+        kind: "skill";
+        status: "created" | "existing";
+        skill: Skill;
+      };
+
   type SkillInstallResult = {
-    source_type: "git" | "zip";
+    source_type: "git" | "zip" | "share";
     source_location: string;
     updated: boolean;
     installed_count: number;
@@ -230,6 +326,7 @@ declare namespace API {
     system_prompt: string;
     skill_ids: number[];
     tool_names: string[];
+    acp_agent_id?: number | null;
     is_active: number;
     created_at?: string;
     updated_at?: string;
